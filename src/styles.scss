@@ -16,3 +16,14 @@ body {
 body {
   min-width: 320px;
 }
+
+/* Past calendar dates stay visible for context, but clearly look unavailable. */
+.calendar-days button.past {
+  opacity: 0.28;
+  cursor: not-allowed !important;
+  color: #8b9296 !important;
+}
+
+.calendar-days button.past:hover {
+  background: transparent !important;
+}
