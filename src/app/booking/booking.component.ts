@@ -39,12 +39,19 @@ interface BookedAppointment {
   duration: number;
 }
 
+interface BookingPerson {
+  id: number;
+  label: string;
+  selectedServices: Service[];
+  selectedBarber: Barber | 'any' | null;
+}
+
 @Component({
   selector: 'app-booking',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './booking.component.html',
-  styleUrls: ['./booking.component.scss']
+  styleUrls: ['./booking.component.scss', './group-booking.component.scss']
 })
 export class BookingComponent implements OnInit {
   readonly serviceImages = {
@@ -91,12 +98,13 @@ export class BookingComponent implements OnInit {
     }
   ];
 
-  // Customers can choose multiple services. Nothing is preselected.
-  selectedServices: Service[] = [];
-  selectedBarber: Barber | 'any' | null = null;
+  bookingMode: 'single' | 'group' = 'single';
+  participants: BookingPerson[] = [this.createPerson(1, 'You')];
+  activeParticipantIndex = 0;
+  private nextPersonId = 2;
+
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
-
   calendarDate = new Date(2026, 8, 1);
   calendarCells: CalendarCell[] = [];
   availableTimes: string[] = [];
@@ -109,28 +117,82 @@ export class BookingComponent implements OnInit {
   };
 
   bookingConfirmed = false;
-  confirmedBarberName = '';
+  confirmedAssignments: { person: string; barber: string }[] = [];
 
   ngOnInit(): void {
     this.buildCalendar();
   }
 
+  get activeParticipant(): BookingPerson {
+    return this.participants[this.activeParticipantIndex];
+  }
+
+  get selectedServices(): Service[] {
+    return this.activeParticipant.selectedServices;
+  }
+
+  get selectedBarber(): Barber | 'any' | null {
+    return this.activeParticipant.selectedBarber;
+  }
+
+  setBookingMode(mode: 'single' | 'group'): void {
+    if (this.bookingMode === mode) return;
+
+    this.bookingMode = mode;
+    this.selectedTime = null;
+
+    if (mode === 'group') {
+      if (this.participants.length === 1) {
+        this.participants.push(this.createPerson(this.nextPersonId++, 'Person 2'));
+      }
+    } else {
+      this.participants = [this.participants[0]];
+      this.activeParticipantIndex = 0;
+    }
+
+    this.generateAvailableTimes();
+  }
+
+  addPerson(): void {
+    if (this.participants.length >= 4) return;
+
+    const personNumber = this.participants.length + 1;
+    this.participants.push(this.createPerson(this.nextPersonId++, `Person ${personNumber}`));
+    this.activeParticipantIndex = this.participants.length - 1;
+    this.selectedTime = null;
+    this.generateAvailableTimes();
+  }
+
+  removePerson(index: number): void {
+    if (index === 0 || this.participants.length <= 2) return;
+
+    this.participants.splice(index, 1);
+    this.participants.forEach((person, personIndex) => {
+      person.label = personIndex === 0 ? 'You' : `Person ${personIndex + 1}`;
+    });
+
+    this.activeParticipantIndex = Math.min(this.activeParticipantIndex, this.participants.length - 1);
+    this.selectedTime = null;
+    this.generateAvailableTimes();
+  }
+
+  selectParticipant(index: number): void {
+    this.activeParticipantIndex = index;
+  }
+
   toggleService(service: Service): void {
+    const person = this.activeParticipant;
     const alreadySelected = this.isServiceSelected(service.id);
 
     if (alreadySelected) {
-      this.selectedServices = this.selectedServices.filter(item => item.id !== service.id);
+      person.selectedServices = person.selectedServices.filter(item => item.id !== service.id);
+    } else if (service.id === 3) {
+      person.selectedServices = person.selectedServices.filter(item => item.id !== 1 && item.id !== 2);
+      person.selectedServices.push(service);
+    } else if ((service.id === 1 || service.id === 2) && this.isServiceSelected(3)) {
+      return;
     } else {
-      // The Hair + Beard combo already contains haircut and beard, so those
-      // individual services cannot be booked together with the combo.
-      if (service.id === 3) {
-        this.selectedServices = this.selectedServices.filter(item => item.id !== 1 && item.id !== 2);
-        this.selectedServices.push(service);
-      } else if ((service.id === 1 || service.id === 2) && this.isServiceSelected(3)) {
-        return;
-      } else {
-        this.selectedServices.push(service);
-      }
+      person.selectedServices.push(service);
     }
 
     this.selectedTime = null;
@@ -138,7 +200,7 @@ export class BookingComponent implements OnInit {
   }
 
   isServiceSelected(serviceId: number): boolean {
-    return this.selectedServices.some(service => service.id === serviceId);
+    return this.activeParticipant.selectedServices.some(service => service.id === serviceId);
   }
 
   isServiceDisabled(service: Service): boolean {
@@ -146,7 +208,7 @@ export class BookingComponent implements OnInit {
   }
 
   selectBarber(barber: Barber | 'any'): void {
-    this.selectedBarber = barber;
+    this.activeParticipant.selectedBarber = barber;
     this.selectedTime = null;
     this.generateAvailableTimes();
   }
@@ -206,7 +268,7 @@ export class BookingComponent implements OnInit {
   }
 
   generateAvailableTimes(): void {
-    if (!this.selectedServices.length || !this.selectedBarber || !this.selectedDate) {
+    if (!this.selectedDate || !this.allParticipantsReady) {
       this.availableTimes = [];
       return;
     }
@@ -218,38 +280,193 @@ export class BookingComponent implements OnInit {
 
     const slots: string[] = [];
     const interval = 30;
-    const duration = this.totalDuration;
+    const longestDuration = Math.max(...this.participants.map(person => this.getPersonDuration(person)));
 
     windows.forEach(window => {
-      for (let minutes = window.start; minutes + duration <= window.end; minutes += interval) {
+      for (let minutes = window.start; minutes + longestDuration <= window.end; minutes += interval) {
         const time = this.minutesToTime(minutes);
-        if (this.isTimeAvailable(time)) slots.push(time);
+        if (this.resolveBarberAssignments(time)) slots.push(time);
       }
     });
 
     this.availableTimes = slots;
   }
 
-  isTimeAvailable(time: string): boolean {
-    if (!this.selectedDate || !this.selectedServices.length || !this.selectedBarber) {
-      return false;
-    }
+  selectTime(time: string): void {
+    this.selectedTime = time;
+  }
 
-    if (this.selectedBarber === 'any') {
-      return this.barbers.some(barber =>
-        this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.totalDuration)
-      );
-    }
+  confirmBooking(): void {
+    if (!this.canConfirmBooking() || !this.selectedTime || !this.selectedDate) return;
 
-    return this.isBarberAvailable(
-      this.selectedBarber.id,
-      time,
-      this.selectedDate.fullDate,
-      this.totalDuration
+    const assignments = this.resolveBarberAssignments(this.selectedTime);
+    if (!assignments) return;
+
+    this.confirmedAssignments = [];
+
+    this.participants.forEach(person => {
+      const barber = assignments.get(person.id);
+      if (!barber) return;
+
+      this.bookedAppointments.push({
+        barberId: barber.id,
+        date: this.selectedDate!.fullDate,
+        startTime: this.selectedTime!,
+        duration: this.getPersonDuration(person)
+      });
+
+      this.confirmedAssignments.push({ person: person.label, barber: barber.name });
+    });
+
+    this.bookingConfirmed = true;
+  }
+
+  canConfirmBooking(): boolean {
+    return !!(
+      this.allParticipantsReady &&
+      this.selectedDate &&
+      this.selectedTime &&
+      this.customer.name.trim() &&
+      this.customer.phone.trim()
     );
   }
 
-  isBarberAvailable(
+  get allParticipantsReady(): boolean {
+    return this.participants.every(person => person.selectedServices.length > 0 && !!person.selectedBarber);
+  }
+
+  get totalPrice(): number {
+    return this.participants.reduce((bookingTotal, person) => {
+      return bookingTotal + this.getPersonPrice(person);
+    }, 0);
+  }
+
+  get totalDuration(): number {
+    return this.getPersonDuration(this.activeParticipant);
+  }
+
+  get monthLabel(): string {
+    return this.calendarDate.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
+  get barberName(): string {
+    return this.getPersonBarberName(this.activeParticipant);
+  }
+
+  get barberImage(): string {
+    const barber = this.activeParticipant.selectedBarber;
+    if (!barber || barber === 'any') return '';
+    return barber.image;
+  }
+
+  get barberRating(): number | null {
+    const barber = this.activeParticipant.selectedBarber;
+    if (!barber || barber === 'any') return null;
+    return barber.rating;
+  }
+
+  get barberExperience(): string {
+    const barber = this.activeParticipant.selectedBarber;
+    if (!barber || barber === 'any') return '';
+    return barber.experience;
+  }
+
+  get bookingEndTime(): string {
+    if (!this.selectedTime || !this.participants.some(person => person.selectedServices.length)) return '';
+
+    const longestDuration = Math.max(
+      ...this.participants.map(person => this.getPersonDuration(person))
+    );
+
+    return this.minutesToTime(this.timeToMinutes(this.selectedTime) + longestDuration);
+  }
+
+  getPersonPrice(person: BookingPerson): number {
+    return person.selectedServices.reduce((total, service) => total + service.price, 0);
+  }
+
+  getPersonDuration(person: BookingPerson): number {
+    return person.selectedServices.reduce((total, service) => total + service.duration, 0);
+  }
+
+  getPersonBarberName(person: BookingPerson): string {
+    if (!person.selectedBarber) return 'Select barber';
+    if (person.selectedBarber === 'any') return 'Any available barber';
+    return person.selectedBarber.name;
+  }
+
+  getPersonBarberImage(person: BookingPerson): string {
+    if (!person.selectedBarber || person.selectedBarber === 'any') return '';
+    return person.selectedBarber.image;
+  }
+
+  closeSuccess(): void {
+    this.bookingConfirmed = false;
+    this.generateAvailableTimes();
+  }
+
+  private createPerson(id: number, label: string): BookingPerson {
+    return {
+      id,
+      label,
+      selectedServices: [],
+      selectedBarber: null
+    };
+  }
+
+  private resolveBarberAssignments(time: string): Map<number, Barber> | null {
+    if (!this.selectedDate || !this.allParticipantsReady) return null;
+
+    const assignments = new Map<number, Barber>();
+    const usedBarberIds = new Set<number>();
+
+    // Reserve explicitly selected barbers first.
+    for (const person of this.participants) {
+      const selected = person.selectedBarber;
+      if (!selected || selected === 'any') continue;
+
+      if (usedBarberIds.has(selected.id)) return null;
+
+      if (!this.isBarberAvailable(
+        selected.id,
+        time,
+        this.selectedDate.fullDate,
+        this.getPersonDuration(person)
+      )) {
+        return null;
+      }
+
+      assignments.set(person.id, selected);
+      usedBarberIds.add(selected.id);
+    }
+
+    // Assign a different available barber to each "Any Barber" participant.
+    for (const person of this.participants) {
+      if (person.selectedBarber !== 'any') continue;
+
+      const availableBarber = this.barbers.find(barber =>
+        !usedBarberIds.has(barber.id) &&
+        this.isBarberAvailable(
+          barber.id,
+          time,
+          this.selectedDate!.fullDate,
+          this.getPersonDuration(person)
+        )
+      );
+
+      if (!availableBarber) return null;
+
+      assignments.set(person.id, availableBarber);
+      usedBarberIds.add(availableBarber.id);
+    }
+
+    return assignments;
+  }
+
+  private isBarberAvailable(
     barberId: number,
     requestedTime: string,
     date: string,
@@ -267,102 +484,6 @@ export class BookingComponent implements OnInit {
       const bookingEnd = bookingStart + booking.duration;
       return requestedStart < bookingEnd && requestedEnd > bookingStart;
     });
-  }
-
-  selectTime(time: string): void {
-    this.selectedTime = time;
-  }
-
-  confirmBooking(): void {
-    if (!this.canConfirmBooking()) return;
-
-    let assignedBarber: Barber | null = null;
-
-    if (this.selectedBarber === 'any') {
-      assignedBarber = this.barbers.find(barber =>
-        this.isBarberAvailable(
-          barber.id,
-          this.selectedTime!,
-          this.selectedDate!.fullDate,
-          this.totalDuration
-        )
-      ) || null;
-    } else {
-      assignedBarber = this.selectedBarber;
-    }
-
-    if (!assignedBarber) return;
-
-    this.bookedAppointments.push({
-      barberId: assignedBarber.id,
-      date: this.selectedDate!.fullDate,
-      startTime: this.selectedTime!,
-      duration: this.totalDuration
-    });
-
-    this.confirmedBarberName = assignedBarber.name;
-    this.bookingConfirmed = true;
-  }
-
-  canConfirmBooking(): boolean {
-    return !!(
-      this.selectedServices.length &&
-      this.selectedBarber &&
-      this.selectedDate &&
-      this.selectedTime &&
-      this.customer.name.trim() &&
-      this.customer.phone.trim()
-    );
-  }
-
-  get totalPrice(): number {
-    return this.selectedServices.reduce((total, service) => total + service.price, 0);
-  }
-
-  get totalDuration(): number {
-    return this.selectedServices.reduce((total, service) => total + service.duration, 0);
-  }
-
-  get selectedServiceNames(): string {
-    return this.selectedServices.map(service => service.name).join(', ');
-  }
-
-  get monthLabel(): string {
-    return this.calendarDate.toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric'
-    });
-  }
-
-  get barberName(): string {
-    if (!this.selectedBarber) return 'Select barber';
-    if (this.selectedBarber === 'any') return 'Any Barber';
-    return this.selectedBarber.name;
-  }
-
-  get barberImage(): string {
-    if (!this.selectedBarber || this.selectedBarber === 'any') return '';
-    return this.selectedBarber.image;
-  }
-
-  get barberRating(): number | null {
-    if (!this.selectedBarber || this.selectedBarber === 'any') return null;
-    return this.selectedBarber.rating;
-  }
-
-  get barberExperience(): string {
-    if (!this.selectedBarber || this.selectedBarber === 'any') return '';
-    return this.selectedBarber.experience;
-  }
-
-  get bookingEndTime(): string {
-    if (!this.selectedTime || !this.selectedServices.length) return '';
-    return this.minutesToTime(this.timeToMinutes(this.selectedTime) + this.totalDuration);
-  }
-
-  closeSuccess(): void {
-    this.bookingConfirmed = false;
-    this.generateAvailableTimes();
   }
 
   private formatDate(date: Date): string {
