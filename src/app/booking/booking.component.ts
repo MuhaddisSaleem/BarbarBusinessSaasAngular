@@ -2,10 +2,42 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-interface Service { id: number; name: string; duration: number; price: number; image: string; }
-interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
-interface BookingDate { date: Date; day: string; dateNumber: number; month: string; fullDate: string; }
-interface BookedAppointment { barberId: number; date: string; startTime: string; duration: number; }
+interface Service {
+  id: number;
+  name: string;
+  duration: number;
+  price: number;
+  image: string;
+}
+
+interface Barber {
+  id: number;
+  name: string;
+  rating: number;
+  experience: string;
+  image: string;
+}
+
+interface BookingDate {
+  date: Date;
+  day: string;
+  dateNumber: number;
+  month: string;
+  fullDate: string;
+}
+
+interface CalendarCell {
+  date: Date | null;
+  dayNumber: number | null;
+  fullDate: string | null;
+}
+
+interface BookedAppointment {
+  barberId: number;
+  date: string;
+  startTime: string;
+  duration: number;
+}
 
 @Component({
   selector: 'app-booking',
@@ -15,94 +47,216 @@ interface BookedAppointment { barberId: number; date: string; startTime: string;
   styleUrls: ['./booking.component.scss']
 })
 export class BookingComponent implements OnInit {
+  readonly serviceImages = {
+    haircut: 'https://images.pexels.com/photos/7447132/pexels-photo-7447132.jpeg?auto=compress&cs=tinysrgb&w=900',
+    beard: 'https://images.pexels.com/photos/3998419/pexels-photo-3998419.jpeg?auto=compress&cs=tinysrgb&w=900',
+    hairBeard: 'https://images.pexels.com/photos/4625630/pexels-photo-4625630.jpeg?auto=compress&cs=tinysrgb&w=900',
+    kids: 'https://images.pexels.com/photos/16098672/pexels-photo-16098672.jpeg?auto=compress&cs=tinysrgb&w=900',
+    wash: 'https://images.pexels.com/photos/3998413/pexels-photo-3998413.jpeg?auto=compress&cs=tinysrgb&w=900',
+    color: 'https://images.pexels.com/photos/9992819/pexels-photo-9992819.jpeg?auto=compress&cs=tinysrgb&w=900'
+  };
+
   services: Service[] = [
-    { id: 1, name: 'Haircut', duration: 30, price: 700, image: 'assets/images/service-placeholder.svg' },
-    { id: 2, name: 'Beard Trim', duration: 20, price: 400, image: 'assets/images/service-placeholder.svg' },
-    { id: 3, name: 'Hair + Beard', duration: 45, price: 1000, image: 'assets/images/service-placeholder.svg' },
-    { id: 4, name: 'Kids Haircut', duration: 30, price: 600, image: 'assets/images/service-placeholder.svg' },
-    { id: 5, name: 'Hair Wash', duration: 15, price: 300, image: 'assets/images/service-placeholder.svg' },
-    { id: 6, name: 'Hair Coloring', duration: 60, price: 2000, image: 'assets/images/service-placeholder.svg' }
+    { id: 1, name: 'Haircut', duration: 30, price: 700, image: this.serviceImages.haircut },
+    { id: 2, name: 'Beard Trim', duration: 20, price: 400, image: this.serviceImages.beard },
+    { id: 3, name: 'Hair + Beard', duration: 45, price: 1000, image: this.serviceImages.hairBeard },
+    { id: 4, name: 'Kids Haircut', duration: 30, price: 600, image: this.serviceImages.kids },
+    { id: 5, name: 'Hair Wash', duration: 15, price: 300, image: this.serviceImages.wash },
+    { id: 6, name: 'Hair Coloring', duration: 60, price: 2000, image: this.serviceImages.color }
   ];
 
   barbers: Barber[] = [
-    { id: 1, name: 'Ahmed', rating: 4.9, experience: '5+ years', image: 'assets/images/barber-placeholder.svg' },
-    { id: 2, name: 'Ali', rating: 4.8, experience: '4+ years', image: 'assets/images/barber-placeholder.svg' },
-    { id: 3, name: 'Usman', rating: 4.7, experience: '3+ years', image: 'assets/images/barber-placeholder.svg' }
+    {
+      id: 1,
+      name: 'Ahmed',
+      rating: 4.9,
+      experience: '5+ years',
+      image: 'https://images.pexels.com/photos/4997508/pexels-photo-4997508.jpeg?auto=compress&cs=tinysrgb&w=700'
+    },
+    {
+      id: 2,
+      name: 'Ali',
+      rating: 4.8,
+      experience: '4+ years',
+      image: 'https://images.pexels.com/photos/26903605/pexels-photo-26903605.jpeg?auto=compress&cs=tinysrgb&w=700'
+    },
+    {
+      id: 3,
+      name: 'Usman',
+      rating: 4.7,
+      experience: '3+ years',
+      image: 'https://images.pexels.com/photos/18885730/pexels-photo-18885730.jpeg?auto=compress&cs=tinysrgb&w=700'
+    }
   ];
 
   selectedService: Service | null = null;
   selectedBarber: Barber | 'any' | null = null;
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
-  bookingDates: BookingDate[] = [];
+
+  calendarDate = new Date(2026, 8, 1);
+  calendarCells: CalendarCell[] = [];
   availableTimes: string[] = [];
   bookedAppointments: BookedAppointment[] = [];
-  customer = { name: '', phone: '', notes: '' };
+
+  customer = {
+    name: '',
+    phone: '',
+    notes: ''
+  };
+
   bookingConfirmed = false;
   confirmedBarberName = '';
 
-  ngOnInit(): void { this.generateBookingDates(); this.createDemoBookings(); }
+  ngOnInit(): void {
+    this.buildCalendar();
+
+    // The reference design opens with these choices selected.
+    this.selectedService = this.services[0];
+    this.selectedBarber = this.barbers[0];
+    this.setSelectedDate(new Date(2026, 8, 17));
+    this.generateAvailableTimes();
+    this.selectedTime = '6:00 PM';
+  }
 
   selectService(service: Service): void {
     this.selectedService = service;
     this.selectedTime = null;
-    if (this.selectedDate && this.selectedBarber) this.generateAvailableTimes();
+    this.generateAvailableTimes();
   }
 
   selectBarber(barber: Barber | 'any'): void {
     this.selectedBarber = barber;
     this.selectedTime = null;
-    if (this.selectedDate && this.selectedService) this.generateAvailableTimes();
+    this.generateAvailableTimes();
   }
 
-  generateBookingDates(): void {
-    const today = new Date();
-    this.bookingDates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      this.bookingDates.push({
+  selectCalendarDay(cell: CalendarCell): void {
+    if (!cell.date) return;
+    this.setSelectedDate(cell.date);
+    this.selectedTime = null;
+    this.generateAvailableTimes();
+  }
+
+  previousMonth(): void {
+    this.calendarDate = new Date(
+      this.calendarDate.getFullYear(),
+      this.calendarDate.getMonth() - 1,
+      1
+    );
+    this.buildCalendar();
+  }
+
+  nextMonth(): void {
+    this.calendarDate = new Date(
+      this.calendarDate.getFullYear(),
+      this.calendarDate.getMonth() + 1,
+      1
+    );
+    this.buildCalendar();
+  }
+
+  private buildCalendar(): void {
+    const year = this.calendarDate.getFullYear();
+    const month = this.calendarDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const cells: CalendarCell[] = [];
+
+    for (let i = 0; i < firstDay; i++) {
+      cells.push({ date: null, dayNumber: null, fullDate: null });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      cells.push({
         date,
-        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-        dateNumber: date.getDate(),
-        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        dayNumber: day,
         fullDate: this.formatDate(date)
       });
     }
+
+    this.calendarCells = cells;
   }
 
-  selectDate(date: BookingDate): void {
-    this.selectedDate = date;
-    this.selectedTime = null;
-    if (this.selectedService && this.selectedBarber) this.generateAvailableTimes();
+  private setSelectedDate(date: Date): void {
+    this.selectedDate = {
+      date,
+      day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      dateNumber: date.getDate(),
+      month: date.toLocaleDateString('en-US', { month: 'short' }),
+      fullDate: this.formatDate(date)
+    };
   }
 
   generateAvailableTimes(): void {
-    if (!this.selectedService || !this.selectedBarber || !this.selectedDate) { this.availableTimes = []; return; }
-    const slots: string[] = [];
-    const openingMinutes = 10 * 60;
-    const closingMinutes = 22 * 60;
-    const slotInterval = 30;
-    const serviceDuration = this.selectedService.duration;
-    for (let minutes = openingMinutes; minutes + serviceDuration <= closingMinutes; minutes += slotInterval) {
-      const time = this.minutesToTime(minutes);
-      if (this.isTimeAvailable(time)) slots.push(time);
+    if (!this.selectedService || !this.selectedBarber || !this.selectedDate) {
+      this.availableTimes = [];
+      return;
     }
+
+    // Matches the reference: morning/afternoon block, then evening block.
+    const windows = [
+      { start: 10 * 60, end: 15 * 60 },
+      { start: 17 * 60, end: 19 * 60 + 30 }
+    ];
+
+    const slots: string[] = [];
+    const interval = 30;
+    const duration = this.selectedService.duration;
+
+    windows.forEach(window => {
+      for (
+        let minutes = window.start;
+        minutes + duration <= window.end;
+        minutes += interval
+      ) {
+        const time = this.minutesToTime(minutes);
+        if (this.isTimeAvailable(time)) slots.push(time);
+      }
+    });
+
     this.availableTimes = slots;
   }
 
   isTimeAvailable(time: string): boolean {
-    if (!this.selectedDate || !this.selectedService || !this.selectedBarber) return false;
-    if (this.selectedBarber === 'any') {
-      return this.barbers.some(barber => this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.selectedService!.duration));
+    if (!this.selectedDate || !this.selectedService || !this.selectedBarber) {
+      return false;
     }
-    return this.isBarberAvailable(this.selectedBarber.id, time, this.selectedDate.fullDate, this.selectedService.duration);
+
+    if (this.selectedBarber === 'any') {
+      return this.barbers.some(barber =>
+        this.isBarberAvailable(
+          barber.id,
+          time,
+          this.selectedDate!.fullDate,
+          this.selectedService!.duration
+        )
+      );
+    }
+
+    return this.isBarberAvailable(
+      this.selectedBarber.id,
+      time,
+      this.selectedDate.fullDate,
+      this.selectedService.duration
+    );
   }
 
-  isBarberAvailable(barberId: number, requestedTime: string, date: string, duration: number): boolean {
+  isBarberAvailable(
+    barberId: number,
+    requestedTime: string,
+    date: string,
+    duration: number
+  ): boolean {
     const requestedStart = this.timeToMinutes(requestedTime);
     const requestedEnd = requestedStart + duration;
-    const barberBookings = this.bookedAppointments.filter(booking => booking.barberId === barberId && booking.date === date);
+
+    const barberBookings = this.bookedAppointments.filter(
+      booking => booking.barberId === barberId && booking.date === date
+    );
+
     return !barberBookings.some(booking => {
       const bookingStart = this.timeToMinutes(booking.startTime);
       const bookingEnd = bookingStart + booking.duration;
@@ -110,46 +264,91 @@ export class BookingComponent implements OnInit {
     });
   }
 
-  selectTime(time: string): void { this.selectedTime = time; }
+  selectTime(time: string): void {
+    this.selectedTime = time;
+  }
 
   confirmBooking(): void {
     if (!this.canConfirmBooking()) return;
+
     let assignedBarber: Barber | null = null;
+
     if (this.selectedBarber === 'any') {
-      assignedBarber = this.barbers.find(barber => this.isBarberAvailable(barber.id, this.selectedTime!, this.selectedDate!.fullDate, this.selectedService!.duration)) || null;
+      assignedBarber = this.barbers.find(barber =>
+        this.isBarberAvailable(
+          barber.id,
+          this.selectedTime!,
+          this.selectedDate!.fullDate,
+          this.selectedService!.duration
+        )
+      ) || null;
     } else {
       assignedBarber = this.selectedBarber;
     }
+
     if (!assignedBarber) return;
-    this.bookedAppointments.push({ barberId: assignedBarber.id, date: this.selectedDate!.fullDate, startTime: this.selectedTime!, duration: this.selectedService!.duration });
+
+    this.bookedAppointments.push({
+      barberId: assignedBarber.id,
+      date: this.selectedDate!.fullDate,
+      startTime: this.selectedTime!,
+      duration: this.selectedService!.duration
+    });
+
     this.confirmedBarberName = assignedBarber.name;
     this.bookingConfirmed = true;
   }
 
   canConfirmBooking(): boolean {
-    return !!(this.selectedService && this.selectedBarber && this.selectedDate && this.selectedTime && this.customer.name.trim() && this.customer.phone.trim());
+    return !!(
+      this.selectedService &&
+      this.selectedBarber &&
+      this.selectedDate &&
+      this.selectedTime &&
+      this.customer.name.trim() &&
+      this.customer.phone.trim()
+    );
+  }
+
+  get monthLabel(): string {
+    return this.calendarDate.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    });
   }
 
   get barberName(): string {
-    if (!this.selectedBarber) return 'Not selected';
-    if (this.selectedBarber === 'any') return 'Any Available Barber';
+    if (!this.selectedBarber) return 'Select barber';
+    if (this.selectedBarber === 'any') return 'Any Barber';
     return this.selectedBarber.name;
+  }
+
+  get barberImage(): string {
+    if (!this.selectedBarber || this.selectedBarber === 'any') return '';
+    return this.selectedBarber.image;
+  }
+
+  get barberRating(): number | null {
+    if (!this.selectedBarber || this.selectedBarber === 'any') return null;
+    return this.selectedBarber.rating;
+  }
+
+  get barberExperience(): string {
+    if (!this.selectedBarber || this.selectedBarber === 'any') return '';
+    return this.selectedBarber.experience;
   }
 
   get bookingEndTime(): string {
     if (!this.selectedTime || !this.selectedService) return '';
-    return this.minutesToTime(this.timeToMinutes(this.selectedTime) + this.selectedService.duration);
+    return this.minutesToTime(
+      this.timeToMinutes(this.selectedTime) + this.selectedService.duration
+    );
   }
 
-  get currentStep(): number {
-    if (!this.selectedService) return 1;
-    if (!this.selectedBarber) return 2;
-    if (!this.selectedDate || !this.selectedTime) return 3;
-    if (!this.customer.name.trim() || !this.customer.phone.trim()) return 4;
-    return 5;
+  closeSuccess(): void {
+    this.bookingConfirmed = false;
+    this.generateAvailableTimes();
   }
-
-  closeSuccess(): void { this.bookingConfirmed = false; }
 
   private formatDate(date: Date): string {
     const year = date.getFullYear();
@@ -161,8 +360,10 @@ export class BookingComponent implements OnInit {
   private timeToMinutes(time: string): number {
     const [timePart, modifier] = time.split(' ');
     let [hours, minutes] = timePart.split(':').map(Number);
+
     if (modifier === 'PM' && hours !== 12) hours += 12;
     if (modifier === 'AM' && hours === 12) hours = 0;
+
     return hours * 60 + minutes;
   }
 
@@ -171,17 +372,7 @@ export class BookingComponent implements OnInit {
     const minutes = totalMinutes % 60;
     const modifier = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12 || 12;
-    return `${hours}:${minutes.toString().padStart(2, '0')} ${modifier}`;
-  }
 
-  private createDemoBookings(): void {
-    if (!this.bookingDates.length) return;
-    const date = this.bookingDates[0].fullDate;
-    this.bookedAppointments = [
-      { barberId: 1, date, startTime: '11:00 AM', duration: 30 },
-      { barberId: 1, date, startTime: '2:00 PM', duration: 60 },
-      { barberId: 2, date, startTime: '12:00 PM', duration: 30 },
-      { barberId: 3, date, startTime: '5:00 PM', duration: 45 }
-    ];
+    return `${hours}:${minutes.toString().padStart(2, '0')} ${modifier}`;
   }
 }
