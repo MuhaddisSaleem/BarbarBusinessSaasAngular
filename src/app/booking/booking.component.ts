@@ -8,6 +8,7 @@ interface BookingDate { date: Date; day: string; dateNumber: number; month: stri
 interface CalendarCell { date: Date | null; dayNumber: number | null; fullDate: string | null; }
 interface BookedAppointment { barberId: number; date: string; startTime: string; duration: number; }
 interface BookingPerson { id: number; label: string; selectedServices: Service[]; selectedBarber: Barber | 'any' | null; }
+interface ConfirmedAssignment { person: string; barber: string; time: string; }
 
 @Component({
   selector: 'app-booking',
@@ -44,14 +45,13 @@ export class BookingComponent implements OnInit {
   ];
 
   bookingMode: 'single' | 'group' = 'single';
+  groupStrategy: 'parallel' | 'sequential' = 'parallel';
   participants: BookingPerson[] = [this.createPerson(1, 'You')];
   activeParticipantIndex = 0;
   private nextPersonId = 2;
 
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
-
-  // Always start the booking calendar on the user's current month.
   calendarDate = this.startOfMonth(new Date());
   calendarCells: CalendarCell[] = [];
   availableTimes: string[] = [];
@@ -59,7 +59,7 @@ export class BookingComponent implements OnInit {
 
   customer = { name: '', phone: '', notes: '' };
   bookingConfirmed = false;
-  confirmedAssignments: { person: string; barber: string }[] = [];
+  confirmedAssignments: ConfirmedAssignment[] = [];
 
   ngOnInit(): void { this.buildCalendar(); }
 
@@ -73,17 +73,35 @@ export class BookingComponent implements OnInit {
     this.selectedTime = null;
 
     if (mode === 'group') {
-      if (this.participants.length === 1) this.participants.push(this.createPerson(this.nextPersonId++, 'Person 2'));
+      if (this.participants.length === 1) {
+        this.participants.push(this.createPerson(this.nextPersonId++, 'Person 2'));
+      }
     } else {
       this.participants = [this.participants[0]];
       this.activeParticipantIndex = 0;
+      this.groupStrategy = 'parallel';
     }
+
+    this.generateAvailableTimes();
+  }
+
+  setGroupStrategy(strategy: 'parallel' | 'sequential'): void {
+    if (this.groupStrategy === strategy) return;
+    this.groupStrategy = strategy;
+    this.selectedTime = null;
+    this.participants.forEach(person => person.selectedBarber = null);
     this.generateAvailableTimes();
   }
 
   addPerson(): void {
     if (this.participants.length >= 4) return;
-    this.participants.push(this.createPerson(this.nextPersonId++, `Person ${this.participants.length + 1}`));
+    const person = this.createPerson(this.nextPersonId++, `Person ${this.participants.length + 1}`);
+
+    if (this.groupStrategy === 'sequential' && this.participants[0]?.selectedBarber) {
+      person.selectedBarber = this.participants[0].selectedBarber;
+    }
+
+    this.participants.push(person);
     this.activeParticipantIndex = this.participants.length - 1;
     this.selectedTime = null;
     this.generateAvailableTimes();
@@ -102,6 +120,7 @@ export class BookingComponent implements OnInit {
 
   toggleService(service: Service): void {
     const person = this.activeParticipant;
+
     if (this.isServiceSelected(service.id)) {
       person.selectedServices = person.selectedServices.filter(item => item.id !== service.id);
     } else if (service.id === 3) {
@@ -112,6 +131,7 @@ export class BookingComponent implements OnInit {
     } else {
       person.selectedServices.push(service);
     }
+
     this.selectedTime = null;
     this.generateAvailableTimes();
   }
@@ -125,7 +145,12 @@ export class BookingComponent implements OnInit {
   }
 
   selectBarber(barber: Barber | 'any'): void {
-    this.activeParticipant.selectedBarber = barber;
+    if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
+      this.participants.forEach(person => person.selectedBarber = barber);
+    } else {
+      this.activeParticipant.selectedBarber = barber;
+    }
+
     this.selectedTime = null;
     this.generateAvailableTimes();
   }
@@ -194,19 +219,23 @@ export class BookingComponent implements OnInit {
     const windows = [{ start: 10 * 60, end: 15 * 60 }, { start: 17 * 60, end: 19 * 60 + 30 }];
     const slots: string[] = [];
     const interval = 30;
-    const longestDuration = Math.max(...this.participants.map(person => this.getPersonDuration(person)));
+    const requiredDuration = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
+      ? this.participants.reduce((total, person) => total + this.getPersonDuration(person), 0)
+      : Math.max(...this.participants.map(person => this.getPersonDuration(person)));
+
     const today = this.startOfDay(new Date());
     const selectedDay = this.startOfDay(this.selectedDate.date);
-    const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
     windows.forEach(window => {
-      for (let minutes = window.start; minutes + longestDuration <= window.end; minutes += interval) {
-        // If booking today, don't show time slots that have already started.
+      for (let minutes = window.start; minutes + requiredDuration <= window.end; minutes += interval) {
         if (selectedDay.getTime() === today.getTime() && minutes <= nowMinutes) continue;
         const time = this.minutesToTime(minutes);
         if (this.resolveBarberAssignments(time)) slots.push(time);
       }
     });
+
     this.availableTimes = slots;
   }
 
@@ -218,17 +247,21 @@ export class BookingComponent implements OnInit {
     if (!assignments) return;
 
     this.confirmedAssignments = [];
-    this.participants.forEach(person => {
+    this.participants.forEach((person, index) => {
       const barber = assignments.get(person.id);
       if (!barber) return;
+      const personStartTime = this.getPersonBookingTime(index);
+
       this.bookedAppointments.push({
         barberId: barber.id,
         date: this.selectedDate!.fullDate,
-        startTime: this.selectedTime!,
+        startTime: personStartTime,
         duration: this.getPersonDuration(person)
       });
-      this.confirmedAssignments.push({ person: person.label, barber: barber.name });
+
+      this.confirmedAssignments.push({ person: person.label, barber: barber.name, time: personStartTime });
     });
+
     this.bookingConfirmed = true;
   }
 
@@ -269,8 +302,23 @@ export class BookingComponent implements OnInit {
 
   get bookingEndTime(): string {
     if (!this.selectedTime || !this.participants.some(person => person.selectedServices.length)) return '';
-    const longestDuration = Math.max(...this.participants.map(person => this.getPersonDuration(person)));
-    return this.minutesToTime(this.timeToMinutes(this.selectedTime) + longestDuration);
+
+    const duration = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
+      ? this.participants.reduce((total, person) => total + this.getPersonDuration(person), 0)
+      : Math.max(...this.participants.map(person => this.getPersonDuration(person)));
+
+    return this.minutesToTime(this.timeToMinutes(this.selectedTime) + duration);
+  }
+
+  getPersonBookingTime(index: number): string {
+    if (!this.selectedTime) return '';
+    if (this.bookingMode !== 'group' || this.groupStrategy !== 'sequential') return this.selectedTime;
+
+    const minutesBefore = this.participants
+      .slice(0, index)
+      .reduce((total, person) => total + this.getPersonDuration(person), 0);
+
+    return this.minutesToTime(this.timeToMinutes(this.selectedTime) + minutesBefore);
   }
 
   getPersonPrice(person: BookingPerson): number {
@@ -303,6 +351,42 @@ export class BookingComponent implements OnInit {
 
   private resolveBarberAssignments(time: string): Map<number, Barber> | null {
     if (!this.selectedDate || this.isPastDate(this.selectedDate.date) || !this.allParticipantsReady) return null;
+
+    if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
+      return this.resolveSequentialBarber(time);
+    }
+
+    return this.resolveParallelBarbers(time);
+  }
+
+  private resolveSequentialBarber(time: string): Map<number, Barber> | null {
+    if (!this.selectedDate) return null;
+
+    const totalDuration = this.participants.reduce((total, person) => total + this.getPersonDuration(person), 0);
+    const firstChoice = this.participants[0].selectedBarber;
+    if (!firstChoice) return null;
+
+    let barber: Barber | undefined;
+
+    if (firstChoice === 'any') {
+      barber = this.barbers.find(candidate =>
+        this.isBarberAvailable(candidate.id, time, this.selectedDate!.fullDate, totalDuration)
+      );
+    } else {
+      barber = firstChoice;
+      if (!this.isBarberAvailable(barber.id, time, this.selectedDate.fullDate, totalDuration)) return null;
+    }
+
+    if (!barber) return null;
+
+    const assignments = new Map<number, Barber>();
+    this.participants.forEach(person => assignments.set(person.id, barber!));
+    return assignments;
+  }
+
+  private resolveParallelBarbers(time: string): Map<number, Barber> | null {
+    if (!this.selectedDate) return null;
+
     const assignments = new Map<number, Barber>();
     const usedBarberIds = new Set<number>();
 
@@ -325,6 +409,7 @@ export class BookingComponent implements OnInit {
       assignments.set(person.id, availableBarber);
       usedBarberIds.add(availableBarber.id);
     }
+
     return assignments;
   }
 
@@ -332,6 +417,7 @@ export class BookingComponent implements OnInit {
     const requestedStart = this.timeToMinutes(requestedTime);
     const requestedEnd = requestedStart + duration;
     const barberBookings = this.bookedAppointments.filter(booking => booking.barberId === barberId && booking.date === date);
+
     return !barberBookings.some(booking => {
       const bookingStart = this.timeToMinutes(booking.startTime);
       return requestedStart < bookingStart + booking.duration && requestedEnd > bookingStart;
