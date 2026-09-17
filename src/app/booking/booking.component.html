@@ -2,11 +2,21 @@
   <section class="booking-stepper">
     <div class="page-shell">
       <div class="steps">
-        <div class="step" [class.active]="!selectedServices.length"><div class="step-circle">1</div><span>Select Service</span></div>
-        <div class="step" [class.active]="!!selectedServices.length && !allParticipantsReady"><div class="step-circle">2</div><span>Choose Barber</span></div>
-        <div class="step" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)"><div class="step-circle">3</div><span>Pick Date &amp; Time</span></div>
-        <div class="step" [class.active]="!!selectedTime && !canConfirmBooking()"><div class="step-circle">4</div><span>Your Details</span></div>
-        <div class="step" [class.active]="canConfirmBooking() || bookingConfirmed"><div class="step-circle">5</div><span>Confirm Booking</span></div>
+        <div class="step" [class.active]="!selectedServices.length" [class.completed]="!!selectedServices.length">
+          <div class="step-circle">{{ selectedServices.length ? '✓' : '1' }}</div><span>Select Service</span>
+        </div>
+        <div class="step" [class.active]="!!selectedServices.length && !allParticipantsReady" [class.completed]="allParticipantsReady">
+          <div class="step-circle">{{ allParticipantsReady ? '✓' : '2' }}</div><span>Choose Barber</span>
+        </div>
+        <div class="step" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)" [class.completed]="!!selectedDate && !!selectedTime">
+          <div class="step-circle">{{ selectedDate && selectedTime ? '✓' : '3' }}</div><span>Pick Date &amp; Time</span>
+        </div>
+        <div class="step" [class.active]="!!selectedTime && (!customer.name.trim() || !customer.phone.trim())" [class.completed]="!!selectedTime && !!customer.name.trim() && !!customer.phone.trim()">
+          <div class="step-circle">{{ selectedTime && customer.name.trim() && customer.phone.trim() ? '✓' : '4' }}</div><span>Your Details</span>
+        </div>
+        <div class="step" [class.active]="canConfirmBooking() && !bookingConfirmed" [class.completed]="bookingConfirmed">
+          <div class="step-circle">{{ bookingConfirmed ? '✓' : '5' }}</div><span>Confirm Booking</span>
+        </div>
       </div>
     </div>
   </section>
