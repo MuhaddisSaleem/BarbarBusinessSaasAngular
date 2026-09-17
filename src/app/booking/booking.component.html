@@ -161,7 +161,7 @@
 
             <div class="no-times" *ngIf="!availableTimes.length && !allParticipantsReady">Complete services and barber selection for {{ bookingMode === 'group' ? 'every person' : 'your appointment' }} first.</div>
             <div class="no-times" *ngIf="!availableTimes.length && allParticipantsReady && !selectedDate">Select a date to see available times.</div>
-            <div class="no-times" *ngIf="!availableTimes.length && allParticipantsReady && selectedDate">
+            <div class="no-times" style="color: #ff4d4f;" *ngIf="!availableTimes.length && allParticipantsReady && selectedDate">
               {{ groupStrategy === 'sequential' ? 'The selected barber cannot fit all people on this date, even with alternative time suggestions. Try another date or barber.' : 'No simultaneous availability for these selections on this date. Try another date or barber.' }}
             </div>
           </div>
