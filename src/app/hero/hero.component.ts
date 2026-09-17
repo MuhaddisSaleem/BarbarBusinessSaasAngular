@@ -5,14 +5,20 @@ import { Component } from '@angular/core';
   standalone: true,
   template: `
     <section class="royal-hero" id="home">
-      <div class="hero-shade"></div>
+      <div class="hero-photo" aria-hidden="true"></div>
+      <div class="hero-overlay" aria-hidden="true"></div>
 
       <div class="hero-shell">
         <header class="site-header">
           <a class="brand" href="#home" aria-label="Royal Barbers home">
             <span class="brand-mark" aria-hidden="true">
-              <span class="crown">♛</span>
-              <span class="scissors">✂</span>
+              <svg viewBox="0 0 64 72" role="img">
+                <path d="M15 17 22 8l10 9L42 8l7 9-4 9H19l-4-9Z" fill="currentColor"/>
+                <circle cx="22" cy="8" r="2.8" fill="currentColor"/><circle cx="42" cy="8" r="2.8" fill="currentColor"/>
+                <path d="M17 31 47 63M47 31 17 63" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="13" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="51" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
+              </svg>
             </span>
             <span class="brand-copy">
               <strong>ROYAL BARBERS</strong>
@@ -37,7 +43,7 @@ import { Component } from '@angular/core';
             <h1>ROYAL BARBERS</h1>
 
             <div class="location-row">
-              <span class="pin" aria-hidden="true">●</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.4A2.4 2.4 0 1 1 12 6.6a2.4 2.4 0 0 1 0 4.8Z" fill="currentColor"/></svg>
               <span>Bahawalpur, Pakistan</span>
             </div>
 
@@ -45,22 +51,28 @@ import { Component } from '@angular/core';
 
             <div class="hero-features">
               <div class="hero-feature">
-                <span class="feature-icon">★</span>
+                <span class="feature-icon star-icon" aria-hidden="true">★</span>
                 <div><strong>4.9</strong><small>(120+ reviews)</small></div>
               </div>
 
               <div class="hero-feature">
-                <span class="feature-icon clock">◷</span>
+                <span class="feature-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v6l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </span>
                 <div><strong>Open until</strong><small>10:00 PM</small></div>
               </div>
 
               <div class="hero-feature">
-                <span class="feature-icon">♟</span>
+                <span class="feature-icon" aria-hidden="true">
+                  <svg viewBox="0 0 28 24"><circle cx="9" cy="7" r="4" fill="currentColor"/><circle cx="20" cy="7" r="4" fill="currentColor"/><path d="M2 21v-3c0-4 3-7 7-7s7 3 7 7v3H2Zm12 0v-3c0-2-.6-4-1.8-5.5A7.2 7.2 0 0 1 20 11c4 0 7 3 7 7v3H14Z" fill="currentColor"/></svg>
+                </span>
                 <div><strong>Professional</strong><small>Barbers</small></div>
               </div>
 
               <div class="hero-feature">
-                <span class="feature-icon shield">✓</span>
+                <span class="feature-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 28"><path d="M12 2 21 6v7c0 6-3.7 10.4-9 13-5.3-2.6-9-7-9-13V6l9-4Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m8 14 2.5 2.5L16.5 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
                 <div><strong>Clean &amp; Safe</strong><small>Environment</small></div>
               </div>
             </div>
@@ -70,94 +82,92 @@ import { Component } from '@angular/core';
     </section>
   `,
   styles: [`
-    :host { display: block; }
+    :host { display: block; background: #050708; }
+    * { box-sizing: border-box; }
 
     .royal-hero {
-      min-height: 458px;
       position: relative;
+      width: 100%;
+      height: 420px;
+      min-height: 420px;
       overflow: hidden;
       color: #fff;
-      background:
-        linear-gradient(90deg, rgba(4,7,8,.96) 0%, rgba(4,7,8,.84) 34%, rgba(4,7,8,.30) 67%, rgba(4,7,8,.48) 100%),
-        url('https://images.pexels.com/photos/7697268/pexels-photo-7697268.jpeg?auto=compress&cs=tinysrgb&w=1800') center 42% / cover no-repeat;
+      background: #080b0c;
       border-bottom: 1px solid rgba(255,255,255,.08);
     }
 
-    .hero-shade {
+    .hero-photo {
       position: absolute;
       inset: 0;
-      pointer-events: none;
+      background-image: url('https://images.pexels.com/photos/19664876/pexels-photo-19664876.jpeg?auto=compress&cs=tinysrgb&w=1920');
+      background-size: cover;
+      background-position: 64% 42%;
+      filter: saturate(.72) contrast(1.08) brightness(.72);
+      transform: scale(1.015);
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
       background:
-        radial-gradient(circle at 54% 55%, transparent 0%, transparent 24%, rgba(0,0,0,.14) 72%),
-        linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.28));
+        linear-gradient(90deg, rgba(5,8,9,.97) 0%, rgba(5,8,9,.90) 24%, rgba(5,8,9,.66) 43%, rgba(5,8,9,.14) 65%, rgba(5,8,9,.20) 100%),
+        linear-gradient(180deg, rgba(0,0,0,.12) 0%, rgba(0,0,0,.02) 50%, rgba(0,0,0,.42) 100%);
+      pointer-events: none;
     }
 
     .hero-shell {
-      width: min(100%, 1560px);
-      min-height: 458px;
-      margin: 0 auto;
-      padding: 0 46px;
       position: relative;
-      z-index: 1;
+      z-index: 2;
+      width: min(100%, 1290px);
+      height: 100%;
+      margin: 0 auto;
+      padding: 0 38px;
     }
 
     .site-header {
-      height: 78px;
+      height: 72px;
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      gap: 34px;
+      column-gap: 36px;
     }
 
     .brand {
       justify-self: start;
       display: inline-flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
       color: #fff;
       text-decoration: none;
     }
 
     .brand-mark {
-      width: 48px;
-      height: 58px;
-      position: relative;
-      display: grid;
-      place-items: center;
-      color: #f2bf5a;
+      width: 42px;
+      height: 52px;
+      flex: 0 0 42px;
+      color: #f4bd57;
     }
 
-    .brand-mark .scissors {
-      font-size: 38px;
-      line-height: 1;
-      transform: rotate(-7deg);
-    }
-
-    .brand-mark .crown {
-      position: absolute;
-      top: -1px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 18px;
-      line-height: 1;
-    }
+    .brand-mark svg { width: 100%; height: 100%; display: block; overflow: visible; }
 
     .brand-copy strong {
       display: block;
       font-family: Georgia, 'Times New Roman', serif;
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 4.5px;
+      font-size: 16px;
+      line-height: 1;
+      font-weight: 500;
+      letter-spacing: 4.2px;
       white-space: nowrap;
     }
 
     .brand-copy small {
       display: block;
-      margin-top: 7px;
-      color: #c5c6c4;
-      font-size: 7px;
+      margin-top: 8px;
+      color: #d0d0cd;
+      font-size: 6px;
+      line-height: 1;
       font-weight: 500;
-      letter-spacing: 4px;
+      letter-spacing: 3.6px;
       white-space: nowrap;
     }
 
@@ -165,130 +175,141 @@ import { Component } from '@angular/core';
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 39px;
+      gap: 32px;
     }
 
     .main-nav a {
+      position: relative;
+      padding: 8px 0;
       color: #f4f4f2;
       text-decoration: none;
-      font-size: 13px;
+      font-size: 11px;
+      line-height: 1;
       font-weight: 500;
       transition: color .18s ease;
     }
 
-    .main-nav a:hover { color: #f2bf5a; }
+    .main-nav a::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      right: 50%;
+      bottom: 1px;
+      height: 1px;
+      background: #f4bd57;
+      transition: left .18s ease, right .18s ease;
+    }
+
+    .main-nav a:hover { color: #f4bd57; }
+    .main-nav a:hover::after { left: 0; right: 0; }
 
     .book-button {
       justify-self: end;
-      min-width: 165px;
-      padding: 13px 20px;
-      border: 1px solid #f5cb72;
-      border-radius: 9px;
-      background: linear-gradient(180deg, #ffd77c 0%, #e8ad45 100%);
-      box-shadow: 0 5px 18px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.38);
+      min-width: 151px;
+      padding: 11px 18px;
+      border: 1px solid #f4ca71;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffd879 0%, #e7ab42 100%);
+      box-shadow: 0 5px 16px rgba(0,0,0,.32), inset 0 1px rgba(255,255,255,.38);
       color: #111;
       text-align: center;
       text-decoration: none;
-      font-size: 13px;
+      font-size: 11px;
+      line-height: 1;
       font-weight: 800;
     }
 
     .hero-content {
-      min-height: 380px;
+      height: calc(100% - 72px);
       display: flex;
-      align-items: center;
-      padding: 20px 0 31px;
+      align-items: flex-start;
+      padding-top: 50px;
     }
 
-    .hero-copy { width: min(100%, 690px); }
+    .hero-copy { width: 620px; max-width: 55%; }
 
     .eyebrow {
       display: block;
-      margin-bottom: 18px;
-      color: #f2bf5a;
-      font-size: 11px;
+      margin-bottom: 17px;
+      color: #e9b654;
+      font-size: 9px;
+      line-height: 1;
       font-weight: 700;
-      letter-spacing: 5px;
+      letter-spacing: 4.7px;
     }
 
     h1 {
       margin: 0;
-      font-size: clamp(46px, 5.2vw, 74px);
-      line-height: .98;
+      color: #fff;
+      font-size: clamp(46px, 4.15vw, 62px);
+      line-height: .96;
       font-weight: 900;
-      letter-spacing: 1.5px;
-      text-shadow: 0 3px 15px rgba(0,0,0,.28);
+      letter-spacing: .2px;
+      text-shadow: 0 3px 16px rgba(0,0,0,.38);
     }
 
     .location-row {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-top: 20px;
-      color: #f2f2f0;
-      font-size: 15px;
+      gap: 9px;
+      margin-top: 16px;
+      color: #f3f3f1;
+      font-size: 12px;
+      line-height: 1;
     }
 
-    .pin {
-      width: 19px;
-      height: 25px;
-      display: grid;
-      place-items: center;
-      color: #f2bf5a;
-      font-size: 21px;
-      transform: scaleX(.75);
+    .location-row svg {
+      width: 17px;
+      height: 21px;
+      flex: 0 0 17px;
+      color: #f1b94e;
     }
 
     .tagline {
-      margin: 20px 0 0;
+      margin: 18px 0 0;
       color: #f3f3f1;
-      font-size: 18px;
+      font-size: 15px;
+      line-height: 1.2;
       font-weight: 400;
     }
 
     .hero-features {
       display: flex;
       align-items: stretch;
-      margin-top: 31px;
+      margin-top: 28px;
     }
 
     .hero-feature {
-      min-width: 135px;
-      min-height: 45px;
-      padding: 0 24px;
+      min-width: 120px;
+      min-height: 44px;
+      padding: 0 20px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 11px;
       border-right: 1px solid rgba(255,255,255,.24);
     }
 
     .hero-feature:first-child { padding-left: 0; }
-    .hero-feature:last-child { border-right: 0; }
+    .hero-feature:last-child { padding-right: 0; border-right: 0; }
 
     .feature-icon {
-      color: #f2bf5a;
-      font-size: 23px;
-      line-height: 1;
-    }
-
-    .feature-icon.clock { font-size: 27px; }
-
-    .feature-icon.shield {
-      width: 24px;
-      height: 27px;
+      width: 25px;
+      height: 25px;
+      flex: 0 0 25px;
       display: grid;
       place-items: center;
-      border: 2px solid #f2bf5a;
-      border-radius: 6px 6px 10px 10px;
-      font-size: 12px;
+      color: #f3bd55;
     }
 
+    .feature-icon svg { width: 100%; height: 100%; display: block; }
+    .star-icon { font-size: 25px; line-height: 1; }
+
     .hero-feature strong,
-    .hero-feature small { display: block; }
+    .hero-feature small { display: block; white-space: nowrap; }
 
     .hero-feature strong {
-      color: #f4f4f2;
-      font-size: 13px;
+      color: #f5f5f3;
+      font-size: 11px;
       line-height: 1.25;
       font-weight: 600;
     }
@@ -296,41 +317,62 @@ import { Component } from '@angular/core';
     .hero-feature small {
       margin-top: 3px;
       color: #d1d2d0;
-      font-size: 10px;
+      font-size: 8px;
       line-height: 1.25;
     }
 
-    @media (max-width: 1050px) {
+    @media (min-width: 1500px) {
+      .royal-hero { height: 460px; min-height: 460px; }
+      .hero-shell { width: min(100%, 1420px); padding: 0 42px; }
+      .site-header { height: 78px; }
+      .hero-content { height: calc(100% - 78px); padding-top: 56px; }
+      .hero-copy { width: 680px; }
+      h1 { font-size: 68px; }
+      .eyebrow { font-size: 10px; }
+      .tagline { font-size: 17px; }
+    }
+
+    @media (max-width: 1100px) {
       .hero-shell { padding: 0 28px; }
       .site-header { grid-template-columns: 1fr auto; }
       .main-nav { display: none; }
-      .hero-features { flex-wrap: wrap; gap: 18px 0; }
-      .hero-feature { min-width: 25%; }
+      .hero-copy { max-width: 65%; }
+      .hero-photo { background-position: 58% center; }
+      .hero-features { flex-wrap: wrap; max-width: 570px; }
     }
 
-    @media (max-width: 720px) {
-      .royal-hero, .hero-shell { min-height: 500px; }
+    @media (max-width: 760px) {
+      .royal-hero { height: 560px; min-height: 560px; }
+      .hero-photo { background-position: 68% center; }
+      .hero-overlay {
+        background:
+          linear-gradient(90deg, rgba(4,7,8,.94), rgba(4,7,8,.56)),
+          linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.68));
+      }
       .hero-shell { padding: 0 18px; }
-      .site-header { height: 72px; }
-      .brand-copy strong { font-size: 14px; letter-spacing: 2.5px; }
-      .brand-copy small { font-size: 6px; letter-spacing: 2.2px; }
-      .brand-mark { width: 38px; }
-      .brand-mark .scissors { font-size: 31px; }
+      .site-header { height: 70px; }
+      .brand-mark { width: 36px; height: 45px; flex-basis: 36px; }
+      .brand-copy strong { font-size: 13px; letter-spacing: 2.6px; }
+      .brand-copy small { font-size: 5.5px; letter-spacing: 2.1px; }
       .book-button { display: none; }
-      .hero-content { min-height: 420px; align-items: flex-end; padding-bottom: 38px; }
-      h1 { font-size: 45px; }
-      .eyebrow { font-size: 9px; letter-spacing: 3.5px; }
-      .tagline { font-size: 15px; }
-      .hero-features { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 18px 0; }
-      .hero-feature { min-width: 0; padding: 0 14px; border-right: 0; }
+      .hero-content { height: calc(100% - 70px); align-items: flex-end; padding: 0 0 34px; }
+      .hero-copy { width: 100%; max-width: 100%; }
+      .eyebrow { font-size: 8px; letter-spacing: 3.5px; }
+      h1 { font-size: 43px; }
+      .location-row { font-size: 12px; }
+      .tagline { font-size: 14px; }
+      .hero-features { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 17px 0; margin-top: 25px; }
+      .hero-feature { min-width: 0; padding: 0 13px; border-right: 0; }
       .hero-feature:nth-child(odd) { padding-left: 0; border-right: 1px solid rgba(255,255,255,.2); }
+      .hero-feature strong { font-size: 10px; }
+      .hero-feature small { font-size: 8px; }
     }
 
-    @media (max-width: 430px) {
+    @media (max-width: 420px) {
+      .royal-hero { height: 540px; min-height: 540px; }
+      h1 { font-size: 37px; }
       .brand-copy strong { font-size: 12px; }
-      .brand-copy small { letter-spacing: 1.7px; }
-      h1 { font-size: 39px; }
-      .location-row { font-size: 13px; }
+      .tagline { font-size: 13px; }
     }
   `]
 })
