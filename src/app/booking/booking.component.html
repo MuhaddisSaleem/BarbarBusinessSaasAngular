@@ -2,11 +2,11 @@
   <section class="booking-stepper">
     <div class="page-shell">
       <div class="steps">
-        <div class="step active"><div class="step-circle">1</div><span>Select Service</span></div>
-        <div class="step"><div class="step-circle">2</div><span>Choose Barber</span></div>
-        <div class="step"><div class="step-circle">3</div><span>Pick Date &amp; Time</span></div>
-        <div class="step"><div class="step-circle">4</div><span>Your Details</span></div>
-        <div class="step"><div class="step-circle">5</div><span>Confirm Booking</span></div>
+        <div class="step" [class.active]="!selectedServices.length"><div class="step-circle">1</div><span>Select Service</span></div>
+        <div class="step" [class.active]="!!selectedServices.length && !allParticipantsReady"><div class="step-circle">2</div><span>Choose Barber</span></div>
+        <div class="step" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)"><div class="step-circle">3</div><span>Pick Date &amp; Time</span></div>
+        <div class="step" [class.active]="!!selectedTime && !canConfirmBooking()"><div class="step-circle">4</div><span>Your Details</span></div>
+        <div class="step" [class.active]="canConfirmBooking() || bookingConfirmed"><div class="step-circle">5</div><span>Confirm Booking</span></div>
       </div>
     </div>
   </section>
