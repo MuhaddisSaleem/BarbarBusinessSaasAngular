@@ -18,17 +18,30 @@
           <section class="booking-section service-section">
             <div class="section-heading">
               <h2>1. Choose a Service</h2>
-              <p>Select services for yourself or book people together at the same time.</p>
+              <p>Select services for yourself or book people together.</p>
             </div>
 
             <div class="booking-for-toggle">
               <button type="button" [class.active]="bookingMode === 'single'" (click)="setBookingMode('single')">
-                <span class="mode-icon">●</span>
+                <span class="mode-icon single-mode-icon"><span class="single-person-shape"></span></span>
                 <span><strong>Just Me</strong><small>One appointment</small></span>
               </button>
+
               <button type="button" [class.active]="bookingMode === 'group'" (click)="setBookingMode('group')">
-                <span class="mode-icon people-mode">●●</span>
-                <span><strong>Me + Someone Else</strong><small>Book together, different barbers</small></span>
+                <span class="mode-icon people-mode"><span class="mini-person first"></span><span class="mini-person second"></span></span>
+                <span><strong>Me + Someone Else</strong><small>Book more than one person</small></span>
+              </button>
+            </div>
+
+            <div class="group-schedule-options" *ngIf="bookingMode === 'group'">
+              <button type="button" class="schedule-option" [class.active]="groupStrategy === 'parallel'" (click)="setGroupStrategy('parallel')">
+                <span class="schedule-option-icon people-icon"><span class="mini-person first"></span><span class="mini-person second"></span></span>
+                <span class="schedule-option-copy"><strong>Me + Someone Else</strong><small>Book together, different barbers</small></span>
+              </button>
+
+              <button type="button" class="schedule-option" [class.active]="groupStrategy === 'sequential'" (click)="setGroupStrategy('sequential')">
+                <span class="schedule-option-icon clock-option-icon"></span>
+                <span class="schedule-option-copy"><strong>Also with same barber</strong><small>With different time slot</small></span>
               </button>
             </div>
 
@@ -39,12 +52,8 @@
                   [class.complete]="person.selectedServices.length && person.selectedBarber"
                   (click)="selectParticipant(i)">
                   <span class="participant-number">{{ i + 1 }}</span>
-                  <span>
-                    <strong>{{ person.label }}</strong>
-                    <small>{{ person.selectedServices.length ? person.selectedServices.length + ' service(s)' : 'Choose services' }}</small>
-                  </span>
-                  <span *ngIf="i > 0 && participants.length > 2" class="remove-person" title="Remove person"
-                    (click)="$event.stopPropagation(); removePerson(i)">×</span>
+                  <span><strong>{{ person.label }}</strong><small>{{ person.selectedServices.length ? person.selectedServices.length + ' service(s)' : 'Choose services' }}</small></span>
+                  <span *ngIf="i > 0 && participants.length > 2" class="remove-person" title="Remove person" (click)="$event.stopPropagation(); removePerson(i)">×</span>
                 </button>
               </div>
               <button type="button" class="add-person-btn" *ngIf="participants.length < 4" (click)="addPerson()">+ Add Person</button>
@@ -54,16 +63,15 @@
               <span>{{ activeParticipantIndex + 1 }}</span>
               <div>
                 <strong>Choose services for {{ activeParticipant.label }}</strong>
-                <small>Each person can have different services and a different barber.</small>
+                <small *ngIf="groupStrategy === 'parallel'">Each person can choose a different barber and book at the same time.</small>
+                <small *ngIf="groupStrategy === 'sequential'">Everyone uses the same barber; appointments run one after another.</small>
               </div>
             </div>
 
             <div class="services-grid">
               <button type="button" class="service-card" *ngFor="let service of services"
-                [class.selected]="isServiceSelected(service.id)"
-                [class.disabled]="isServiceDisabled(service)"
-                [disabled]="isServiceDisabled(service)"
-                (click)="toggleService(service)">
+                [class.selected]="isServiceSelected(service.id)" [class.disabled]="isServiceDisabled(service)"
+                [disabled]="isServiceDisabled(service)" (click)="toggleService(service)">
                 <div class="service-image"><img [src]="service.image" [alt]="service.name"></div>
                 <div class="service-card-body">
                   <div class="service-title-row"><h3>{{ service.name }}</h3><span class="radio-dot"></span></div>
@@ -77,31 +85,32 @@
           <section class="booking-section barber-section">
             <div class="section-heading">
               <h2>2. Choose {{ bookingMode === 'group' ? activeParticipant.label + "'s" : 'Your' }} Barber</h2>
-              <p>{{ bookingMode === 'group' ? 'Choose a different barber for each person' : 'Pick your preferred barber (or choose any)' }}</p>
+              <p *ngIf="bookingMode === 'single'">Pick your preferred barber (or choose any)</p>
+              <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel'">Choose a different barber for each person</p>
+              <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">Choose one barber for everyone — we'll schedule separate time slots</p>
+            </div>
+
+            <div class="same-barber-notice" *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">
+              <span class="same-barber-clock"></span>
+              <div><strong>Same barber mode</strong><small>Selecting a barber here automatically applies that barber to every person.</small></div>
             </div>
 
             <div class="barber-grid">
               <button type="button" class="barber-card" *ngFor="let barber of barbers"
-                [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id"
-                (click)="selectBarber(barber)">
-                <span class="radio-dot"></span>
-                <img [src]="barber.image" [alt]="barber.name">
-                <h3>{{ barber.name }}</h3>
+                [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id" (click)="selectBarber(barber)">
+                <span class="radio-dot"></span><img [src]="barber.image" [alt]="barber.name"><h3>{{ barber.name }}</h3>
                 <div class="barber-meta"><span class="rating"><b>★</b> {{ barber.rating }}</span><span>{{ barber.experience }}</span></div>
               </button>
 
               <button type="button" class="barber-card any-barber" [class.selected]="selectedBarber === 'any'" (click)="selectBarber('any')">
-                <span class="radio-dot"></span>
-                <div class="any-icon"><span class="person one"></span><span class="person two"></span></div>
-                <h3>Any Barber</h3>
-                <p>We'll assign<br>an available barber</p>
+                <span class="radio-dot"></span><div class="any-icon"><span class="person one"></span><span class="person two"></span></div>
+                <h3>Any Barber</h3><p>We'll assign<br>an available barber</p>
               </button>
             </div>
 
             <div class="group-progress" *ngIf="bookingMode === 'group'">
               <button type="button" *ngFor="let person of participants; let i = index"
-                [class.ready]="person.selectedServices.length && person.selectedBarber"
-                [class.current]="activeParticipantIndex === i" (click)="selectParticipant(i)">
+                [class.ready]="person.selectedServices.length && person.selectedBarber" [class.current]="activeParticipantIndex === i" (click)="selectParticipant(i)">
                 <span>{{ person.selectedServices.length && person.selectedBarber ? '✓' : i + 1 }}</span>
                 <div><strong>{{ person.label }}</strong><small>{{ getPersonBarberName(person) }}</small></div>
               </button>
@@ -113,7 +122,8 @@
           <div class="section-heading">
             <h2>3. Select Date &amp; Time</h2>
             <p *ngIf="bookingMode === 'single'">Choose a convenient date and time</p>
-            <p *ngIf="bookingMode === 'group'">Only times when all selected barbers are available are shown</p>
+            <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel'">Only times when all selected barbers are available are shown</p>
+            <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">Choose the first appointment time; the remaining people follow one after another</p>
           </div>
 
           <div class="calendar-card">
@@ -122,40 +132,35 @@
               <strong>{{ monthLabel }}</strong>
               <button type="button" (click)="nextMonth()" aria-label="Next month">›</button>
             </div>
-
-            <div class="calendar-weekdays">
-              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-            </div>
-
+            <div class="calendar-weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
             <div class="calendar-days">
-              <button type="button" *ngFor="let cell of calendarCells"
-                [class.empty]="!cell.date"
-                [class.past]="isPastDate(cell.date)"
-                [class.selected]="cell.fullDate === selectedDate?.fullDate"
-                [disabled]="!cell.date || isPastDate(cell.date)"
-                (click)="selectCalendarDay(cell)">
-                {{ cell.dayNumber }}
-              </button>
+              <button type="button" *ngFor="let cell of calendarCells" [class.empty]="!cell.date" [class.past]="isPastDate(cell.date)"
+                [class.selected]="cell.fullDate === selectedDate?.fullDate" [disabled]="!cell.date || isPastDate(cell.date)" (click)="selectCalendarDay(cell)">{{ cell.dayNumber }}</button>
             </div>
           </div>
 
           <div class="time-area">
             <div class="time-title-row">
               <h3>Available Times</h3>
-              <span class="group-badge" *ngIf="bookingMode === 'group' && allParticipantsReady">{{ participants.length }} people together</span>
+              <span class="group-badge" *ngIf="bookingMode === 'group' && allParticipantsReady && groupStrategy === 'parallel'">{{ participants.length }} people together</span>
+              <span class="group-badge sequential-badge" *ngIf="bookingMode === 'group' && allParticipantsReady && groupStrategy === 'sequential'">Same barber · consecutive slots</span>
             </div>
 
             <div class="time-grid">
-              <button type="button" class="time-slot" *ngFor="let time of availableTimes"
-                [class.selected]="selectedTime === time" (click)="selectTime(time)">{{ time }}</button>
+              <button type="button" class="time-slot" *ngFor="let time of availableTimes" [class.selected]="selectedTime === time" (click)="selectTime(time)">{{ time }}</button>
             </div>
 
-            <div class="no-times" *ngIf="!availableTimes.length && !allParticipantsReady">
-              Complete services and barber selection for {{ bookingMode === 'group' ? 'every person' : 'your appointment' }} first.
+            <div class="sequential-preview" *ngIf="bookingMode === 'group' && groupStrategy === 'sequential' && selectedTime">
+              <div *ngFor="let person of participants; let i = index">
+                <span>{{ person.label }}</span><strong>{{ getPersonBookingTime(i) }}</strong>
+                <small>{{ getPersonDuration(person) }} min · {{ getPersonBarberName(person) }}</small>
+              </div>
             </div>
+
+            <div class="no-times" *ngIf="!availableTimes.length && !allParticipantsReady">Complete services and barber selection for {{ bookingMode === 'group' ? 'every person' : 'your appointment' }} first.</div>
             <div class="no-times" *ngIf="!availableTimes.length && allParticipantsReady && !selectedDate">Select a date to see available times.</div>
             <div class="no-times" *ngIf="!availableTimes.length && allParticipantsReady && selectedDate">
-              No simultaneous availability for these selections on this date. Try another date or barber.
+              {{ groupStrategy === 'sequential' ? 'The selected barber does not have a long enough consecutive slot on this date. Try another date or barber.' : 'No simultaneous availability for these selections on this date. Try another date or barber.' }}
             </div>
           </div>
         </section>
@@ -173,7 +178,6 @@
               </div>
 
               <div class="empty-person" *ngIf="!person.selectedServices.length">No services selected yet</div>
-
               <div class="summary-service" *ngFor="let service of person.selectedServices">
                 <img [src]="service.image" [alt]="service.name">
                 <div class="summary-copy"><strong>{{ service.name }}</strong><span>◷ {{ service.duration }} minutes</span></div>
@@ -185,27 +189,21 @@
                 <div *ngIf="!getPersonBarberImage(person)" class="summary-icon">●</div>
                 <div class="summary-copy"><span>Barber</span><strong>{{ getPersonBarberName(person) }}</strong></div>
               </div>
+
+              <div class="person-time-row" *ngIf="bookingMode === 'group' && selectedTime"><span>Time</span><strong>{{ getPersonBookingTime(i) }}</strong></div>
             </div>
 
             <div class="summary-row"><div class="summary-line-icon calendar-icon"></div><strong>{{ selectedDate ? (selectedDate.date | date:'EEE, dd MMM yyyy') : 'Select date' }}</strong></div>
             <div class="summary-row"><div class="summary-line-icon clock-icon"></div><strong>{{ selectedTime ? selectedTime + ' – ' + bookingEndTime : 'Select time' }}</strong></div>
-
             <div class="summary-total"><strong>Total</strong><strong>Rs. {{ totalPrice | number }}</strong></div>
 
             <div class="details-block">
               <h2>4. Your Details</h2>
               <p>{{ bookingMode === 'group' ? 'One contact for the complete group booking' : 'Enter your information to confirm' }}</p>
-
               <div class="form-group"><label>Full Name <span>*</span></label><input type="text" [(ngModel)]="customer.name" placeholder="Enter your full name"></div>
-              <div class="form-group">
-                <label>Phone Number <span>*</span></label>
-                <div class="phone-input"><span class="flag">🇵🇰</span><span class="country-code">+92</span><input type="tel" [(ngModel)]="customer.phone" placeholder="300 1234567"></div>
-              </div>
+              <div class="form-group"><label>Phone Number <span>*</span></label><div class="phone-input"><span class="flag">🇵🇰</span><span class="country-code">+92</span><input type="tel" [(ngModel)]="customer.phone" placeholder="300 1234567"></div></div>
               <div class="form-group"><label>Notes <small>(optional)</small></label><textarea [(ngModel)]="customer.notes" placeholder="Any special requests?"></textarea></div>
-
-              <button type="button" class="confirm-btn" [disabled]="!canConfirmBooking()" (click)="confirmBooking()">
-                <span>{{ bookingMode === 'group' ? 'Confirm Group Booking' : 'Confirm Booking' }}</span><b>→</b>
-              </button>
+              <button type="button" class="confirm-btn" [disabled]="!canConfirmBooking()" (click)="confirmBooking()"><span>{{ bookingMode === 'group' ? 'Confirm Group Booking' : 'Confirm Booking' }}</span><b>→</b></button>
               <div class="whatsapp-note"><span class="wa-icon">✓</span>You'll receive a confirmation on WhatsApp</div>
             </div>
           </div>
@@ -229,15 +227,17 @@
       <div class="success-icon">✓</div>
       <span class="success-label">{{ bookingMode === 'group' ? 'GROUP BOOKING CONFIRMED' : 'BOOKING CONFIRMED' }}</span>
       <h2>You're all set!</h2>
-      <p>{{ bookingMode === 'group' ? 'All appointments are booked for the same time with separate barbers.' : 'Your appointment at Royal Barbers has been successfully booked.' }}</p>
+      <p *ngIf="bookingMode === 'single'">Your appointment at Royal Barbers has been successfully booked.</p>
+      <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel'">All appointments are booked for the same time with separate barbers.</p>
+      <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">All appointments are booked with the same barber in consecutive time slots.</p>
 
       <div class="confirmed-people" *ngIf="bookingMode === 'group'">
-        <div *ngFor="let assignment of confirmedAssignments"><span>{{ assignment.person }}</span><strong>{{ assignment.barber }}</strong></div>
+        <div *ngFor="let assignment of confirmedAssignments"><span>{{ assignment.person }}</span><strong>{{ assignment.barber }} · {{ assignment.time }}</strong></div>
       </div>
 
       <div class="success-details">
         <div><span>Date</span><strong>{{ selectedDate?.date | date:'dd MMM yyyy' }}</strong></div>
-        <div><span>Time</span><strong>{{ selectedTime }} – {{ bookingEndTime }}</strong></div>
+        <div><span>Booking window</span><strong>{{ selectedTime }} – {{ bookingEndTime }}</strong></div>
         <div><span>Total</span><strong>Rs. {{ totalPrice | number }}</strong></div>
       </div>
       <button type="button" (click)="closeSuccess()">Done</button>
