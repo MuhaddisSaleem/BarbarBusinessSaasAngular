@@ -31,33 +31,25 @@ body {
 /*
  * Booking flow layout
  * Desktop: Services | Barber + Calendar | Summary
- * This keeps the visual flow in the same order as the booking steps:
- * service -> barber -> date/time -> confirmation.
+ * Barber and calendar now live in their own middle-column wrapper.
+ * This prevents the height of the services column from stretching the
+ * grid rows and creating empty space between barber and calendar sections.
  */
-.booking-page .left-column {
-  display: contents;
+.booking-page .left-column,
+.booking-page .middle-column {
+  min-width: 0;
 }
 
-.booking-page .service-section {
-  grid-column: 1;
-  grid-row: 1 / span 2;
+.booking-page .middle-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-self: start;
 }
 
-.booking-page .barber-section {
-  grid-column: 2;
-  grid-row: 1;
-  margin-top: 0;
-}
-
+.booking-page .barber-section,
 .booking-page .date-section {
-  grid-column: 2;
-  grid-row: 2;
-  margin-top: 24px;
-}
-
-.booking-page .booking-summary {
-  grid-column: 3;
-  grid-row: 1 / span 2;
+  margin-top: 0;
 }
 
 /* The middle column is narrower, so barber choices use a clean 2 x 2 layout. */
@@ -70,53 +62,9 @@ body {
   height: 62px;
 }
 
-@media (max-width: 1220px) {
-  .booking-page .service-section {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-  }
-
-  .booking-page .barber-section {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .booking-page .date-section {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
-  .booking-page .booking-summary {
-    grid-column: 1 / -1;
-    grid-row: 3;
-  }
-}
-
 @media (max-width: 900px) {
-  .booking-page .service-section,
-  .booking-page .barber-section,
-  .booking-page .date-section,
-  .booking-page .booking-summary {
-    grid-column: 1;
-  }
-
-  .booking-page .service-section {
-    grid-row: 1;
-  }
-
-  .booking-page .barber-section {
-    grid-row: 2;
-    margin-top: 24px;
-  }
-
-  .booking-page .date-section {
-    grid-row: 3;
-    margin-top: 24px;
-    max-width: none;
-  }
-
-  .booking-page .booking-summary {
-    grid-row: 4;
+  .booking-page .middle-column {
+    gap: 24px;
   }
 
   .booking-page .barber-section .barber-grid {
