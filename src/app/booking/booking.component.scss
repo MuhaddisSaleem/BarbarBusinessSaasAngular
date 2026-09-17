@@ -155,7 +155,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .service-image {
-  height: 116px;
+  height: 140px;
   padding: 9px 9px 0;
 
   img {
@@ -163,7 +163,7 @@ button { -webkit-tap-highlight-color: transparent; }
     height: 100%;
     display: block;
     object-fit: cover;
-    object-position: center 35%;
+    object-position: center;
     border-radius: 7px;
     filter: saturate(.82) contrast(1.04) brightness(.92);
   }
