@@ -9,6 +9,7 @@ interface CalendarCell { date: Date | null; dayNumber: number | null; fullDate: 
 interface BookedAppointment { barberId: number; date: string; startTime: string; duration: number; }
 interface BookingPerson { id: number; label: string; selectedServices: Service[]; selectedBarber: Barber | 'any' | null; }
 interface ConfirmedAssignment { person: string; barber: string; time: string; }
+interface PersonSchedule { personId: number; time: string; barber: Barber; suggested: boolean; }
 
 @Component({
   selector: 'app-booking',
@@ -56,6 +57,7 @@ export class BookingComponent implements OnInit {
   calendarCells: CalendarCell[] = [];
   availableTimes: string[] = [];
   bookedAppointments: BookedAppointment[] = [];
+  sequentialSchedule: PersonSchedule[] = [];
 
   customer = { name: '', phone: '', notes: '' };
   bookingConfirmed = false;
@@ -70,25 +72,21 @@ export class BookingComponent implements OnInit {
   setBookingMode(mode: 'single' | 'group'): void {
     if (this.bookingMode === mode) return;
     this.bookingMode = mode;
-    this.selectedTime = null;
-
+    this.clearSelectedTime();
     if (mode === 'group') {
-      if (this.participants.length === 1) {
-        this.participants.push(this.createPerson(this.nextPersonId++, 'Person 2'));
-      }
+      if (this.participants.length === 1) this.participants.push(this.createPerson(this.nextPersonId++, 'Person 2'));
     } else {
       this.participants = [this.participants[0]];
       this.activeParticipantIndex = 0;
       this.groupStrategy = 'parallel';
     }
-
     this.generateAvailableTimes();
   }
 
   setGroupStrategy(strategy: 'parallel' | 'sequential'): void {
     if (this.groupStrategy === strategy) return;
     this.groupStrategy = strategy;
-    this.selectedTime = null;
+    this.clearSelectedTime();
     this.participants.forEach(person => person.selectedBarber = null);
     this.generateAvailableTimes();
   }
@@ -96,14 +94,10 @@ export class BookingComponent implements OnInit {
   addPerson(): void {
     if (this.participants.length >= 4) return;
     const person = this.createPerson(this.nextPersonId++, `Person ${this.participants.length + 1}`);
-
-    if (this.groupStrategy === 'sequential' && this.participants[0]?.selectedBarber) {
-      person.selectedBarber = this.participants[0].selectedBarber;
-    }
-
+    if (this.groupStrategy === 'sequential' && this.participants[0]?.selectedBarber) person.selectedBarber = this.participants[0].selectedBarber;
     this.participants.push(person);
     this.activeParticipantIndex = this.participants.length - 1;
-    this.selectedTime = null;
+    this.clearSelectedTime();
     this.generateAvailableTimes();
   }
 
@@ -112,7 +106,7 @@ export class BookingComponent implements OnInit {
     this.participants.splice(index, 1);
     this.participants.forEach((person, i) => person.label = i === 0 ? 'You' : `Person ${i + 1}`);
     this.activeParticipantIndex = Math.min(this.activeParticipantIndex, this.participants.length - 1);
-    this.selectedTime = null;
+    this.clearSelectedTime();
     this.generateAvailableTimes();
   }
 
@@ -120,7 +114,6 @@ export class BookingComponent implements OnInit {
 
   toggleService(service: Service): void {
     const person = this.activeParticipant;
-
     if (this.isServiceSelected(service.id)) {
       person.selectedServices = person.selectedServices.filter(item => item.id !== service.id);
     } else if (service.id === 3) {
@@ -131,18 +124,12 @@ export class BookingComponent implements OnInit {
     } else {
       person.selectedServices.push(service);
     }
-
-    this.selectedTime = null;
+    this.clearSelectedTime();
     this.generateAvailableTimes();
   }
 
-  isServiceSelected(serviceId: number): boolean {
-    return this.activeParticipant.selectedServices.some(service => service.id === serviceId);
-  }
-
-  isServiceDisabled(service: Service): boolean {
-    return this.isServiceSelected(3) && (service.id === 1 || service.id === 2);
-  }
+  isServiceSelected(serviceId: number): boolean { return this.activeParticipant.selectedServices.some(service => service.id === serviceId); }
+  isServiceDisabled(service: Service): boolean { return this.isServiceSelected(3) && (service.id === 1 || service.id === 2); }
 
   selectBarber(barber: Barber | 'any'): void {
     if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
@@ -150,27 +137,23 @@ export class BookingComponent implements OnInit {
     } else {
       this.activeParticipant.selectedBarber = barber;
     }
-
-    this.selectedTime = null;
+    this.clearSelectedTime();
     this.generateAvailableTimes();
   }
 
   selectCalendarDay(cell: CalendarCell): void {
     if (!cell.date || this.isPastDate(cell.date)) return;
     this.setSelectedDate(cell.date);
-    this.selectedTime = null;
+    this.clearSelectedTime();
     this.generateAvailableTimes();
   }
 
   isPastDate(date: Date | null): boolean {
     if (!date) return false;
-    const today = this.startOfDay(new Date());
-    return this.startOfDay(date).getTime() < today.getTime();
+    return this.startOfDay(date).getTime() < this.startOfDay(new Date()).getTime();
   }
 
-  get canGoPreviousMonth(): boolean {
-    return this.calendarDate.getTime() > this.startOfMonth(new Date()).getTime();
-  }
+  get canGoPreviousMonth(): boolean { return this.calendarDate.getTime() > this.startOfMonth(new Date()).getTime(); }
 
   previousMonth(): void {
     if (!this.canGoPreviousMonth) return;
@@ -191,7 +174,6 @@ export class BookingComponent implements OnInit {
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const cells: CalendarCell[] = [];
-
     for (let i = 0; i < firstDay; i++) cells.push({ date: null, dayNumber: null, fullDate: null });
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
@@ -216,30 +198,54 @@ export class BookingComponent implements OnInit {
       return;
     }
 
-    const windows = [{ start: 10 * 60, end: 15 * 60 }, { start: 17 * 60, end: 19 * 60 + 30 }];
     const slots: string[] = [];
-    const interval = 30;
-    const requiredDuration = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
-      ? this.participants.reduce((total, person) => total + this.getPersonDuration(person), 0)
-      : Math.max(...this.participants.map(person => this.getPersonDuration(person)));
-
     const today = this.startOfDay(new Date());
     const selectedDay = this.startOfDay(this.selectedDate.date);
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-    windows.forEach(window => {
-      for (let minutes = window.start; minutes + requiredDuration <= window.end; minutes += interval) {
+    for (const window of this.businessWindows) {
+      for (let minutes = window.start; minutes < window.end; minutes += 30) {
         if (selectedDay.getTime() === today.getTime() && minutes <= nowMinutes) continue;
         const time = this.minutesToTime(minutes);
-        if (this.resolveBarberAssignments(time)) slots.push(time);
+        const valid = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
+          ? !!this.buildSequentialSchedule(time)
+          : !!this.resolveParallelBarbers(time);
+        if (valid) slots.push(time);
       }
-    });
+    }
 
     this.availableTimes = slots;
   }
 
-  selectTime(time: string): void { this.selectedTime = time; }
+  selectTime(time: string): void {
+    this.selectedTime = time;
+    this.sequentialSchedule = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
+      ? (this.buildSequentialSchedule(time) || [])
+      : [];
+  }
+
+  isTimeSelectedForBooking(time: string): boolean {
+    if (this.selectedTime === time) return true;
+    return this.bookingMode === 'group' && this.groupStrategy === 'sequential' && this.sequentialSchedule.some(slot => slot.time === time);
+  }
+
+  getPersonBookingTime(index: number): string {
+    if (!this.selectedTime) return '';
+    if (this.bookingMode !== 'group' || this.groupStrategy !== 'sequential') return this.selectedTime;
+    return this.sequentialSchedule.find(slot => slot.personId === this.participants[index]?.id)?.time || '';
+  }
+
+  isSuggestedPersonTime(index: number): boolean {
+    if (this.bookingMode !== 'group' || this.groupStrategy !== 'sequential') return false;
+    const person = this.participants[index];
+    return !!this.sequentialSchedule.find(slot => slot.personId === person?.id)?.suggested;
+  }
+
+  getSuggestedTimeMessage(index: number): string {
+    if (!this.isSuggestedPersonTime(index)) return '';
+    return `Previous slot unavailable — suggested ${this.getPersonBookingTime(index)}`;
+  }
 
   confirmBooking(): void {
     if (!this.canConfirmBooking() || !this.selectedTime || !this.selectedDate) return;
@@ -251,17 +257,9 @@ export class BookingComponent implements OnInit {
       const barber = assignments.get(person.id);
       if (!barber) return;
       const personStartTime = this.getPersonBookingTime(index);
-
-      this.bookedAppointments.push({
-        barberId: barber.id,
-        date: this.selectedDate!.fullDate,
-        startTime: personStartTime,
-        duration: this.getPersonDuration(person)
-      });
-
+      this.bookedAppointments.push({ barberId: barber.id, date: this.selectedDate!.fullDate, startTime: personStartTime, duration: this.getPersonDuration(person) });
       this.confirmedAssignments.push({ person: person.label, barber: barber.name, time: personStartTime });
     });
-
     this.bookingConfirmed = true;
   }
 
@@ -269,20 +267,10 @@ export class BookingComponent implements OnInit {
     return !!(this.allParticipantsReady && this.selectedDate && !this.isPastDate(this.selectedDate.date) && this.selectedTime && this.customer.name.trim() && this.customer.phone.trim());
   }
 
-  get allParticipantsReady(): boolean {
-    return this.participants.every(person => person.selectedServices.length > 0 && !!person.selectedBarber);
-  }
-
-  get totalPrice(): number {
-    return this.participants.reduce((total, person) => total + this.getPersonPrice(person), 0);
-  }
-
+  get allParticipantsReady(): boolean { return this.participants.every(person => person.selectedServices.length > 0 && !!person.selectedBarber); }
+  get totalPrice(): number { return this.participants.reduce((total, person) => total + this.getPersonPrice(person), 0); }
   get totalDuration(): number { return this.getPersonDuration(this.activeParticipant); }
-
-  get monthLabel(): string {
-    return this.calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  }
-
+  get monthLabel(): string { return this.calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
   get barberName(): string { return this.getPersonBarberName(this.activeParticipant); }
 
   get barberImage(): string {
@@ -301,33 +289,18 @@ export class BookingComponent implements OnInit {
   }
 
   get bookingEndTime(): string {
-    if (!this.selectedTime || !this.participants.some(person => person.selectedServices.length)) return '';
-
-    const duration = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
-      ? this.participants.reduce((total, person) => total + this.getPersonDuration(person), 0)
-      : Math.max(...this.participants.map(person => this.getPersonDuration(person)));
-
+    if (!this.selectedTime) return '';
+    if (this.bookingMode === 'group' && this.groupStrategy === 'sequential' && this.sequentialSchedule.length) {
+      const last = this.sequentialSchedule[this.sequentialSchedule.length - 1];
+      const person = this.participants.find(item => item.id === last.personId);
+      return this.minutesToTime(this.timeToMinutes(last.time) + (person ? this.getPersonDuration(person) : 0));
+    }
+    const duration = Math.max(...this.participants.map(person => this.getPersonDuration(person)));
     return this.minutesToTime(this.timeToMinutes(this.selectedTime) + duration);
   }
 
-  getPersonBookingTime(index: number): string {
-    if (!this.selectedTime) return '';
-    if (this.bookingMode !== 'group' || this.groupStrategy !== 'sequential') return this.selectedTime;
-
-    const minutesBefore = this.participants
-      .slice(0, index)
-      .reduce((total, person) => total + this.getPersonDuration(person), 0);
-
-    return this.minutesToTime(this.timeToMinutes(this.selectedTime) + minutesBefore);
-  }
-
-  getPersonPrice(person: BookingPerson): number {
-    return person.selectedServices.reduce((total, service) => total + service.price, 0);
-  }
-
-  getPersonDuration(person: BookingPerson): number {
-    return person.selectedServices.reduce((total, service) => total + service.duration, 0);
-  }
+  getPersonPrice(person: BookingPerson): number { return person.selectedServices.reduce((total, service) => total + service.price, 0); }
+  getPersonDuration(person: BookingPerson): number { return person.selectedServices.reduce((total, service) => total + service.duration, 0); }
 
   getPersonBarberName(person: BookingPerson): string {
     if (!person.selectedBarber) return 'Select barber';
@@ -345,48 +318,83 @@ export class BookingComponent implements OnInit {
     this.generateAvailableTimes();
   }
 
+  private clearSelectedTime(): void {
+    this.selectedTime = null;
+    this.sequentialSchedule = [];
+  }
+
   private createPerson(id: number, label: string): BookingPerson {
     return { id, label, selectedServices: [], selectedBarber: null };
+  }
+
+  private get businessWindows(): { start: number; end: number }[] {
+    return [{ start: 10 * 60, end: 15 * 60 }, { start: 17 * 60, end: 19 * 60 + 30 }];
   }
 
   private resolveBarberAssignments(time: string): Map<number, Barber> | null {
     if (!this.selectedDate || this.isPastDate(this.selectedDate.date) || !this.allParticipantsReady) return null;
 
     if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
-      return this.resolveSequentialBarber(time);
+      const schedule = this.buildSequentialSchedule(time);
+      if (!schedule) return null;
+      this.sequentialSchedule = schedule;
+      const assignments = new Map<number, Barber>();
+      schedule.forEach(slot => assignments.set(slot.personId, slot.barber));
+      return assignments;
     }
 
     return this.resolveParallelBarbers(time);
   }
 
-  private resolveSequentialBarber(time: string): Map<number, Barber> | null {
-    if (!this.selectedDate) return null;
-
-    const totalDuration = this.participants.reduce((total, person) => total + this.getPersonDuration(person), 0);
+  private buildSequentialSchedule(firstTime: string): PersonSchedule[] | null {
+    if (!this.selectedDate || !this.participants.length) return null;
     const firstChoice = this.participants[0].selectedBarber;
     if (!firstChoice) return null;
+    const candidateBarbers = firstChoice === 'any' ? this.barbers : [firstChoice];
 
-    let barber: Barber | undefined;
+    for (const barber of candidateBarbers) {
+      const schedule: PersonSchedule[] = [];
+      let earliestStart = this.timeToMinutes(firstTime);
+      let failed = false;
 
-    if (firstChoice === 'any') {
-      barber = this.barbers.find(candidate =>
-        this.isBarberAvailable(candidate.id, time, this.selectedDate!.fullDate, totalDuration)
-      );
-    } else {
-      barber = firstChoice;
-      if (!this.isBarberAvailable(barber.id, time, this.selectedDate.fullDate, totalDuration)) return null;
+      for (let index = 0; index < this.participants.length; index++) {
+        const person = this.participants[index];
+        const duration = this.getPersonDuration(person);
+        const slot = this.findNextAvailableSlot(barber.id, earliestStart, duration);
+        if (slot === null) {
+          failed = true;
+          break;
+        }
+        const actualTime = this.minutesToTime(slot);
+        schedule.push({ personId: person.id, time: actualTime, barber, suggested: index > 0 && slot > earliestStart });
+        earliestStart = slot + duration;
+      }
+
+      if (!failed && schedule.length === this.participants.length && schedule[0].time === firstTime) return schedule;
     }
 
-    if (!barber) return null;
+    return null;
+  }
 
-    const assignments = new Map<number, Barber>();
-    this.participants.forEach(person => assignments.set(person.id, barber!));
-    return assignments;
+  private findNextAvailableSlot(barberId: number, earliestStart: number, duration: number): number | null {
+    if (!this.selectedDate) return null;
+
+    for (const window of this.businessWindows) {
+      if (earliestStart >= window.end) continue;
+      let start = Math.max(earliestStart, window.start);
+      start = Math.ceil(start / 30) * 30;
+
+      for (let minutes = start; minutes + duration <= window.end; minutes += 30) {
+        const time = this.minutesToTime(minutes);
+        if (this.isBarberAvailable(barberId, time, this.selectedDate.fullDate, duration)) return minutes;
+      }
+    }
+
+    return null;
   }
 
   private resolveParallelBarbers(time: string): Map<number, Barber> | null {
     if (!this.selectedDate) return null;
-
     const assignments = new Map<number, Barber>();
     const usedBarberIds = new Set<number>();
 
@@ -401,10 +409,7 @@ export class BookingComponent implements OnInit {
 
     for (const person of this.participants) {
       if (person.selectedBarber !== 'any') continue;
-      const availableBarber = this.barbers.find(barber =>
-        !usedBarberIds.has(barber.id) &&
-        this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.getPersonDuration(person))
-      );
+      const availableBarber = this.barbers.find(barber => !usedBarberIds.has(barber.id) && this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.getPersonDuration(person)));
       if (!availableBarber) return null;
       assignments.set(person.id, availableBarber);
       usedBarberIds.add(availableBarber.id);
@@ -417,20 +422,14 @@ export class BookingComponent implements OnInit {
     const requestedStart = this.timeToMinutes(requestedTime);
     const requestedEnd = requestedStart + duration;
     const barberBookings = this.bookedAppointments.filter(booking => booking.barberId === barberId && booking.date === date);
-
     return !barberBookings.some(booking => {
       const bookingStart = this.timeToMinutes(booking.startTime);
       return requestedStart < bookingStart + booking.duration && requestedEnd > bookingStart;
     });
   }
 
-  private startOfDay(date: Date): Date {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  }
-
-  private startOfMonth(date: Date): Date {
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-  }
+  private startOfDay(date: Date): Date { return new Date(date.getFullYear(), date.getMonth(), date.getDate()); }
+  private startOfMonth(date: Date): Date { return new Date(date.getFullYear(), date.getMonth(), 1); }
 
   private formatDate(date: Date): string {
     const year = date.getFullYear();
