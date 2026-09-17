@@ -64,7 +64,7 @@
               <div>
                 <strong>Choose services for {{ activeParticipant.label }}</strong>
                 <small *ngIf="groupStrategy === 'parallel'">Each person can choose a different barber and book at the same time.</small>
-                <small *ngIf="groupStrategy === 'sequential'">Everyone uses the same barber; appointments run one after another.</small>
+                <small *ngIf="groupStrategy === 'sequential'">Everyone uses the same barber. If the next slot is busy, we'll suggest the next available time.</small>
               </div>
             </div>
 
@@ -87,7 +87,7 @@
               <h2>2. Choose {{ bookingMode === 'group' ? activeParticipant.label + "'s" : 'Your' }} Barber</h2>
               <p *ngIf="bookingMode === 'single'">Pick your preferred barber (or choose any)</p>
               <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel'">Choose a different barber for each person</p>
-              <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">Choose one barber for everyone — we'll schedule separate time slots</p>
+              <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">Choose one barber for everyone — we'll find a suitable time for each person</p>
             </div>
 
             <div class="same-barber-notice" *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">
@@ -123,7 +123,7 @@
             <h2>3. Select Date &amp; Time</h2>
             <p *ngIf="bookingMode === 'single'">Choose a convenient date and time</p>
             <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel'">Only times when all selected barbers are available are shown</p>
-            <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">Choose the first appointment time; the remaining people follow one after another</p>
+            <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">Choose the first appointment time; we'll find the next available slot for each following person</p>
           </div>
 
           <div class="calendar-card">
@@ -143,24 +143,26 @@
             <div class="time-title-row">
               <h3>Available Times</h3>
               <span class="group-badge" *ngIf="bookingMode === 'group' && allParticipantsReady && groupStrategy === 'parallel'">{{ participants.length }} people together</span>
-              <span class="group-badge sequential-badge" *ngIf="bookingMode === 'group' && allParticipantsReady && groupStrategy === 'sequential'">Same barber · consecutive slots</span>
+              <span class="group-badge sequential-badge" *ngIf="bookingMode === 'group' && allParticipantsReady && groupStrategy === 'sequential'">Same barber · smart time slots</span>
             </div>
 
             <div class="time-grid">
-              <button type="button" class="time-slot" *ngFor="let time of availableTimes" [class.selected]="selectedTime === time" (click)="selectTime(time)">{{ time }}</button>
+              <button type="button" class="time-slot" *ngFor="let time of availableTimes"
+                [class.selected]="isTimeSelectedForBooking(time)" (click)="selectTime(time)">{{ time }}</button>
             </div>
 
             <div class="sequential-preview" *ngIf="bookingMode === 'group' && groupStrategy === 'sequential' && selectedTime">
-              <div *ngFor="let person of participants; let i = index">
+              <div *ngFor="let person of participants; let i = index" [class.suggested-slot]="isSuggestedPersonTime(i)">
                 <span>{{ person.label }}</span><strong>{{ getPersonBookingTime(i) }}</strong>
                 <small>{{ getPersonDuration(person) }} min · {{ getPersonBarberName(person) }}</small>
+                <small class="time-suggestion" *ngIf="isSuggestedPersonTime(i)">↳ {{ getSuggestedTimeMessage(i) }}</small>
               </div>
             </div>
 
             <div class="no-times" *ngIf="!availableTimes.length && !allParticipantsReady">Complete services and barber selection for {{ bookingMode === 'group' ? 'every person' : 'your appointment' }} first.</div>
             <div class="no-times" *ngIf="!availableTimes.length && allParticipantsReady && !selectedDate">Select a date to see available times.</div>
             <div class="no-times" *ngIf="!availableTimes.length && allParticipantsReady && selectedDate">
-              {{ groupStrategy === 'sequential' ? 'The selected barber does not have a long enough consecutive slot on this date. Try another date or barber.' : 'No simultaneous availability for these selections on this date. Try another date or barber.' }}
+              {{ groupStrategy === 'sequential' ? 'The selected barber cannot fit all people on this date, even with alternative time suggestions. Try another date or barber.' : 'No simultaneous availability for these selections on this date. Try another date or barber.' }}
             </div>
           </div>
         </section>
@@ -190,7 +192,9 @@
                 <div class="summary-copy"><span>Barber</span><strong>{{ getPersonBarberName(person) }}</strong></div>
               </div>
 
-              <div class="person-time-row" *ngIf="bookingMode === 'group' && selectedTime"><span>Time</span><strong>{{ getPersonBookingTime(i) }}</strong></div>
+              <div class="person-time-row" *ngIf="bookingMode === 'group' && selectedTime" [class.suggested]="isSuggestedPersonTime(i)">
+                <span>{{ isSuggestedPersonTime(i) ? 'Suggested time' : 'Time' }}</span><strong>{{ getPersonBookingTime(i) }}</strong>
+              </div>
             </div>
 
             <div class="summary-row"><div class="summary-line-icon calendar-icon"></div><strong>{{ selectedDate ? (selectedDate.date | date:'EEE, dd MMM yyyy') : 'Select date' }}</strong></div>
@@ -229,7 +233,7 @@
       <h2>You're all set!</h2>
       <p *ngIf="bookingMode === 'single'">Your appointment at Royal Barbers has been successfully booked.</p>
       <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel'">All appointments are booked for the same time with separate barbers.</p>
-      <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">All appointments are booked with the same barber in consecutive time slots.</p>
+      <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">All appointments are booked with the same barber using the available time slots shown below.</p>
 
       <div class="confirmed-people" *ngIf="bookingMode === 'group'">
         <div *ngFor="let assignment of confirmedAssignments"><span>{{ assignment.person }}</span><strong>{{ assignment.barber }} · {{ assignment.time }}</strong></div>
