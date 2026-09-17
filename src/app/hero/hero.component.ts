@@ -59,7 +59,7 @@ import { Component } from '@angular/core';
                 <span class="feature-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v6l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </span>
-                <div><strong>Open until</strong><small>10:00 PM</small></div>
+                <div><strong>Open until</strong><small>09:00 PM</small></div>
               </div>
 
               <div class="hero-feature">

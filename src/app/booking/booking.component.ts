@@ -328,7 +328,9 @@ export class BookingComponent implements OnInit {
   }
 
   private get businessWindows(): { start: number; end: number }[] {
-    return [{ start: 10 * 60, end: 15 * 60 }, { start: 17 * 60, end: 19 * 60 + 30 }];
+    return [
+      { start: 8 * 60, end: 21 * 60 }
+    ];
   }
 
   private resolveBarberAssignments(time: string): Map<number, Barber> | null {
