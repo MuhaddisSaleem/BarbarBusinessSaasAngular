@@ -53,16 +53,18 @@ export class BookingComponent implements OnInit {
     hairBeard: 'https://images.pexels.com/photos/4625630/pexels-photo-4625630.jpeg?auto=compress&cs=tinysrgb&w=900',
     kids: 'https://images.pexels.com/photos/16098672/pexels-photo-16098672.jpeg?auto=compress&cs=tinysrgb&w=900',
     wash: 'https://images.pexels.com/photos/3998413/pexels-photo-3998413.jpeg?auto=compress&cs=tinysrgb&w=900',
-    color: 'https://images.pexels.com/photos/9992819/pexels-photo-9992819.jpeg?auto=compress&cs=tinysrgb&w=900'
+    color: 'https://images.pexels.com/photos/9992819/pexels-photo-9992819.jpeg?auto=compress&cs=tinysrgb&w=900',
+    faceMassage: 'https://images.pexels.com/photos/3997993/pexels-photo-3997993.jpeg?auto=compress&cs=tinysrgb&w=900'
   };
 
   services: Service[] = [
     { id: 1, name: 'Haircut', duration: 30, price: 700, image: this.serviceImages.haircut },
     { id: 2, name: 'Beard Trim', duration: 20, price: 400, image: this.serviceImages.beard },
-    { id: 3, name: 'Hair + Beard', duration: 45, price: 1000, image: this.serviceImages.hairBeard },
+    { id: 3, name: 'Hair + Beard + Free Hair Massage', duration: 45, price: 1000, image: this.serviceImages.hairBeard },
     { id: 4, name: 'Kids Haircut', duration: 30, price: 600, image: this.serviceImages.kids },
     { id: 5, name: 'Hair Wash', duration: 15, price: 300, image: this.serviceImages.wash },
-    { id: 6, name: 'Hair Coloring', duration: 60, price: 2000, image: this.serviceImages.color }
+    { id: 6, name: 'Hair Coloring', duration: 60, price: 2000, image: this.serviceImages.color },
+    { id: 7, name: '6 Step Face Massage', duration: 60, price: 5000, image: this.serviceImages.faceMassage }
   ];
 
   barbers: Barber[] = [
@@ -89,6 +91,7 @@ export class BookingComponent implements OnInit {
     }
   ];
 
+  // Nothing is preselected. The customer makes every booking choice.
   selectedService: Service | null = null;
   selectedBarber: Barber | 'any' | null = null;
   selectedDate: BookingDate | null = null;
@@ -110,13 +113,6 @@ export class BookingComponent implements OnInit {
 
   ngOnInit(): void {
     this.buildCalendar();
-
-    // The reference design opens with these choices selected.
-    this.selectedService = this.services[0];
-    this.selectedBarber = this.barbers[0];
-    this.setSelectedDate(new Date(2026, 8, 17));
-    this.generateAvailableTimes();
-    this.selectedTime = '6:00 PM';
   }
 
   selectService(service: Service): void {
@@ -196,7 +192,6 @@ export class BookingComponent implements OnInit {
       return;
     }
 
-    // Matches the reference: morning/afternoon block, then evening block.
     const windows = [
       { start: 10 * 60, end: 15 * 60 },
       { start: 17 * 60, end: 19 * 60 + 30 }
