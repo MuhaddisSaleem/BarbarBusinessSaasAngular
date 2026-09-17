@@ -1,0 +1,126 @@
+$gold: #d9ad5b;
+$gold-light: #f2cd7b;
+$background: #090c0e;
+$card: #111518;
+$card-light: #171b1e;
+$border: #2b3034;
+$text: #ffffff;
+$muted: #8e9499;
+
+* { box-sizing: border-box; }
+button, input, textarea { font-family: inherit; }
+.booking-page { min-height: 100vh; background: $background; color: $text; }
+.container { max-width: 1400px; width: 100%; padding: 0 24px; margin: 0 auto; }
+.position-relative { position: relative; }
+
+.shop-hero { min-height: 480px; position: relative; background: url('/assets/images/barber-hero.jpg') center 35% / cover no-repeat; display: flex; flex-direction: column; }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4,6,7,.98) 0%, rgba(4,6,7,.83) 40%, rgba(4,6,7,.25) 72%, rgba(4,6,7,.5) 100%); }
+.top-nav { min-height: 90px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.08); }
+.brand { display: flex; align-items: center; gap: 14px; color: #fff; text-decoration: none;
+  .brand-icon { color: $gold; font-size: 34px; }
+  strong { display: block; font-size: 18px; letter-spacing: 4px; }
+  small { display: block; margin-top: 5px; font-size: 8px; letter-spacing: 4px; color: #aaa; }
+}
+.btn-book-top { padding: 13px 23px; border-radius: 8px; background: linear-gradient(135deg,$gold-light,$gold); color: #0a0a0a; text-decoration: none; font-size: 14px; font-weight: 700; transition: .25s ease; &:hover { transform: translateY(-2px); } }
+.hero-content { padding: 75px 0 55px; max-width: 750px;
+  .eyebrow { color: $gold; font-size: 12px; font-weight: 600; letter-spacing: 5px; }
+  h1 { font-size: clamp(42px,6vw,76px); font-weight: 800; letter-spacing: 2px; margin: 13px 0 12px; }
+  > p { margin: 18px 0 0; color: #d5d5d5; font-size: 18px; }
+}
+.location { display: flex; align-items: center; gap: 10px; color: #d4d4d4; span { color: $gold; } }
+.shop-features { display: flex; margin-top: 42px;
+  .feature { padding: 0 30px; border-right: 1px solid rgba(255,255,255,.15); &:first-child { padding-left: 0; } &:last-child { border-right: 0; } strong { display: block; font-size: 14px; } small { display: block; color: $muted; font-size: 11px; margin-top: 5px; } }
+}
+
+.booking-stepper { background: #101416; border-top: 1px solid $border; border-bottom: 1px solid $border; }
+.steps { display: flex; padding: 27px 0; }
+.step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; color: #686e72;
+  &:not(:last-child)::after { content: ''; position: absolute; height: 1px; width: calc(100% - 55px); left: calc(50% + 28px); top: 16px; background: #363c40; }
+  &.completed:not(:last-child)::after { background: $gold; }
+  span { font-size: 12px; margin-top: 10px; }
+  &.active { color: #fff; }
+}
+.step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #555c60; background: #202528; position: relative; z-index: 2; font-size: 13px; font-weight: 700; }
+.step.active .step-circle { border-color: $gold; background: $gold; color: #000; }
+
+.booking-content { padding: 50px 0 90px; }
+.booking-layout { display: grid; grid-template-columns: minmax(0,1fr) 370px; gap: 40px; align-items: start; }
+.booking-section { margin-bottom: 55px; transition: opacity .3s ease, filter .3s ease; }
+.section-disabled { opacity: .4; .section-heading { pointer-events: none; } }
+.section-heading { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 24px; h2 { margin: 0; font-size: 22px; } p { margin: 6px 0 0; color: $muted; font-size: 13px; } }
+.section-number { width: 32px; height: 32px; border-radius: 50%; background: $gold; color: #080808; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; }
+
+.services-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.service-card { appearance: none; padding: 0; background: $card; color: #fff; border: 1px solid $border; border-radius: 12px; overflow: hidden; text-align: left; cursor: pointer; transition: .25s ease;
+  &:hover { border-color: rgba($gold,.65); transform: translateY(-3px); }
+  &.selected { border-color: $gold; box-shadow: 0 0 0 1px $gold,0 8px 30px rgba(217,173,91,.08); }
+}
+.service-image { height: 145px; position: relative; img { width: 100%; height: 100%; object-fit: cover; } }
+.selection-circle { width: 18px; height: 18px; border: 1px solid #fff; border-radius: 50%; position: absolute; top: 12px; right: 12px; background: #111; }
+.selected .selection-circle { border: 5px solid $gold; background: #111; }
+.service-content { padding: 16px; h3 { margin: 0 0 8px; font-size: 16px; } }
+.duration { color: $muted; font-size: 12px; }
+.price { margin-top: 12px; color: $gold-light; font-size: 17px; font-weight: 700; }
+
+.barber-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; }
+.barber-card { appearance: none; position: relative; background: $card; color: #fff; border: 1px solid $border; border-radius: 12px; padding: 10px; text-align: left; cursor: pointer; transition: .25s ease;
+  &:hover:not(:disabled) { border-color: rgba($gold,.6); transform: translateY(-3px); }
+  &.selected { border-color: $gold; box-shadow: 0 0 0 1px $gold; }
+  &:disabled { cursor: not-allowed; }
+  img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; }
+  h3 { font-size: 14px; margin: 12px 0 8px; }
+  > small { display: block; line-height: 1.5; color: $muted; }
+}
+.barber-meta { display: flex; align-items: center; justify-content: space-between; span { color: $gold-light; font-size: 12px; } small { color: $muted; font-size: 10px; } }
+.any-barber { display: flex; flex-direction: column; justify-content: center; min-height: 185px; }
+.any-icon { width: 55px; height: 55px; border-radius: 50%; background: #252a2d; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+
+.date-list { display: grid; grid-template-columns: repeat(7,1fr); gap: 10px; }
+.date-card { appearance: none; min-height: 100px; border-radius: 10px; background: $card; color: #fff; border: 1px solid $border; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: .2s ease;
+  .day { color: $muted; font-size: 11px; } strong { font-size: 24px; margin: 4px 0; } span:last-child { color: $muted; font-size: 11px; }
+  &:hover:not(:disabled) { border-color: $gold; }
+  &.selected { background: $gold; border-color: $gold; color: #080808; span { color: #2b2418; } }
+}
+.time-wrapper { margin-top: 28px; }
+.time-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; h3 { margin: 0; font-size: 16px; } p { margin: 5px 0 0; color: $muted; font-size: 11px; } }
+.available-label { color: #7bd7a0; font-size: 11px; }
+.time-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; }
+.time-slot { height: 45px; background: $card-light; color: #fff; border: 1px solid $border; border-radius: 8px; cursor: pointer; font-size: 12px; transition: .2s ease; &:hover { border-color: $gold; } &.selected { background: $gold; border-color: $gold; color: #050505; font-weight: 700; } }
+.no-times { padding: 25px; border: 1px dashed $border; border-radius: 10px; color: $muted; text-align: center; }
+
+.customer-form { display: grid; grid-template-columns: repeat(2,1fr); gap: 18px; }
+.form-group { &:last-child { grid-column: 1 / -1; }
+  label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; span { color: #d86666; } small { color: $muted; font-weight: 400; } }
+  input,textarea { width: 100%; border: 1px solid $border; background: $card-light; border-radius: 8px; padding: 13px 14px; color: #fff; outline: none; transition: .2s ease; &::placeholder { color: #656b70; } &:focus { border-color: $gold; } }
+  textarea { resize: vertical; min-height: 100px; }
+}
+.phone-input { display: flex; border: 1px solid $border; border-radius: 8px; background: $card-light; overflow: hidden; &:focus-within { border-color: $gold; } input { border: 0; border-radius: 0; } }
+.country-code { display: flex; align-items: center; padding: 0 13px; white-space: nowrap; border-right: 1px solid $border; font-size: 12px; }
+
+.booking-summary { position: sticky; top: 25px; }
+.summary-card { background: #111517; border: 1px solid $border; border-radius: 14px; padding: 24px; h2 { margin: 0 0 20px; font-size: 19px; } }
+.summary-row { display: flex; align-items: center; gap: 12px; padding: 17px 0; border-top: 1px solid #262b2e; > div:not(.summary-icon) { flex: 1; } span { display: block; color: $muted; font-size: 10px; margin-bottom: 4px; } strong { display: block; font-size: 12px; } }
+.summary-icon { width: 38px; height: 38px; flex-shrink: 0; border-radius: 8px; background: #202528; display: flex; align-items: center; justify-content: center; }
+.summary-price { color: $gold-light; }
+.summary-total { border-top: 1px solid $border; padding: 20px 0; display: flex; align-items: center; justify-content: space-between; span { font-size: 14px; font-weight: 600; } strong { color: $gold-light; font-size: 21px; } }
+.confirm-btn { width: 100%; height: 52px; border: 0; border-radius: 8px; background: linear-gradient(135deg,$gold-light,$gold); color: #080808; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 15px; transition: .25s ease; &:hover:not(:disabled) { transform: translateY(-2px); } &:disabled { opacity: .35; cursor: not-allowed; } }
+.whatsapp-note { margin-top: 15px; text-align: center; color: $muted; font-size: 10px; span { color: #25d366; } }
+
+.success-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.78); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.success-modal { width: 100%; max-width: 460px; background: #121719; border: 1px solid $border; border-radius: 18px; padding: 40px; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.45); h2 { margin: 12px 0 8px; font-size: 28px; } > p { color: $muted; line-height: 1.6; font-size: 13px; } > button { width: 100%; height: 48px; margin-top: 25px; border: 0; border-radius: 8px; background: $gold; color: #080808; font-weight: 800; cursor: pointer; } }
+.success-icon { width: 65px; height: 65px; margin: 0 auto 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(68,185,117,.12); border: 1px solid #44b975; color: #63d994; font-size: 28px; }
+.success-label { color: $gold; letter-spacing: 3px; font-size: 9px; }
+.success-details { margin-top: 25px; border: 1px solid $border; border-radius: 10px; overflow: hidden; text-align: left; div { padding: 14px 16px; display: flex; justify-content: space-between; border-bottom: 1px solid $border; &:last-child { border-bottom: 0; } } span { color: $muted; font-size: 11px; } strong { font-size: 11px; } }
+
+@media (max-width: 1100px) { .booking-layout { grid-template-columns: 1fr; } .booking-summary { position: static; } .services-grid { grid-template-columns: repeat(2,1fr); } .barber-grid { grid-template-columns: repeat(2,1fr); } .time-grid { grid-template-columns: repeat(4,1fr); } }
+@media (max-width: 767px) {
+  .container { padding-left: 16px; padding-right: 16px; } .shop-hero { min-height: 430px; } .top-nav { min-height: 72px; }
+  .brand { strong { font-size: 13px; letter-spacing: 2px; } small { letter-spacing: 2px; } } .btn-book-top { display: none; }
+  .hero-content { padding-top: 55px; h1 { font-size: 42px; } > p { font-size: 15px; } }
+  .shop-features { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; .feature { padding: 0; border: 0; } }
+  .booking-stepper { overflow-x: auto; scrollbar-width: none; &::-webkit-scrollbar { display: none; } } .steps { min-width: 650px; }
+  .booking-content { padding-top: 35px; } .services-grid { grid-template-columns: 1fr 1fr; } .service-image { height: 120px; } .barber-grid { grid-template-columns: 1fr 1fr; }
+  .date-list { display: flex; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; &::-webkit-scrollbar { display: none; } } .date-card { flex: 0 0 72px; min-height: 90px; }
+  .time-grid { grid-template-columns: repeat(3,1fr); } .customer-form { grid-template-columns: 1fr; } .form-group:last-child { grid-column: auto; }
+}
+@media (max-width: 480px) { .services-grid { grid-template-columns: 1fr; } .service-card { display: grid; grid-template-columns: 125px 1fr; } .service-image { height: 125px; } .barber-grid { grid-template-columns: 1fr 1fr; } .barber-card img { height: 105px; } .time-grid { grid-template-columns: repeat(2,1fr); } .summary-card { padding: 18px; } .success-modal { padding: 30px 20px; } }
