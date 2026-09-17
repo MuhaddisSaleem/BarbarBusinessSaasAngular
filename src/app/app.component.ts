@@ -8,7 +8,9 @@ import { HeroComponent } from './hero/hero.component';
   imports: [HeroComponent, BookingComponent],
   template: `
     <app-hero></app-hero>
-    <app-booking></app-booking>
+    <div id="booking">
+      <app-booking></app-booking>
+    </div>
   `
 })
 export class AppComponent {}
