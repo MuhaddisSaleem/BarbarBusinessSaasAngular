@@ -92,6 +92,33 @@ body {
   color: #ffffff;
 }
 
+/* Uploaded service photos. These override the old remote service image URLs
+ * everywhere the service image is rendered, including the booking summary.
+ */
+.booking-page img[alt='Haircut'] {
+  content: url('/assets/images/services/haircut.webp');
+}
+
+.booking-page img[alt='Beard Trim'] {
+  content: url('/assets/images/services/beard-trim.webp');
+}
+
+.booking-page img[alt='Hair + Beard + Free Hair Massage'] {
+  content: url('/assets/images/services/hair-beard-massage.webp');
+}
+
+.booking-page img[alt='Kids Haircut'] {
+  content: url('/assets/images/services/kids-haircut.webp');
+}
+
+.booking-page img[alt='Hair Wash'] {
+  content: url('/assets/images/services/hair-wash.webp');
+}
+
+.booking-page img[alt='6 Step Face Massage'] {
+  content: url('/assets/images/services/face-massage.webp');
+}
+
 @media (max-width: 900px) {
   .booking-page .middle-column {
     gap: 24px;
