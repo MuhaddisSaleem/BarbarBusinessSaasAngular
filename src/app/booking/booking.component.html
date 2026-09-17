@@ -1,121 +1,263 @@
 <div class="booking-page">
-  <section class="shop-hero">
-    <div class="hero-overlay"></div>
-    <div class="container position-relative">
-      <nav class="top-nav">
-        <a class="brand" href="#">
-          <span class="brand-icon">✂</span>
-          <span><strong>ROYAL BARBERS</strong><small>LOOK GOOD · FEEL GREAT</small></span>
-        </a>
-        <a href="#booking" class="btn-book-top">Book Appointment</a>
-      </nav>
-
-      <div class="hero-content">
-        <span class="eyebrow">PREMIUM BARBERSHOP</span>
-        <h1>ROYAL BARBERS</h1>
-        <div class="location"><span>●</span> Bahawalpur, Pakistan</div>
-        <p>More Than a Haircut. It's a Lifestyle.</p>
-
-        <div class="shop-features">
-          <div class="feature"><strong>★ 4.9</strong><small>120+ reviews</small></div>
-          <div class="feature"><strong>10:00 PM</strong><small>Open until</small></div>
-          <div class="feature"><strong>Professional</strong><small>Experienced Barbers</small></div>
-          <div class="feature"><strong>Clean & Safe</strong><small>Premium Environment</small></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section class="booking-stepper">
-    <div class="container">
+    <div class="page-shell">
       <div class="steps">
-        <div class="step" [class.active]="currentStep >= 1" [class.completed]="currentStep > 1"><div class="step-circle">1</div><span>Select Service</span></div>
-        <div class="step" [class.active]="currentStep >= 2" [class.completed]="currentStep > 2"><div class="step-circle">2</div><span>Choose Barber</span></div>
-        <div class="step" [class.active]="currentStep >= 3" [class.completed]="currentStep > 3"><div class="step-circle">3</div><span>Date & Time</span></div>
-        <div class="step" [class.active]="currentStep >= 4" [class.completed]="currentStep > 4"><div class="step-circle">4</div><span>Your Details</span></div>
-        <div class="step" [class.active]="currentStep >= 5"><div class="step-circle">5</div><span>Confirmation</span></div>
+        <div class="step active">
+          <div class="step-circle">1</div>
+          <span>Select Service</span>
+        </div>
+        <div class="step">
+          <div class="step-circle">2</div>
+          <span>Choose Barber</span>
+        </div>
+        <div class="step">
+          <div class="step-circle">3</div>
+          <span>Pick Date &amp; Time</span>
+        </div>
+        <div class="step">
+          <div class="step-circle">4</div>
+          <span>Your Details</span>
+        </div>
+        <div class="step">
+          <div class="step-circle">5</div>
+          <span>Confirm Booking</span>
+        </div>
       </div>
     </div>
   </section>
 
-  <main class="booking-content" id="booking">
-    <div class="container">
-      <div class="booking-layout">
-        <div class="booking-main">
-          <section class="booking-section">
-            <div class="section-heading"><span class="section-number">1</span><div><h2>Choose a Service</h2><p>Select the service you want to book.</p></div></div>
+  <main class="booking-content">
+    <div class="page-shell">
+      <div class="booking-grid">
+        <div class="left-column">
+          <section class="booking-section service-section">
+            <div class="section-heading">
+              <h2>1. Choose a Service</h2>
+              <p>Select the service you want to book</p>
+            </div>
+
             <div class="services-grid">
-              <button type="button" class="service-card" *ngFor="let service of services" [class.selected]="selectedService?.id === service.id" (click)="selectService(service)">
-                <div class="service-image"><img [src]="service.image" [alt]="service.name"><span class="selection-circle"></span></div>
-                <div class="service-content"><h3>{{ service.name }}</h3><div class="duration">◷ {{ service.duration }} minutes</div><div class="price">Rs. {{ service.price | number }}</div></div>
+              <button
+                type="button"
+                class="service-card"
+                *ngFor="let service of services"
+                [class.selected]="selectedService?.id === service.id"
+                (click)="selectService(service)">
+                <div class="service-image">
+                  <img [src]="service.image" [alt]="service.name">
+                </div>
+
+                <div class="service-card-body">
+                  <div class="service-title-row">
+                    <h3>{{ service.name }}</h3>
+                    <span class="radio-dot"></span>
+                  </div>
+                  <div class="duration-row">
+                    <span class="clock-mini">◷</span>
+                    {{ service.duration }} minutes
+                  </div>
+                  <strong class="service-price">Rs. {{ service.price | number }}</strong>
+                </div>
               </button>
             </div>
           </section>
 
-          <section class="booking-section" [class.section-disabled]="!selectedService">
-            <div class="section-heading"><span class="section-number">2</span><div><h2>Choose Your Barber</h2><p>Pick your preferred barber or choose any.</p></div></div>
+          <section class="booking-section barber-section">
+            <div class="section-heading">
+              <h2>2. Choose Your Barber</h2>
+              <p>Pick your preferred barber (or choose any)</p>
+            </div>
+
             <div class="barber-grid">
-              <button type="button" class="barber-card" *ngFor="let barber of barbers" [disabled]="!selectedService" [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id" (click)="selectBarber(barber)">
-                <span class="selection-circle"></span><img [src]="barber.image" [alt]="barber.name"><h3>{{ barber.name }}</h3>
-                <div class="barber-meta"><span>★ {{ barber.rating }}</span><small>{{ barber.experience }}</small></div>
+              <button
+                type="button"
+                class="barber-card"
+                *ngFor="let barber of barbers"
+                [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id"
+                (click)="selectBarber(barber)">
+                <span class="radio-dot"></span>
+                <img [src]="barber.image" [alt]="barber.name">
+                <h3>{{ barber.name }}</h3>
+                <div class="barber-meta">
+                  <span class="rating"><b>★</b> {{ barber.rating }}</span>
+                  <span>{{ barber.experience }}</span>
+                </div>
               </button>
-              <button type="button" class="barber-card any-barber" [disabled]="!selectedService" [class.selected]="selectedBarber === 'any'" (click)="selectBarber('any')">
-                <span class="selection-circle"></span><div class="any-icon">👥</div><h3>Any Barber</h3><small>We'll assign the best available barber.</small>
+
+              <button
+                type="button"
+                class="barber-card any-barber"
+                [class.selected]="selectedBarber === 'any'"
+                (click)="selectBarber('any')">
+                <span class="radio-dot"></span>
+                <div class="any-icon">
+                  <span class="person one"></span>
+                  <span class="person two"></span>
+                </div>
+                <h3>Any Barber</h3>
+                <p>We'll assign<br>the best available</p>
               </button>
-            </div>
-          </section>
-
-          <section class="booking-section" [class.section-disabled]="!selectedBarber">
-            <div class="section-heading"><span class="section-number">3</span><div><h2>Select Date & Time</h2><p>Choose when you'd like to visit.</p></div></div>
-            <div class="date-list">
-              <button type="button" class="date-card" *ngFor="let item of bookingDates" [disabled]="!selectedBarber" [class.selected]="selectedDate?.fullDate === item.fullDate" (click)="selectDate(item)">
-                <span class="day">{{ item.day }}</span><strong>{{ item.dateNumber }}</strong><span>{{ item.month }}</span>
-              </button>
-            </div>
-
-            <div class="time-wrapper" *ngIf="selectedDate">
-              <div class="time-header"><div><h3>Available Times</h3><p *ngIf="selectedService">{{ selectedService.duration }} minute {{ selectedService.name }}</p></div><span class="available-label">{{ availableTimes.length }} available</span></div>
-              <div class="time-grid" *ngIf="availableTimes.length">
-                <button type="button" *ngFor="let time of availableTimes" class="time-slot" [class.selected]="selectedTime === time" (click)="selectTime(time)">{{ time }}</button>
-              </div>
-              <div class="no-times" *ngIf="!availableTimes.length">No available appointments for this date.</div>
-            </div>
-          </section>
-
-          <section class="booking-section customer-section" [class.section-disabled]="!selectedTime">
-            <div class="section-heading"><span class="section-number">4</span><div><h2>Your Details</h2><p>Enter your information to confirm.</p></div></div>
-            <div class="customer-form">
-              <div class="form-group"><label>Full Name <span>*</span></label><input type="text" [(ngModel)]="customer.name" [disabled]="!selectedTime" placeholder="Enter your full name"></div>
-              <div class="form-group"><label>Phone Number <span>*</span></label><div class="phone-input"><span class="country-code">🇵🇰 +92</span><input type="tel" [(ngModel)]="customer.phone" [disabled]="!selectedTime" placeholder="300 1234567"></div></div>
-              <div class="form-group"><label>Notes <small>(optional)</small></label><textarea [(ngModel)]="customer.notes" [disabled]="!selectedTime" placeholder="Any special requests?"></textarea></div>
             </div>
           </section>
         </div>
+
+        <section class="booking-section date-section">
+          <div class="section-heading">
+            <h2>3. Select Date &amp; Time</h2>
+            <p>Choose a convenient date and time</p>
+          </div>
+
+          <div class="calendar-card">
+            <div class="calendar-header">
+              <button type="button" (click)="previousMonth()" aria-label="Previous month">‹</button>
+              <strong>{{ monthLabel }}</strong>
+              <button type="button" (click)="nextMonth()" aria-label="Next month">›</button>
+            </div>
+
+            <div class="calendar-weekdays">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+
+            <div class="calendar-days">
+              <button
+                type="button"
+                *ngFor="let cell of calendarCells"
+                [class.empty]="!cell.date"
+                [class.selected]="cell.fullDate === selectedDate?.fullDate"
+                [disabled]="!cell.date"
+                (click)="selectCalendarDay(cell)">
+                {{ cell.dayNumber }}
+              </button>
+            </div>
+          </div>
+
+          <div class="time-area">
+            <h3>Available Times</h3>
+            <div class="time-grid">
+              <button
+                type="button"
+                class="time-slot"
+                *ngFor="let time of availableTimes"
+                [class.selected]="selectedTime === time"
+                (click)="selectTime(time)">
+                {{ time }}
+              </button>
+            </div>
+            <div class="no-times" *ngIf="!availableTimes.length">No available times for this date.</div>
+          </div>
+        </section>
 
         <aside class="booking-summary">
           <div class="summary-card">
             <h2>Booking Summary</h2>
-            <div class="summary-row"><div class="summary-icon">✂</div><div><span>Service</span><strong>{{ selectedService?.name || 'Select a service' }}</strong></div><strong class="summary-price" *ngIf="selectedService">Rs. {{ selectedService.price | number }}</strong></div>
-            <div class="summary-row"><div class="summary-icon">👤</div><div><span>Barber</span><strong>{{ barberName }}</strong></div></div>
-            <div class="summary-row"><div class="summary-icon">📅</div><div><span>Date</span><strong>{{ selectedDate ? (selectedDate.date | date:'EEE, dd MMM yyyy') : 'Select date' }}</strong></div></div>
-            <div class="summary-row"><div class="summary-icon">◷</div><div><span>Time</span><strong *ngIf="selectedTime">{{ selectedTime }} - {{ bookingEndTime }}</strong><strong *ngIf="!selectedTime">Select time</strong></div></div>
-            <div class="summary-total"><span>Total</span><strong>Rs. {{ selectedService?.price ? (selectedService?.price | number) : 0 }}</strong></div>
-            <button type="button" class="confirm-btn" [disabled]="!canConfirmBooking()" (click)="confirmBooking()">Confirm Booking <span>→</span></button>
-            <div class="whatsapp-note"><span>●</span> You'll receive confirmation on WhatsApp.</div>
+
+            <div class="summary-divider"></div>
+
+            <div class="summary-service" *ngIf="selectedService">
+              <img [src]="selectedService.image" [alt]="selectedService.name">
+              <div class="summary-copy">
+                <strong>{{ selectedService.name }}</strong>
+                <span>◷ {{ selectedService.duration }} minutes</span>
+              </div>
+              <strong class="summary-price">Rs. {{ selectedService.price | number }}</strong>
+            </div>
+
+            <div class="summary-row barber-summary">
+              <img *ngIf="barberImage" class="summary-avatar" [src]="barberImage" [alt]="barberName">
+              <div *ngIf="!barberImage" class="summary-icon">●</div>
+              <div class="summary-copy">
+                <strong>{{ barberName }}</strong>
+                <span *ngIf="barberRating"><b class="star">★</b> {{ barberRating }} &nbsp;&nbsp; {{ barberExperience }}</span>
+              </div>
+            </div>
+
+            <div class="summary-row">
+              <div class="summary-line-icon calendar-icon"></div>
+              <strong>{{ selectedDate ? (selectedDate.date | date:'EEE, dd MMM yyyy') : 'Select date' }}</strong>
+            </div>
+
+            <div class="summary-row">
+              <div class="summary-line-icon clock-icon"></div>
+              <strong>{{ selectedTime ? selectedTime + ' – ' + bookingEndTime : 'Select time' }}</strong>
+            </div>
+
+            <div class="summary-total">
+              <strong>Total</strong>
+              <strong>Rs. {{ selectedService?.price ? (selectedService?.price | number) : 0 }}</strong>
+            </div>
+
+            <div class="details-block">
+              <h2>4. Your Details</h2>
+              <p>Enter your information to confirm</p>
+
+              <div class="form-group">
+                <label>Full Name <span>*</span></label>
+                <input type="text" [(ngModel)]="customer.name" placeholder="Enter your full name">
+              </div>
+
+              <div class="form-group">
+                <label>Phone Number <span>*</span></label>
+                <div class="phone-input">
+                  <span class="flag">🇵🇰</span>
+                  <span class="country-code">+92</span>
+                  <input type="tel" [(ngModel)]="customer.phone" placeholder="300 1234567">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Notes <small>(optional)</small></label>
+                <textarea [(ngModel)]="customer.notes" placeholder="Any special requests?"></textarea>
+              </div>
+
+              <button type="button" class="confirm-btn" (click)="confirmBooking()">
+                <span>Confirm Booking</span>
+                <b>→</b>
+              </button>
+
+              <div class="whatsapp-note">
+                <span class="wa-icon">✓</span>
+                You'll receive a confirmation on WhatsApp
+              </div>
+            </div>
           </div>
         </aside>
       </div>
     </div>
   </main>
 
+  <footer class="booking-footer">
+    <div class="page-shell footer-inner">
+      <div class="footer-feature">
+        <div class="footer-icon calendar-outline"></div>
+        <div><strong>Easy Online Booking</strong><span>Book in seconds</span></div>
+      </div>
+      <div class="footer-feature">
+        <div class="footer-icon shield-outline">✓</div>
+        <div><strong>100% Secure</strong><span>Your information is safe</span></div>
+      </div>
+      <div class="footer-feature">
+        <div class="footer-icon clock-outline"></div>
+        <div><strong>Free Cancellation</strong><span>Up to 2 hours before</span></div>
+      </div>
+      <div class="footer-feature">
+        <div class="footer-icon headset-outline">⌁</div>
+        <div><strong>Need Help?</strong><span>+92 300 1234567</span></div>
+      </div>
+      <div class="footer-signature">Stay Sharp <span>♛</span></div>
+    </div>
+  </footer>
+
   <div class="success-overlay" *ngIf="bookingConfirmed">
     <div class="success-modal">
-      <div class="success-icon">✓</div><span class="success-label">BOOKING CONFIRMED</span><h2>You're all set!</h2><p>Your appointment at Royal Barbers has been successfully booked.</p>
+      <div class="success-icon">✓</div>
+      <span class="success-label">BOOKING CONFIRMED</span>
+      <h2>You're all set!</h2>
+      <p>Your appointment at Royal Barbers has been successfully booked.</p>
       <div class="success-details">
         <div><span>Service</span><strong>{{ selectedService?.name }}</strong></div>
         <div><span>Barber</span><strong>{{ confirmedBarberName }}</strong></div>
         <div><span>Date</span><strong>{{ selectedDate?.date | date:'dd MMM yyyy' }}</strong></div>
-        <div><span>Time</span><strong>{{ selectedTime }} - {{ bookingEndTime }}</strong></div>
+        <div><span>Time</span><strong>{{ selectedTime }} – {{ bookingEndTime }}</strong></div>
       </div>
       <button type="button" (click)="closeSuccess()">Done</button>
     </div>
