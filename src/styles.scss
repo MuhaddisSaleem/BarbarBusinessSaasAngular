@@ -14,3 +14,8 @@ html, body {
 body {
   min-width: 320px;
 }
+
+/* Repository-safe hero asset. Final photography can replace this SVG later. */
+.shop-hero {
+  background-image: url('/assets/images/barber-hero.svg') !important;
+}
