@@ -62,6 +62,36 @@ body {
   height: 62px;
 }
 
+/* Booking stepper progress states.
+ * Current step = gold outline.
+ * Completed step = gold tick.
+ * Completed connector = gold progress line.
+ */
+.booking-page .booking-stepper .step.active:not(.completed) .step-circle {
+  border: 2px solid #ffd16f;
+  background: #20292e;
+  color: #ffd16f;
+  box-shadow: 0 0 0 4px rgba(242, 191, 90, 0.08), 0 0 14px rgba(242, 191, 90, 0.14);
+}
+
+.booking-page .booking-stepper .step.completed .step-circle {
+  border-color: #ffd16f;
+  background: linear-gradient(145deg, #ffd879, #e9aa42);
+  color: #111;
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: 0 0 12px rgba(242, 191, 90, 0.18);
+}
+
+.booking-page .booking-stepper .step.completed:not(:last-child)::after {
+  background: #f2bf5a;
+}
+
+.booking-page .booking-stepper .step.active > span,
+.booking-page .booking-stepper .step.completed > span {
+  color: #ffffff;
+}
+
 @media (max-width: 900px) {
   .booking-page .middle-column {
     gap: 24px;
