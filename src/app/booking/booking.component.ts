@@ -91,8 +91,8 @@ export class BookingComponent implements OnInit {
     }
   ];
 
-  // Nothing is preselected. The customer makes every booking choice.
-  selectedService: Service | null = null;
+  // Customers can choose multiple services. Nothing is preselected.
+  selectedServices: Service[] = [];
   selectedBarber: Barber | 'any' | null = null;
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
@@ -115,10 +115,34 @@ export class BookingComponent implements OnInit {
     this.buildCalendar();
   }
 
-  selectService(service: Service): void {
-    this.selectedService = service;
+  toggleService(service: Service): void {
+    const alreadySelected = this.isServiceSelected(service.id);
+
+    if (alreadySelected) {
+      this.selectedServices = this.selectedServices.filter(item => item.id !== service.id);
+    } else {
+      // The Hair + Beard combo already contains haircut and beard, so those
+      // individual services cannot be booked together with the combo.
+      if (service.id === 3) {
+        this.selectedServices = this.selectedServices.filter(item => item.id !== 1 && item.id !== 2);
+        this.selectedServices.push(service);
+      } else if ((service.id === 1 || service.id === 2) && this.isServiceSelected(3)) {
+        return;
+      } else {
+        this.selectedServices.push(service);
+      }
+    }
+
     this.selectedTime = null;
     this.generateAvailableTimes();
+  }
+
+  isServiceSelected(serviceId: number): boolean {
+    return this.selectedServices.some(service => service.id === serviceId);
+  }
+
+  isServiceDisabled(service: Service): boolean {
+    return this.isServiceSelected(3) && (service.id === 1 || service.id === 2);
   }
 
   selectBarber(barber: Barber | 'any'): void {
@@ -157,7 +181,6 @@ export class BookingComponent implements OnInit {
     const month = this.calendarDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-
     const cells: CalendarCell[] = [];
 
     for (let i = 0; i < firstDay; i++) {
@@ -166,11 +189,7 @@ export class BookingComponent implements OnInit {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
-      cells.push({
-        date,
-        dayNumber: day,
-        fullDate: this.formatDate(date)
-      });
+      cells.push({ date, dayNumber: day, fullDate: this.formatDate(date) });
     }
 
     this.calendarCells = cells;
@@ -187,7 +206,7 @@ export class BookingComponent implements OnInit {
   }
 
   generateAvailableTimes(): void {
-    if (!this.selectedService || !this.selectedBarber || !this.selectedDate) {
+    if (!this.selectedServices.length || !this.selectedBarber || !this.selectedDate) {
       this.availableTimes = [];
       return;
     }
@@ -199,14 +218,10 @@ export class BookingComponent implements OnInit {
 
     const slots: string[] = [];
     const interval = 30;
-    const duration = this.selectedService.duration;
+    const duration = this.totalDuration;
 
     windows.forEach(window => {
-      for (
-        let minutes = window.start;
-        minutes + duration <= window.end;
-        minutes += interval
-      ) {
+      for (let minutes = window.start; minutes + duration <= window.end; minutes += interval) {
         const time = this.minutesToTime(minutes);
         if (this.isTimeAvailable(time)) slots.push(time);
       }
@@ -216,18 +231,13 @@ export class BookingComponent implements OnInit {
   }
 
   isTimeAvailable(time: string): boolean {
-    if (!this.selectedDate || !this.selectedService || !this.selectedBarber) {
+    if (!this.selectedDate || !this.selectedServices.length || !this.selectedBarber) {
       return false;
     }
 
     if (this.selectedBarber === 'any') {
       return this.barbers.some(barber =>
-        this.isBarberAvailable(
-          barber.id,
-          time,
-          this.selectedDate!.fullDate,
-          this.selectedService!.duration
-        )
+        this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.totalDuration)
       );
     }
 
@@ -235,7 +245,7 @@ export class BookingComponent implements OnInit {
       this.selectedBarber.id,
       time,
       this.selectedDate.fullDate,
-      this.selectedService.duration
+      this.totalDuration
     );
   }
 
@@ -274,7 +284,7 @@ export class BookingComponent implements OnInit {
           barber.id,
           this.selectedTime!,
           this.selectedDate!.fullDate,
-          this.selectedService!.duration
+          this.totalDuration
         )
       ) || null;
     } else {
@@ -287,7 +297,7 @@ export class BookingComponent implements OnInit {
       barberId: assignedBarber.id,
       date: this.selectedDate!.fullDate,
       startTime: this.selectedTime!,
-      duration: this.selectedService!.duration
+      duration: this.totalDuration
     });
 
     this.confirmedBarberName = assignedBarber.name;
@@ -296,13 +306,25 @@ export class BookingComponent implements OnInit {
 
   canConfirmBooking(): boolean {
     return !!(
-      this.selectedService &&
+      this.selectedServices.length &&
       this.selectedBarber &&
       this.selectedDate &&
       this.selectedTime &&
       this.customer.name.trim() &&
       this.customer.phone.trim()
     );
+  }
+
+  get totalPrice(): number {
+    return this.selectedServices.reduce((total, service) => total + service.price, 0);
+  }
+
+  get totalDuration(): number {
+    return this.selectedServices.reduce((total, service) => total + service.duration, 0);
+  }
+
+  get selectedServiceNames(): string {
+    return this.selectedServices.map(service => service.name).join(', ');
   }
 
   get monthLabel(): string {
@@ -334,10 +356,8 @@ export class BookingComponent implements OnInit {
   }
 
   get bookingEndTime(): string {
-    if (!this.selectedTime || !this.selectedService) return '';
-    return this.minutesToTime(
-      this.timeToMinutes(this.selectedTime) + this.selectedService.duration
-    );
+    if (!this.selectedTime || !this.selectedServices.length) return '';
+    return this.minutesToTime(this.timeToMinutes(this.selectedTime) + this.totalDuration);
   }
 
   closeSuccess(): void {
