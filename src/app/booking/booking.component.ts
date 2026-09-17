@@ -2,49 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-interface Service {
-  id: number;
-  name: string;
-  duration: number;
-  price: number;
-  image: string;
-}
-
-interface Barber {
-  id: number;
-  name: string;
-  rating: number;
-  experience: string;
-  image: string;
-}
-
-interface BookingDate {
-  date: Date;
-  day: string;
-  dateNumber: number;
-  month: string;
-  fullDate: string;
-}
-
-interface CalendarCell {
-  date: Date | null;
-  dayNumber: number | null;
-  fullDate: string | null;
-}
-
-interface BookedAppointment {
-  barberId: number;
-  date: string;
-  startTime: string;
-  duration: number;
-}
-
-interface BookingPerson {
-  id: number;
-  label: string;
-  selectedServices: Service[];
-  selectedBarber: Barber | 'any' | null;
-}
+interface Service { id: number; name: string; duration: number; price: number; image: string; }
+interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
+interface BookingDate { date: Date; day: string; dateNumber: number; month: string; fullDate: string; }
+interface CalendarCell { date: Date | null; dayNumber: number | null; fullDate: string | null; }
+interface BookedAppointment { barberId: number; date: string; startTime: string; duration: number; }
+interface BookingPerson { id: number; label: string; selectedServices: Service[]; selectedBarber: Barber | 'any' | null; }
 
 @Component({
   selector: 'app-booking',
@@ -75,27 +38,9 @@ export class BookingComponent implements OnInit {
   ];
 
   barbers: Barber[] = [
-    {
-      id: 1,
-      name: 'Ahmed',
-      rating: 4.9,
-      experience: '5+ years',
-      image: 'https://images.pexels.com/photos/4997508/pexels-photo-4997508.jpeg?auto=compress&cs=tinysrgb&w=700'
-    },
-    {
-      id: 2,
-      name: 'Ali',
-      rating: 4.8,
-      experience: '4+ years',
-      image: 'https://images.pexels.com/photos/26903605/pexels-photo-26903605.jpeg?auto=compress&cs=tinysrgb&w=700'
-    },
-    {
-      id: 3,
-      name: 'Usman',
-      rating: 4.7,
-      experience: '3+ years',
-      image: 'https://images.pexels.com/photos/18885730/pexels-photo-18885730.jpeg?auto=compress&cs=tinysrgb&w=700'
-    }
+    { id: 1, name: 'Ahmed', rating: 4.9, experience: '5+ years', image: 'https://images.pexels.com/photos/4997508/pexels-photo-4997508.jpeg?auto=compress&cs=tinysrgb&w=700' },
+    { id: 2, name: 'Ali', rating: 4.8, experience: '4+ years', image: 'https://images.pexels.com/photos/26903605/pexels-photo-26903605.jpeg?auto=compress&cs=tinysrgb&w=700' },
+    { id: 3, name: 'Usman', rating: 4.7, experience: '3+ years', image: 'https://images.pexels.com/photos/18885730/pexels-photo-18885730.jpeg?auto=compress&cs=tinysrgb&w=700' }
   ];
 
   bookingMode: 'single' | 'group' = 'single';
@@ -105,59 +50,40 @@ export class BookingComponent implements OnInit {
 
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
-  calendarDate = new Date(2026, 8, 1);
+
+  // Always start the booking calendar on the user's current month.
+  calendarDate = this.startOfMonth(new Date());
   calendarCells: CalendarCell[] = [];
   availableTimes: string[] = [];
   bookedAppointments: BookedAppointment[] = [];
 
-  customer = {
-    name: '',
-    phone: '',
-    notes: ''
-  };
-
+  customer = { name: '', phone: '', notes: '' };
   bookingConfirmed = false;
   confirmedAssignments: { person: string; barber: string }[] = [];
 
-  ngOnInit(): void {
-    this.buildCalendar();
-  }
+  ngOnInit(): void { this.buildCalendar(); }
 
-  get activeParticipant(): BookingPerson {
-    return this.participants[this.activeParticipantIndex];
-  }
-
-  get selectedServices(): Service[] {
-    return this.activeParticipant.selectedServices;
-  }
-
-  get selectedBarber(): Barber | 'any' | null {
-    return this.activeParticipant.selectedBarber;
-  }
+  get activeParticipant(): BookingPerson { return this.participants[this.activeParticipantIndex]; }
+  get selectedServices(): Service[] { return this.activeParticipant.selectedServices; }
+  get selectedBarber(): Barber | 'any' | null { return this.activeParticipant.selectedBarber; }
 
   setBookingMode(mode: 'single' | 'group'): void {
     if (this.bookingMode === mode) return;
-
     this.bookingMode = mode;
     this.selectedTime = null;
 
     if (mode === 'group') {
-      if (this.participants.length === 1) {
-        this.participants.push(this.createPerson(this.nextPersonId++, 'Person 2'));
-      }
+      if (this.participants.length === 1) this.participants.push(this.createPerson(this.nextPersonId++, 'Person 2'));
     } else {
       this.participants = [this.participants[0]];
       this.activeParticipantIndex = 0;
     }
-
     this.generateAvailableTimes();
   }
 
   addPerson(): void {
     if (this.participants.length >= 4) return;
-
-    const personNumber = this.participants.length + 1;
-    this.participants.push(this.createPerson(this.nextPersonId++, `Person ${personNumber}`));
+    this.participants.push(this.createPerson(this.nextPersonId++, `Person ${this.participants.length + 1}`));
     this.activeParticipantIndex = this.participants.length - 1;
     this.selectedTime = null;
     this.generateAvailableTimes();
@@ -165,26 +91,18 @@ export class BookingComponent implements OnInit {
 
   removePerson(index: number): void {
     if (index === 0 || this.participants.length <= 2) return;
-
     this.participants.splice(index, 1);
-    this.participants.forEach((person, personIndex) => {
-      person.label = personIndex === 0 ? 'You' : `Person ${personIndex + 1}`;
-    });
-
+    this.participants.forEach((person, i) => person.label = i === 0 ? 'You' : `Person ${i + 1}`);
     this.activeParticipantIndex = Math.min(this.activeParticipantIndex, this.participants.length - 1);
     this.selectedTime = null;
     this.generateAvailableTimes();
   }
 
-  selectParticipant(index: number): void {
-    this.activeParticipantIndex = index;
-  }
+  selectParticipant(index: number): void { this.activeParticipantIndex = index; }
 
   toggleService(service: Service): void {
     const person = this.activeParticipant;
-    const alreadySelected = this.isServiceSelected(service.id);
-
-    if (alreadySelected) {
+    if (this.isServiceSelected(service.id)) {
       person.selectedServices = person.selectedServices.filter(item => item.id !== service.id);
     } else if (service.id === 3) {
       person.selectedServices = person.selectedServices.filter(item => item.id !== 1 && item.id !== 2);
@@ -194,7 +112,6 @@ export class BookingComponent implements OnInit {
     } else {
       person.selectedServices.push(service);
     }
-
     this.selectedTime = null;
     this.generateAvailableTimes();
   }
@@ -214,27 +131,32 @@ export class BookingComponent implements OnInit {
   }
 
   selectCalendarDay(cell: CalendarCell): void {
-    if (!cell.date) return;
+    if (!cell.date || this.isPastDate(cell.date)) return;
     this.setSelectedDate(cell.date);
     this.selectedTime = null;
     this.generateAvailableTimes();
   }
 
+  isPastDate(date: Date | null): boolean {
+    if (!date) return false;
+    const today = this.startOfDay(new Date());
+    return this.startOfDay(date).getTime() < today.getTime();
+  }
+
+  get canGoPreviousMonth(): boolean {
+    return this.calendarDate.getTime() > this.startOfMonth(new Date()).getTime();
+  }
+
   previousMonth(): void {
-    this.calendarDate = new Date(
-      this.calendarDate.getFullYear(),
-      this.calendarDate.getMonth() - 1,
-      1
-    );
+    if (!this.canGoPreviousMonth) return;
+    const previous = new Date(this.calendarDate.getFullYear(), this.calendarDate.getMonth() - 1, 1);
+    const currentMonth = this.startOfMonth(new Date());
+    this.calendarDate = previous.getTime() < currentMonth.getTime() ? currentMonth : previous;
     this.buildCalendar();
   }
 
   nextMonth(): void {
-    this.calendarDate = new Date(
-      this.calendarDate.getFullYear(),
-      this.calendarDate.getMonth() + 1,
-      1
-    );
+    this.calendarDate = new Date(this.calendarDate.getFullYear(), this.calendarDate.getMonth() + 1, 1);
     this.buildCalendar();
   }
 
@@ -245,15 +167,11 @@ export class BookingComponent implements OnInit {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const cells: CalendarCell[] = [];
 
-    for (let i = 0; i < firstDay; i++) {
-      cells.push({ date: null, dayNumber: null, fullDate: null });
-    }
-
+    for (let i = 0; i < firstDay; i++) cells.push({ date: null, dayNumber: null, fullDate: null });
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       cells.push({ date, dayNumber: day, fullDate: this.formatDate(date) });
     }
-
     this.calendarCells = cells;
   }
 
@@ -268,67 +186,54 @@ export class BookingComponent implements OnInit {
   }
 
   generateAvailableTimes(): void {
-    if (!this.selectedDate || !this.allParticipantsReady) {
+    if (!this.selectedDate || this.isPastDate(this.selectedDate.date) || !this.allParticipantsReady) {
       this.availableTimes = [];
       return;
     }
 
-    const windows = [
-      { start: 10 * 60, end: 15 * 60 },
-      { start: 17 * 60, end: 19 * 60 + 30 }
-    ];
-
+    const windows = [{ start: 10 * 60, end: 15 * 60 }, { start: 17 * 60, end: 19 * 60 + 30 }];
     const slots: string[] = [];
     const interval = 30;
     const longestDuration = Math.max(...this.participants.map(person => this.getPersonDuration(person)));
+    const today = this.startOfDay(new Date());
+    const selectedDay = this.startOfDay(this.selectedDate.date);
+    const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 
     windows.forEach(window => {
       for (let minutes = window.start; minutes + longestDuration <= window.end; minutes += interval) {
+        // If booking today, don't show time slots that have already started.
+        if (selectedDay.getTime() === today.getTime() && minutes <= nowMinutes) continue;
         const time = this.minutesToTime(minutes);
         if (this.resolveBarberAssignments(time)) slots.push(time);
       }
     });
-
     this.availableTimes = slots;
   }
 
-  selectTime(time: string): void {
-    this.selectedTime = time;
-  }
+  selectTime(time: string): void { this.selectedTime = time; }
 
   confirmBooking(): void {
     if (!this.canConfirmBooking() || !this.selectedTime || !this.selectedDate) return;
-
     const assignments = this.resolveBarberAssignments(this.selectedTime);
     if (!assignments) return;
 
     this.confirmedAssignments = [];
-
     this.participants.forEach(person => {
       const barber = assignments.get(person.id);
       if (!barber) return;
-
       this.bookedAppointments.push({
         barberId: barber.id,
         date: this.selectedDate!.fullDate,
         startTime: this.selectedTime!,
         duration: this.getPersonDuration(person)
       });
-
       this.confirmedAssignments.push({ person: person.label, barber: barber.name });
     });
-
     this.bookingConfirmed = true;
   }
 
   canConfirmBooking(): boolean {
-    return !!(
-      this.allParticipantsReady &&
-      this.selectedDate &&
-      this.selectedTime &&
-      this.customer.name.trim() &&
-      this.customer.phone.trim()
-    );
+    return !!(this.allParticipantsReady && this.selectedDate && !this.isPastDate(this.selectedDate.date) && this.selectedTime && this.customer.name.trim() && this.customer.phone.trim());
   }
 
   get allParticipantsReady(): boolean {
@@ -336,51 +241,35 @@ export class BookingComponent implements OnInit {
   }
 
   get totalPrice(): number {
-    return this.participants.reduce((bookingTotal, person) => {
-      return bookingTotal + this.getPersonPrice(person);
-    }, 0);
+    return this.participants.reduce((total, person) => total + this.getPersonPrice(person), 0);
   }
 
-  get totalDuration(): number {
-    return this.getPersonDuration(this.activeParticipant);
-  }
+  get totalDuration(): number { return this.getPersonDuration(this.activeParticipant); }
 
   get monthLabel(): string {
-    return this.calendarDate.toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric'
-    });
+    return this.calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
 
-  get barberName(): string {
-    return this.getPersonBarberName(this.activeParticipant);
-  }
+  get barberName(): string { return this.getPersonBarberName(this.activeParticipant); }
 
   get barberImage(): string {
     const barber = this.activeParticipant.selectedBarber;
-    if (!barber || barber === 'any') return '';
-    return barber.image;
+    return !barber || barber === 'any' ? '' : barber.image;
   }
 
   get barberRating(): number | null {
     const barber = this.activeParticipant.selectedBarber;
-    if (!barber || barber === 'any') return null;
-    return barber.rating;
+    return !barber || barber === 'any' ? null : barber.rating;
   }
 
   get barberExperience(): string {
     const barber = this.activeParticipant.selectedBarber;
-    if (!barber || barber === 'any') return '';
-    return barber.experience;
+    return !barber || barber === 'any' ? '' : barber.experience;
   }
 
   get bookingEndTime(): string {
     if (!this.selectedTime || !this.participants.some(person => person.selectedServices.length)) return '';
-
-    const longestDuration = Math.max(
-      ...this.participants.map(person => this.getPersonDuration(person))
-    );
-
+    const longestDuration = Math.max(...this.participants.map(person => this.getPersonDuration(person)));
     return this.minutesToTime(this.timeToMinutes(this.selectedTime) + longestDuration);
   }
 
@@ -409,81 +298,52 @@ export class BookingComponent implements OnInit {
   }
 
   private createPerson(id: number, label: string): BookingPerson {
-    return {
-      id,
-      label,
-      selectedServices: [],
-      selectedBarber: null
-    };
+    return { id, label, selectedServices: [], selectedBarber: null };
   }
 
   private resolveBarberAssignments(time: string): Map<number, Barber> | null {
-    if (!this.selectedDate || !this.allParticipantsReady) return null;
-
+    if (!this.selectedDate || this.isPastDate(this.selectedDate.date) || !this.allParticipantsReady) return null;
     const assignments = new Map<number, Barber>();
     const usedBarberIds = new Set<number>();
 
-    // Reserve explicitly selected barbers first.
     for (const person of this.participants) {
       const selected = person.selectedBarber;
       if (!selected || selected === 'any') continue;
-
       if (usedBarberIds.has(selected.id)) return null;
-
-      if (!this.isBarberAvailable(
-        selected.id,
-        time,
-        this.selectedDate.fullDate,
-        this.getPersonDuration(person)
-      )) {
-        return null;
-      }
-
+      if (!this.isBarberAvailable(selected.id, time, this.selectedDate.fullDate, this.getPersonDuration(person))) return null;
       assignments.set(person.id, selected);
       usedBarberIds.add(selected.id);
     }
 
-    // Assign a different available barber to each "Any Barber" participant.
     for (const person of this.participants) {
       if (person.selectedBarber !== 'any') continue;
-
       const availableBarber = this.barbers.find(barber =>
         !usedBarberIds.has(barber.id) &&
-        this.isBarberAvailable(
-          barber.id,
-          time,
-          this.selectedDate!.fullDate,
-          this.getPersonDuration(person)
-        )
+        this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.getPersonDuration(person))
       );
-
       if (!availableBarber) return null;
-
       assignments.set(person.id, availableBarber);
       usedBarberIds.add(availableBarber.id);
     }
-
     return assignments;
   }
 
-  private isBarberAvailable(
-    barberId: number,
-    requestedTime: string,
-    date: string,
-    duration: number
-  ): boolean {
+  private isBarberAvailable(barberId: number, requestedTime: string, date: string, duration: number): boolean {
     const requestedStart = this.timeToMinutes(requestedTime);
     const requestedEnd = requestedStart + duration;
-
-    const barberBookings = this.bookedAppointments.filter(
-      booking => booking.barberId === barberId && booking.date === date
-    );
-
+    const barberBookings = this.bookedAppointments.filter(booking => booking.barberId === barberId && booking.date === date);
     return !barberBookings.some(booking => {
       const bookingStart = this.timeToMinutes(booking.startTime);
-      const bookingEnd = bookingStart + booking.duration;
-      return requestedStart < bookingEnd && requestedEnd > bookingStart;
+      return requestedStart < bookingStart + booking.duration && requestedEnd > bookingStart;
     });
+  }
+
+  private startOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  private startOfMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
   }
 
   private formatDate(date: Date): string {
@@ -496,10 +356,8 @@ export class BookingComponent implements OnInit {
   private timeToMinutes(time: string): number {
     const [timePart, modifier] = time.split(' ');
     let [hours, minutes] = timePart.split(':').map(Number);
-
     if (modifier === 'PM' && hours !== 12) hours += 12;
     if (modifier === 'AM' && hours === 12) hours = 0;
-
     return hours * 60 + minutes;
   }
 
@@ -508,7 +366,6 @@ export class BookingComponent implements OnInit {
     const minutes = totalMinutes % 60;
     const modifier = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12 || 12;
-
     return `${hours}:${minutes.toString().padStart(2, '0')} ${modifier}`;
   }
 }
