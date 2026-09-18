@@ -60,6 +60,7 @@ export class BookingComponent implements OnInit {
   sequentialSchedule: PersonSchedule[] = [];
 
   customer = { name: '', phone: '', notes: '' };
+  phoneTouched = false;
   bookingConfirmed = false;
   confirmedAssignments: ConfirmedAssignment[] = [];
 
@@ -68,6 +69,17 @@ export class BookingComponent implements OnInit {
   get activeParticipant(): BookingPerson { return this.participants[this.activeParticipantIndex]; }
   get selectedServices(): Service[] { return this.activeParticipant.selectedServices; }
   get selectedBarber(): Barber | 'any' | null { return this.activeParticipant.selectedBarber; }
+  get isPakistanPhoneValid(): boolean { return /^3\d{9}$/.test(this.customer.phone); }
+
+  onPhoneInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digitsOnly = input.value.replace(/\D/g, '').slice(0, 10);
+    this.customer.phone = digitsOnly;
+    input.value = digitsOnly;
+    this.phoneTouched = true;
+  }
+
+  onPhoneBlur(): void { this.phoneTouched = true; }
 
   setBookingMode(mode: 'single' | 'group'): void {
     if (this.bookingMode === mode) return;
@@ -264,7 +276,7 @@ export class BookingComponent implements OnInit {
   }
 
   canConfirmBooking(): boolean {
-    return !!(this.allParticipantsReady && this.selectedDate && !this.isPastDate(this.selectedDate.date) && this.selectedTime && this.customer.name.trim() && this.customer.phone.trim());
+    return !!(this.allParticipantsReady && this.selectedDate && !this.isPastDate(this.selectedDate.date) && this.selectedTime && this.customer.name.trim() && this.isPakistanPhoneValid);
   }
 
   get allParticipantsReady(): boolean { return this.participants.every(person => person.selectedServices.length > 0 && !!person.selectedBarber); }
