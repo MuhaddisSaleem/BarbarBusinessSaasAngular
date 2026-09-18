@@ -61,6 +61,7 @@ export class BookingComponent implements OnInit {
 
   customer = { name: '', phone: '', notes: '' };
   phoneTouched = false;
+  bookingValidationMessage = '';
   bookingConfirmed = false;
   confirmedAssignments: ConfirmedAssignment[] = [];
 
@@ -77,13 +78,16 @@ export class BookingComponent implements OnInit {
     this.customer.phone = digitsOnly;
     input.value = digitsOnly;
     this.phoneTouched = true;
+    this.clearValidationMessage();
   }
 
   onPhoneBlur(): void { this.phoneTouched = true; }
+  clearValidationMessage(): void { this.bookingValidationMessage = ''; }
 
   setBookingMode(mode: 'single' | 'group'): void {
     if (this.bookingMode === mode) return;
     this.bookingMode = mode;
+    this.clearValidationMessage();
     this.clearSelectedTime();
     if (mode === 'group') {
       if (this.participants.length === 1) this.participants.push(this.createPerson(this.nextPersonId++, 'Person 2'));
@@ -98,6 +102,7 @@ export class BookingComponent implements OnInit {
   setGroupStrategy(strategy: 'parallel' | 'sequential'): void {
     if (this.groupStrategy === strategy) return;
     this.groupStrategy = strategy;
+    this.clearValidationMessage();
     this.clearSelectedTime();
     this.participants.forEach(person => person.selectedBarber = null);
     this.generateAvailableTimes();
@@ -109,6 +114,7 @@ export class BookingComponent implements OnInit {
     if (this.groupStrategy === 'sequential' && this.participants[0]?.selectedBarber) person.selectedBarber = this.participants[0].selectedBarber;
     this.participants.push(person);
     this.activeParticipantIndex = this.participants.length - 1;
+    this.clearValidationMessage();
     this.clearSelectedTime();
     this.generateAvailableTimes();
   }
@@ -118,6 +124,7 @@ export class BookingComponent implements OnInit {
     this.participants.splice(index, 1);
     this.participants.forEach((person, i) => person.label = i === 0 ? 'You' : `Person ${i + 1}`);
     this.activeParticipantIndex = Math.min(this.activeParticipantIndex, this.participants.length - 1);
+    this.clearValidationMessage();
     this.clearSelectedTime();
     this.generateAvailableTimes();
   }
@@ -125,6 +132,7 @@ export class BookingComponent implements OnInit {
   selectParticipant(index: number): void { this.activeParticipantIndex = index; }
 
   toggleService(service: Service): void {
+    this.clearValidationMessage();
     const person = this.activeParticipant;
     if (this.isServiceSelected(service.id)) {
       person.selectedServices = person.selectedServices.filter(item => item.id !== service.id);
@@ -144,6 +152,7 @@ export class BookingComponent implements OnInit {
   isServiceDisabled(service: Service): boolean { return this.isServiceSelected(3) && (service.id === 1 || service.id === 2); }
 
   selectBarber(barber: Barber | 'any'): void {
+    this.clearValidationMessage();
     if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
       this.participants.forEach(person => person.selectedBarber = barber);
     } else {
@@ -155,6 +164,7 @@ export class BookingComponent implements OnInit {
 
   selectCalendarDay(cell: CalendarCell): void {
     if (!cell.date || this.isPastDate(cell.date)) return;
+    this.clearValidationMessage();
     this.setSelectedDate(cell.date);
     this.clearSelectedTime();
     this.generateAvailableTimes();
@@ -231,6 +241,7 @@ export class BookingComponent implements OnInit {
   }
 
   selectTime(time: string): void {
+    this.clearValidationMessage();
     this.selectedTime = time;
     this.sequentialSchedule = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
       ? (this.buildSequentialSchedule(time) || [])
@@ -260,10 +271,15 @@ export class BookingComponent implements OnInit {
   }
 
   confirmBooking(): void {
-    if (!this.canConfirmBooking() || !this.selectedTime || !this.selectedDate) return;
-    const assignments = this.resolveBarberAssignments(this.selectedTime);
-    if (!assignments) return;
+    if (!this.validateBookingBeforeConfirm() || !this.selectedTime || !this.selectedDate) return;
 
+    const assignments = this.resolveBarberAssignments(this.selectedTime);
+    if (!assignments) {
+      this.showValidationError('This time slot is no longer available. Please choose another time.', 'date-time-section');
+      return;
+    }
+
+    this.bookingValidationMessage = '';
     this.confirmedAssignments = [];
     this.participants.forEach((person, index) => {
       const barber = assignments.get(person.id);
@@ -273,6 +289,65 @@ export class BookingComponent implements OnInit {
       this.confirmedAssignments.push({ person: person.label, barber: barber.name, time: personStartTime });
     });
     this.bookingConfirmed = true;
+  }
+
+  private validateBookingBeforeConfirm(): boolean {
+    const missingServiceIndex = this.participants.findIndex(person => !person.selectedServices.length);
+    if (missingServiceIndex !== -1) {
+      this.activeParticipantIndex = missingServiceIndex;
+      const person = this.participants[missingServiceIndex];
+      return this.showValidationError(`Please select at least one service for ${person.label}.`, 'service-section');
+    }
+
+    const missingBarberIndex = this.participants.findIndex(person => !person.selectedBarber);
+    if (missingBarberIndex !== -1) {
+      this.activeParticipantIndex = missingBarberIndex;
+      const person = this.participants[missingBarberIndex];
+      return this.showValidationError(`Please choose a barber for ${person.label}.`, 'barber-section');
+    }
+
+    if (!this.selectedDate) {
+      return this.showValidationError('Please select an appointment date.', 'date-time-section');
+    }
+
+    if (this.isPastDate(this.selectedDate.date)) {
+      return this.showValidationError('Please select a valid upcoming appointment date.', 'date-time-section');
+    }
+
+    if (!this.selectedTime) {
+      return this.showValidationError('Please select an available appointment time.', 'date-time-section');
+    }
+
+    if (!this.customer.name.trim()) {
+      return this.showValidationError('Please enter your full name.', 'customer-details-section', 'customer-name-input');
+    }
+
+    if (!this.customer.phone.trim()) {
+      this.phoneTouched = true;
+      return this.showValidationError('Please enter your Pakistan mobile number.', 'customer-details-section', 'customer-phone-input');
+    }
+
+    if (!this.isPakistanPhoneValid) {
+      this.phoneTouched = true;
+      return this.showValidationError('Please enter a valid Pakistan mobile number, e.g. +92 300 1234567.', 'customer-details-section', 'customer-phone-input');
+    }
+
+    this.bookingValidationMessage = '';
+    return true;
+  }
+
+  private showValidationError(message: string, sectionId: string, focusId?: string): false {
+    this.bookingValidationMessage = message;
+
+    setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      if (focusId) {
+        setTimeout(() => document.getElementById(focusId)?.focus(), 450);
+      }
+    });
+
+    return false;
   }
 
   canConfirmBooking(): boolean {
