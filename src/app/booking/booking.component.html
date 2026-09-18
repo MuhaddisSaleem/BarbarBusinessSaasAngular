@@ -1,4 +1,9 @@
 <div class="booking-page">
+  <div *ngIf="bookingValidationMessage" role="alert"
+    style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; width: calc(100% - 32px); max-width: 520px; padding: 13px 18px; border: 1px solid #ff7875; border-radius: 10px; background: #fff2f0; color: #cf1322; font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.18);">
+    {{ bookingValidationMessage }}
+  </div>
+
   <section class="booking-stepper">
     <div class="page-shell">
       <div class="steps">
@@ -25,7 +30,7 @@
     <div class="page-shell">
       <div class="booking-grid">
         <div class="left-column">
-          <section class="booking-section service-section">
+          <section id="service-section" class="booking-section service-section">
             <div class="section-heading">
               <h2>1. Choose a Service</h2>
               <p>Select services for yourself or book people together.</p>
@@ -94,7 +99,7 @@
         </div>
 
         <div class="middle-column">
-          <section class="booking-section barber-section">
+          <section id="barber-section" class="booking-section barber-section">
             <div class="section-heading">
               <h2>2. Choose {{ bookingMode === 'group' ? activeParticipant.label + "'s" : 'Your' }} Barber</h2>
               <p *ngIf="bookingMode === 'single'">Pick your preferred barber (or choose any)</p>
@@ -129,7 +134,7 @@
             </div>
           </section>
 
-          <section class="booking-section date-section">
+          <section id="date-time-section" class="booking-section date-section">
             <div class="section-heading">
               <h2>3. Select Date &amp; Time</h2>
               <p *ngIf="bookingMode === 'single'">Choose a convenient date and time</p>
@@ -213,23 +218,26 @@
             <div class="summary-row"><div class="summary-line-icon clock-icon"></div><strong>{{ selectedTime ? selectedTime + ' – ' + bookingEndTime : 'Select time' }}</strong></div>
             <div class="summary-total"><strong>Total</strong><strong>Rs. {{ totalPrice | number }}</strong></div>
 
-            <div class="details-block">
+            <div id="customer-details-section" class="details-block">
               <h2>4. Your Details</h2>
               <p>{{ bookingMode === 'group' ? 'One contact for the complete group booking' : 'Enter your information to confirm' }}</p>
-              <div class="form-group"><label>Full Name <span>*</span></label><input type="text" [(ngModel)]="customer.name" placeholder="Enter your full name"></div>
+              <div class="form-group">
+                <label>Full Name <span>*</span></label>
+                <input id="customer-name-input" type="text" [(ngModel)]="customer.name" (input)="clearValidationMessage()" placeholder="Enter your full name">
+              </div>
               <div class="form-group">
                 <label>Phone Number <span>*</span></label>
-                <div class="phone-input" [style.border-color]="phoneTouched && customer.phone && !isPakistanPhoneValid ? '#ff4d4f' : null">
+                <div class="phone-input" [style.border-color]="phoneTouched && !isPakistanPhoneValid ? '#ff4d4f' : null">
                   <span class="flag">🇵🇰</span><span class="country-code">+92</span>
-                  <input type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" pattern="3[0-9]{9}"
+                  <input id="customer-phone-input" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" pattern="3[0-9]{9}"
                     [(ngModel)]="customer.phone" (input)="onPhoneInput($event)" (blur)="onPhoneBlur()" placeholder="300 1234567">
                 </div>
-                <small *ngIf="phoneTouched && customer.phone && !isPakistanPhoneValid" style="display:block; margin-top:5px; color:#ff4d4f; font-size:11px;">
-                  Enter a valid Pakistan mobile number, e.g. +92 300 1234567.
+                <small *ngIf="phoneTouched && !isPakistanPhoneValid" style="display:block; margin-top:5px; color:#ff4d4f; font-size:11px;">
+                  {{ customer.phone ? 'Enter a valid Pakistan mobile number, e.g. +92 300 1234567.' : 'Phone number is required.' }}
                 </small>
               </div>
               <div class="form-group"><label>Notes <small>(optional)</small></label><textarea [(ngModel)]="customer.notes" placeholder="Any special requests?"></textarea></div>
-              <button type="button" class="confirm-btn" [disabled]="!canConfirmBooking()" (click)="confirmBooking()"><span>{{ bookingMode === 'group' ? 'Confirm Group Booking' : 'Confirm Booking' }}</span><b>→</b></button>
+              <button type="button" class="confirm-btn" (click)="confirmBooking()"><span>{{ bookingMode === 'group' ? 'Confirm Group Booking' : 'Confirm Booking' }}</span><b>→</b></button>
               <div class="whatsapp-note"><span class="wa-icon">✓</span>You'll receive a confirmation on WhatsApp</div>
             </div>
           </div>
