@@ -1,13 +1,24 @@
 /*
  * Responsive pass for the Bootstrap migration.
  * Loaded last so Bootstrap owns the structure while these rules preserve
- * the Royal Barbers visual proportions at tablet and mobile widths.
+ * the Royal Barbers visual proportions at laptop, tablet and mobile widths.
  */
 
 html,
 body {
+  width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  margin: 0;
+  overflow-x: clip;
+}
+
+app-root,
+app-hero,
+app-booking {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 img,
@@ -16,8 +27,50 @@ svg {
 }
 
 /* ---------------- Header / hero ---------------- */
+app-hero .royal-hero,
+app-hero .hero-shell,
+app-hero .hero-content,
+app-hero .hero-copy,
+app-hero .hero-features {
+  min-width: 0;
+  max-width: 100%;
+}
+
 app-hero .site-header > .container-fluid {
   position: relative;
+}
+
+/* Keep the four information items balanced on normal laptops instead of
+   allowing fixed padding/min-width values to push the hero wider. */
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+  app-hero .hero-shell {
+    width: 100%;
+    max-width: 1290px;
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+
+  app-hero .hero-copy {
+    width: min(620px, 58vw);
+    max-width: 58%;
+  }
+
+  app-hero .hero-features {
+    width: 100%;
+    max-width: 610px;
+  }
+
+  app-hero .hero-feature {
+    flex: 0 0 25%;
+    width: 25%;
+    max-width: 25%;
+    min-width: 0;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  app-hero .hero-feature:first-child { padding-left: 0; }
+  app-hero .hero-feature:last-child { padding-right: 0; }
 }
 
 @media (max-width: 1199.98px) {
@@ -51,6 +104,7 @@ app-hero .site-header > .container-fluid {
     top: calc(100% + 8px);
     left: 0;
     right: 0;
+    width: 100%;
     padding: 14px;
     border: 1px solid rgba(244, 189, 87, .22);
     border-radius: 10px;
@@ -58,8 +112,6 @@ app-hero .site-header > .container-fluid {
     box-shadow: 0 18px 40px rgba(0, 0, 0, .38);
   }
 
-  /* The old hero stylesheet hid .main-nav below 1100px. Bootstrap collapse
-     must be allowed to show it when the hamburger is expanded. */
   app-hero .navbar-collapse .main-nav,
   app-hero .navbar-collapse.show .main-nav,
   app-hero .navbar-collapse.collapsing .main-nav {
@@ -77,18 +129,65 @@ app-hero .site-header > .container-fluid {
     font-size: 13px;
   }
 
-  app-hero .main-nav .nav-link::after {
-    display: none;
-  }
-
-  app-hero .main-nav .nav-link:hover {
-    background: rgba(255, 255, 255, .055);
-  }
+  app-hero .main-nav .nav-link::after { display: none; }
+  app-hero .main-nav .nav-link:hover { background: rgba(255, 255, 255, .055); }
 
   app-hero .navbar-collapse .book-button {
     width: 100%;
     min-height: 42px;
   }
+
+  app-hero .hero-copy {
+    width: min(620px, 68vw);
+    max-width: 68%;
+  }
+
+  app-hero .hero-features {
+    width: 100%;
+    max-width: 590px;
+  }
+
+  app-hero .hero-feature {
+    min-width: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* At tablet widths the rating/open-until/professional/safety information
+   becomes a clean 2 x 2 layout with readable text. */
+@media (max-width: 991.98px) {
+  app-hero .hero-copy {
+    width: min(620px, 78vw);
+    max-width: 78%;
+  }
+
+  app-hero .hero-features {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    max-width: 500px;
+    row-gap: 14px;
+  }
+
+  app-hero .hero-feature {
+    flex: 0 0 50% !important;
+    width: 50%;
+    max-width: 50%;
+    min-height: 40px;
+    padding: 0 14px;
+  }
+
+  app-hero .hero-feature:nth-child(odd) {
+    padding-left: 0;
+    border-right: 1px solid rgba(255,255,255,.22);
+  }
+
+  app-hero .hero-feature:nth-child(even) {
+    border-right: 0;
+  }
+
+  app-hero .hero-feature strong { font-size: 11px; }
+  app-hero .hero-feature small { font-size: 8px; }
 }
 
 @media (max-width: 767.98px) {
@@ -106,9 +205,7 @@ app-hero .site-header > .container-fluid {
     max-width: calc(100% - 56px);
   }
 
-  app-hero .brand-copy {
-    min-width: 0;
-  }
+  app-hero .brand-copy { min-width: 0; }
 
   app-hero .brand-copy strong,
   app-hero .brand-copy small {
@@ -116,21 +213,21 @@ app-hero .site-header > .container-fluid {
     text-overflow: ellipsis;
   }
 
-  app-hero .navbar-collapse {
-    top: 64px;
-  }
+  app-hero .navbar-collapse { top: 64px; }
 
   app-hero .hero-copy {
+    width: 100%;
     max-width: 100% !important;
   }
 
   app-hero .hero-features {
-    display: flex !important;
-    flex-wrap: wrap !important;
+    width: 100%;
+    max-width: 100%;
   }
 
   app-hero .hero-feature {
-    flex: 0 0 50%;
+    flex: 0 0 50% !important;
+    width: 50%;
     max-width: 50%;
     min-width: 0;
   }
@@ -148,30 +245,46 @@ app-hero .site-header > .container-fluid {
     letter-spacing: 1.8px;
   }
 
-  app-hero .brand-copy small {
-    letter-spacing: 1.4px;
-  }
+  app-hero .brand-copy small { letter-spacing: 1.4px; }
 
   app-hero .navbar-toggler {
     width: 38px;
     height: 38px;
   }
+
+  app-hero .hero-feature {
+    padding-left: 9px;
+    padding-right: 9px;
+    gap: 8px;
+  }
+
+  app-hero .feature-icon {
+    width: 22px;
+    height: 22px;
+    flex-basis: 22px;
+  }
 }
 
 /* ---------------- Booking page ---------------- */
+.booking-page,
+.booking-page .booking-stepper,
+.booking-page .booking-content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .booking-page .page-shell {
   max-width: 1560px;
   width: 100%;
+  min-width: 0;
 }
 
 .booking-page .booking-grid,
 .booking-page .services-grid,
 .booking-page .barber-grid,
 .booking-page .time-grid,
-.booking-page .group-progress {
-  min-width: 0;
-}
-
+.booking-page .group-progress,
 .booking-page .left-column,
 .booking-page .middle-column,
 .booking-page .booking-summary {
@@ -184,9 +297,10 @@ app-hero .site-header > .container-fluid {
   max-width: 100%;
 }
 
-/* Large tablet / small laptop: services + scheduling stay side-by-side,
-   summary moves underneath so nothing is squeezed or clipped. */
-@media (min-width: 992px) and (max-width: 1220px) {
+/* The original 3-column minimums need roughly 1300px of content width.
+   From 992-1399 the summary therefore moves below the two working columns.
+   This removes the page-level horizontal scrollbar seen around 1200-1400px. */
+@media (min-width: 992px) and (max-width: 1399.98px) {
   .booking-page .page-shell {
     padding-left: 24px;
     padding-right: 24px;
@@ -195,16 +309,17 @@ app-hero .site-header > .container-fluid {
   .booking-page .booking-grid {
     flex-wrap: wrap !important;
     gap: 24px !important;
+    width: 100%;
   }
 
   .booking-page .booking-grid > .left-column {
-    flex: 1 1 calc(62% - 12px) !important;
+    flex: 1 1 calc(60% - 12px) !important;
     width: auto !important;
     min-width: 0 !important;
   }
 
   .booking-page .booking-grid > .middle-column {
-    flex: 1 1 calc(38% - 12px) !important;
+    flex: 1 1 calc(40% - 12px) !important;
     width: auto !important;
     min-width: 300px !important;
   }
@@ -213,11 +328,18 @@ app-hero .site-header > .container-fluid {
     flex: 0 0 100% !important;
     width: 100% !important;
     max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .booking-page .services-grid,
+  .booking-page .barber-grid,
+  .booking-page .time-grid,
+  .booking-page .group-progress {
+    width: auto;
   }
 }
 
-/* Tablet: stack the three primary booking areas. Bootstrap card rows remain
-   responsive inside each area. */
+/* Tablet: stack the three primary booking areas. */
 @media (max-width: 991.98px) {
   .booking-page .page-shell {
     padding-left: 22px;
@@ -228,6 +350,7 @@ app-hero .site-header > .container-fluid {
     display: flex !important;
     flex-direction: column !important;
     gap: 28px !important;
+    width: 100%;
   }
 
   .booking-page .booking-grid > .left-column,
@@ -239,9 +362,7 @@ app-hero .site-header > .container-fluid {
     min-width: 0 !important;
   }
 
-  .booking-page .barber-section {
-    margin-top: 0;
-  }
+  .booking-page .barber-section { margin-top: 0; }
 
   .booking-page .services-grid,
   .booking-page .barber-grid,
@@ -265,55 +386,85 @@ app-hero .site-header > .container-fluid {
     max-width: 33.333333%;
   }
 
-  .booking-page .booking-summary {
-    order: 3;
-  }
+  .booking-page .booking-summary { order: 3; }
 }
 
-/* Mobile */
+/* ---------------- Responsive stepper ---------------- */
+.booking-page .booking-stepper .page-shell {
+  overflow: visible;
+}
+
+.booking-page .steps {
+  width: 100%;
+  min-width: 0;
+}
+
+.booking-page .step {
+  flex: 1 1 20%;
+  width: 20%;
+  min-width: 0;
+}
+
 @media (max-width: 767.98px) {
   .booking-page .page-shell {
     padding-left: 16px;
     padding-right: 16px;
   }
 
-  .booking-page .booking-content {
-    padding-top: 22px;
-  }
+  .booking-page .booking-content { padding-top: 22px; }
 
-  /* Keep the 5-step workflow readable instead of crushing labels. */
+  /* No horizontal stepper scroller: all five steps always fit the viewport. */
   .booking-page .booking-stepper .page-shell {
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .booking-page .booking-stepper .page-shell::-webkit-scrollbar {
-    display: none;
+    overflow: visible;
+    padding-left: 8px;
+    padding-right: 8px;
   }
 
   .booking-page .steps {
-    min-width: 570px;
-    padding-left: 4px;
-    padding-right: 4px;
+    min-width: 0 !important;
+    width: 100%;
+    padding: 16px 0 13px;
+  }
+
+  .booking-page .step {
+    flex: 1 1 20%;
+    width: 20%;
+    min-width: 0;
+  }
+
+  .booking-page .step:not(:last-child)::after {
+    top: 13px;
+    left: calc(50% + 18px);
+    width: calc(100% - 36px);
+  }
+
+  .booking-page .step-circle {
+    width: 27px;
+    height: 27px;
+    font-size: 12px;
   }
 
   .booking-page .step span {
-    font-size: 11px;
+    width: 100%;
+    max-width: 76px;
+    min-height: 24px;
+    margin-top: 8px;
+    padding: 0 2px;
+    white-space: normal;
+    overflow-wrap: normal;
+    text-align: center;
+    font-size: 9px;
+    line-height: 1.25;
   }
 
-  .booking-page .section-heading h2 {
-    font-size: 18px;
-  }
+  .booking-page .section-heading h2 { font-size: 18px; }
 
   .booking-page .service-col {
     flex: 0 0 50%;
     max-width: 50%;
   }
 
-  .booking-page .service-image {
-    height: 132px;
-  }
+  .booking-page .service-image { height: 132px; }
 
   .booking-page .barber-col {
     flex: 0 0 50%;
@@ -337,35 +488,27 @@ app-hero .site-header > .container-fluid {
 
   .booking-page .participant-tabs {
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
   }
 
-  .booking-page .participant-tabs::-webkit-scrollbar {
-    display: none;
-  }
+  .booking-page .participant-tabs::-webkit-scrollbar { display: none; }
 
   .booking-page .participant-tab {
     flex: 0 0 auto;
     min-width: 150px;
   }
 
-  .booking-page .add-person-btn {
-    width: 100%;
-  }
-
-  .booking-page .calendar-card {
-    width: 100%;
-  }
+  .booking-page .add-person-btn { width: 100%; }
+  .booking-page .calendar-card { width: 100%; }
 
   .booking-page .calendar-cell {
     flex: 0 0 14.285714%;
     max-width: 14.285714%;
   }
 
-  .booking-page .summary-card {
-    width: 100%;
-  }
+  .booking-page .summary-card { width: 100%; }
 }
 
 /* Small phones */
@@ -375,18 +518,38 @@ app-hero .site-header > .container-fluid {
     padding-right: 12px;
   }
 
-  .booking-page .booking-grid {
-    gap: 24px !important;
+  .booking-page .booking-stepper .page-shell {
+    padding-left: 4px;
+    padding-right: 4px;
   }
+
+  .booking-page .steps { padding-top: 14px; }
+
+  .booking-page .step:not(:last-child)::after {
+    left: calc(50% + 16px);
+    width: calc(100% - 32px);
+  }
+
+  .booking-page .step-circle {
+    width: 25px;
+    height: 25px;
+    font-size: 11px;
+  }
+
+  .booking-page .step span {
+    max-width: 62px;
+    font-size: 8px;
+    line-height: 1.2;
+  }
+
+  .booking-page .booking-grid { gap: 24px !important; }
 
   .booking-page .service-col {
     flex: 0 0 100%;
     max-width: 100%;
   }
 
-  .booking-page .service-image {
-    height: 190px;
-  }
+  .booking-page .service-image { height: 190px; }
 
   .booking-page .barber-col {
     flex: 0 0 50%;
@@ -426,7 +589,10 @@ app-hero .site-header > .container-fluid {
     max-width: 100%;
   }
 
-  .booking-page .service-image {
-    height: 170px;
+  .booking-page .service-image { height: 170px; }
+
+  .booking-page .step span {
+    max-width: 58px;
+    font-size: 7.5px;
   }
 }
