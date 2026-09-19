@@ -24,7 +24,8 @@
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "src/styles.scss",
               "src/bootstrap-layout-fixes.scss",
-              "src/responsive.scss"
+              "src/responsive.scss",
+              "src/mobile-layout-fixes.scss"
             ],
             "scripts": [
               "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
