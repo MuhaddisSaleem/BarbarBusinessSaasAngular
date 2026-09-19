@@ -1,0 +1,91 @@
+/* Final containment for laptop widths.
+ * Loaded last so legacy component minimum widths cannot create page-level
+ * horizontal scrolling between Bootstrap breakpoints.
+ */
+
+html,
+body,
+app-root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (min-width: 992px) and (max-width: 1399.98px) {
+  app-hero,
+  app-booking,
+  .royal-hero,
+  .booking-page,
+  app-hero .hero-shell,
+  .booking-page .page-shell,
+  .booking-page .booking-content,
+  .booking-page .booking-stepper {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Keep the booking work area on one exact 100% flex line. The summary
+     remains on its own line, as intended for this breakpoint. */
+  .booking-page .booking-grid,
+  .booking-page .booking-grid.d-flex {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    column-gap: 24px !important;
+    row-gap: 24px !important;
+  }
+
+  .booking-page .booking-grid > .left-column {
+    flex: 0 1 calc(60% - 12px) !important;
+    width: calc(60% - 12px) !important;
+    max-width: calc(60% - 12px) !important;
+    min-width: 0 !important;
+  }
+
+  .booking-page .booking-grid > .middle-column {
+    flex: 0 1 calc(40% - 12px) !important;
+    width: calc(40% - 12px) !important;
+    max-width: calc(40% - 12px) !important;
+    min-width: 0 !important;
+  }
+
+  .booking-page .booking-grid > .booking-summary {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .booking-page .services-grid,
+  .booking-page .barber-grid,
+  .booking-page .time-grid,
+  .booking-page .group-progress,
+  .booking-page .calendar-card,
+  .booking-page .summary-card,
+  .booking-page .footer-inner {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Bootstrap rows must not introduce negative side width here. */
+  .booking-page .services-grid.row,
+  .booking-page .barber-grid.row,
+  .booking-page .time-grid.row,
+  .booking-page .group-progress.row,
+  .booking-page .footer-inner.row,
+  app-hero .site-header.row,
+  app-hero .hero-features.row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  app-hero .hero-feature,
+  app-hero .hero-feature > div {
+    min-width: 0 !important;
+  }
+}
