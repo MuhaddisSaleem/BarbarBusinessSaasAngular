@@ -25,7 +25,8 @@
               "src/styles.scss",
               "src/bootstrap-layout-fixes.scss",
               "src/responsive.scss",
-              "src/mobile-layout-fixes.scss"
+              "src/mobile-layout-fixes.scss",
+              "src/laptop-overflow-fixes.scss"
             ],
             "scripts": [
               "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
