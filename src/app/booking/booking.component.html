@@ -6,21 +6,21 @@
 
   <section class="booking-stepper">
     <div class="page-shell">
-      <div class="steps">
-        <div class="step" [class.active]="!allServicesSelected" [class.completed]="allServicesSelected">
-          <div class="step-circle">{{ allServicesSelected ? '✓' : '1' }}</div><span>Select Service</span>
+      <div class="steps d-flex align-items-start">
+        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="!allServicesSelected" [class.completed]="allServicesSelected">
+          <div class="step-circle d-flex align-items-center justify-content-center">{{ allServicesSelected ? '✓' : '1' }}</div><span>Select Service</span>
         </div>
-        <div class="step" [class.active]="allServicesSelected && !allBarbersSelected" [class.completed]="allServicesSelected && allBarbersSelected">
-          <div class="step-circle">{{ allServicesSelected && allBarbersSelected ? '✓' : '2' }}</div><span>Choose Barber</span>
+        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="allServicesSelected && !allBarbersSelected" [class.completed]="allServicesSelected && allBarbersSelected">
+          <div class="step-circle d-flex align-items-center justify-content-center">{{ allServicesSelected && allBarbersSelected ? '✓' : '2' }}</div><span>Choose Barber</span>
         </div>
-        <div class="step" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)" [class.completed]="allParticipantsReady && !!selectedDate && !!selectedTime">
-          <div class="step-circle">{{ allParticipantsReady && selectedDate && selectedTime ? '✓' : '3' }}</div><span>Pick Date &amp; Time</span>
+        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)" [class.completed]="allParticipantsReady && !!selectedDate && !!selectedTime">
+          <div class="step-circle d-flex align-items-center justify-content-center">{{ allParticipantsReady && selectedDate && selectedTime ? '✓' : '3' }}</div><span>Pick Date &amp; Time</span>
         </div>
-        <div class="step" [class.active]="!!selectedTime && !customerDetailsComplete" [class.completed]="!!selectedTime && customerDetailsComplete">
-          <div class="step-circle">{{ selectedTime && customerDetailsComplete ? '✓' : '4' }}</div><span>Your Details</span>
+        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="!!selectedTime && !customerDetailsComplete" [class.completed]="!!selectedTime && customerDetailsComplete">
+          <div class="step-circle d-flex align-items-center justify-content-center">{{ selectedTime && customerDetailsComplete ? '✓' : '4' }}</div><span>Your Details</span>
         </div>
-        <div class="step" [class.active]="canConfirmBooking() && !bookingConfirmed" [class.completed]="bookingConfirmed">
-          <div class="step-circle">{{ bookingConfirmed ? '✓' : '5' }}</div><span>Confirm Booking</span>
+        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="canConfirmBooking() && !bookingConfirmed" [class.completed]="bookingConfirmed">
+          <div class="step-circle d-flex align-items-center justify-content-center">{{ bookingConfirmed ? '✓' : '5' }}</div><span>Confirm Booking</span>
         </div>
       </div>
     </div>
@@ -28,7 +28,7 @@
 
   <main class="booking-content">
     <div class="page-shell">
-      <div class="booking-grid">
+      <div class="booking-grid d-flex align-items-start">
         <div class="left-column">
           <section id="service-section" class="booking-section service-section">
             <div class="section-heading">
@@ -36,46 +36,46 @@
               <p>Select services for yourself or book people together.</p>
             </div>
 
-            <div class="booking-for-toggle">
-              <button type="button" [class.active]="bookingMode === 'single'" (click)="setBookingMode('single')">
-                <span class="mode-icon single-mode-icon"><span class="single-person-shape"></span></span>
+            <div class="booking-for-toggle d-flex">
+              <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'single'" (click)="setBookingMode('single')">
+                <span class="mode-icon single-mode-icon d-flex align-items-center justify-content-center"><span class="single-person-shape"></span></span>
                 <span><strong>Just Me</strong><small>One appointment</small></span>
               </button>
 
-              <button type="button" [class.active]="bookingMode === 'group'" (click)="setBookingMode('group')">
-                <span class="mode-icon people-mode"><span class="mini-person first"></span><span class="mini-person second"></span></span>
+              <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'group'" (click)="setBookingMode('group')">
+                <span class="mode-icon people-mode d-flex align-items-center justify-content-center"><span class="mini-person first"></span><span class="mini-person second"></span></span>
                 <span><strong>Me + Someone Else</strong><small>Book more than one person</small></span>
               </button>
             </div>
 
-            <div class="group-schedule-options" *ngIf="bookingMode === 'group'">
-              <button type="button" class="schedule-option" [class.active]="groupStrategy === 'parallel'" (click)="setGroupStrategy('parallel')">
+            <div class="group-schedule-options d-flex" *ngIf="bookingMode === 'group'">
+              <button type="button" class="schedule-option flex-fill d-flex align-items-center" [class.active]="groupStrategy === 'parallel'" (click)="setGroupStrategy('parallel')">
                 <span class="schedule-option-icon people-icon"><span class="mini-person first"></span><span class="mini-person second"></span></span>
                 <span class="schedule-option-copy"><strong>Me + Someone Else</strong><small>Book together, different barbers</small></span>
               </button>
 
-              <button type="button" class="schedule-option" [class.active]="groupStrategy === 'sequential'" (click)="setGroupStrategy('sequential')">
+              <button type="button" class="schedule-option flex-fill d-flex align-items-center" [class.active]="groupStrategy === 'sequential'" (click)="setGroupStrategy('sequential')">
                 <span class="schedule-option-icon clock-option-icon"></span>
                 <span class="schedule-option-copy"><strong>Also with same barber</strong><small>With different time slot</small></span>
               </button>
             </div>
 
-            <div class="participant-bar" *ngIf="bookingMode === 'group'">
-              <div class="participant-tabs">
-                <button type="button" class="participant-tab" *ngFor="let person of participants; let i = index"
+            <div class="participant-bar d-flex align-items-stretch" *ngIf="bookingMode === 'group'">
+              <div class="participant-tabs d-flex flex-grow-1">
+                <button type="button" class="participant-tab d-flex align-items-center" *ngFor="let person of participants; let i = index"
                   [class.active]="activeParticipantIndex === i"
                   [class.complete]="person.selectedServices.length && person.selectedBarber"
                   (click)="selectParticipant(i)">
-                  <span class="participant-number">{{ i + 1 }}</span>
+                  <span class="participant-number d-flex align-items-center justify-content-center">{{ i + 1 }}</span>
                   <span><strong>{{ person.label }}</strong><small>{{ person.selectedServices.length ? person.selectedServices.length + ' service(s)' : 'Choose services' }}</small></span>
                   <span *ngIf="i > 0 && participants.length > 2" class="remove-person" title="Remove person" (click)="$event.stopPropagation(); removePerson(i)">×</span>
                 </button>
               </div>
-              <button type="button" class="add-person-btn" *ngIf="participants.length < 4" (click)="addPerson()">+ Add Person</button>
+              <button type="button" class="add-person-btn flex-shrink-0" *ngIf="participants.length < 4" (click)="addPerson()">+ Add Person</button>
             </div>
 
-            <div class="active-person-note" *ngIf="bookingMode === 'group'">
-              <span>{{ activeParticipantIndex + 1 }}</span>
+            <div class="active-person-note d-flex align-items-center" *ngIf="bookingMode === 'group'">
+              <span class="d-flex align-items-center justify-content-center">{{ activeParticipantIndex + 1 }}</span>
               <div>
                 <strong>Choose services for {{ activeParticipant.label }}</strong>
                 <small *ngIf="groupStrategy === 'parallel'">Each person can choose a different barber and book at the same time.</small>
@@ -83,22 +83,23 @@
               </div>
             </div>
 
-            <div class="services-grid">
-              <button type="button" class="service-card" *ngFor="let service of services"
-                [class.selected]="isServiceSelected(service.id)" [class.disabled]="isServiceDisabled(service)"
-                [disabled]="isServiceDisabled(service)" (click)="toggleService(service)">
-                <div class="service-image"><img [src]="service.image" [alt]="service.name"></div>
-                <div class="service-card-body">
-                  <div class="service-title-row"><h3>{{ service.name }}</h3><span class="radio-dot"></span></div>
-                  <div class="duration-row"><span class="clock-mini">◷</span>{{ service.duration }} minutes</div>
-                  <strong class="service-price">Rs. {{ service.price | number }}</strong>
-                </div>
-              </button>
+            <div class="services-grid row">
+              <div class="service-col col-4" *ngFor="let service of services">
+                <button type="button" class="service-card h-100" [class.selected]="isServiceSelected(service.id)" [class.disabled]="isServiceDisabled(service)"
+                  [disabled]="isServiceDisabled(service)" (click)="toggleService(service)">
+                  <div class="service-image"><img [src]="service.image" [alt]="service.name"></div>
+                  <div class="service-card-body">
+                    <div class="service-title-row d-flex align-items-center justify-content-between"><h3>{{ service.name }}</h3><span class="radio-dot"></span></div>
+                    <div class="duration-row"><span class="clock-mini">◷</span>{{ service.duration }} minutes</div>
+                    <strong class="service-price">Rs. {{ service.price | number }}</strong>
+                  </div>
+                </button>
+              </div>
             </div>
           </section>
         </div>
 
-        <div class="middle-column">
+        <div class="middle-column d-flex flex-column">
           <section id="barber-section" class="booking-section barber-section">
             <div class="section-heading">
               <h2>2. Choose {{ bookingMode === 'group' ? activeParticipant.label + "'s" : 'Your' }} Barber</h2>
@@ -107,30 +108,35 @@
               <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">Choose one barber for everyone — we'll find a suitable time for each person</p>
             </div>
 
-            <div class="same-barber-notice" *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">
+            <div class="same-barber-notice d-flex align-items-center" *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">
               <span class="same-barber-clock"></span>
               <div><strong>Same barber mode</strong><small>Selecting a barber here automatically applies that barber to every person.</small></div>
             </div>
 
-            <div class="barber-grid">
-              <button type="button" class="barber-card" *ngFor="let barber of barbers"
-                [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id" (click)="selectBarber(barber)">
-                <span class="radio-dot"></span><img [src]="barber.image" [alt]="barber.name"><h3>{{ barber.name }}</h3>
-                <div class="barber-meta"><span class="rating"><b>★</b> {{ barber.rating }}</span><span>{{ barber.experience }}</span></div>
-              </button>
+            <div class="barber-grid row">
+              <div class="barber-col col-6" *ngFor="let barber of barbers">
+                <button type="button" class="barber-card w-100 h-100" [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id" (click)="selectBarber(barber)">
+                  <span class="radio-dot"></span><img [src]="barber.image" [alt]="barber.name"><h3>{{ barber.name }}</h3>
+                  <div class="barber-meta d-flex align-items-center justify-content-between"><span class="rating"><b>★</b> {{ barber.rating }}</span><span>{{ barber.experience }}</span></div>
+                </button>
+              </div>
 
-              <button type="button" class="barber-card any-barber" [class.selected]="selectedBarber === 'any'" (click)="selectBarber('any')">
-                <span class="radio-dot"></span><div class="any-icon"><span class="person one"></span><span class="person two"></span></div>
-                <h3>Any Barber</h3><p>We'll assign<br>an available barber</p>
-              </button>
+              <div class="barber-col col-6">
+                <button type="button" class="barber-card any-barber w-100 h-100 d-flex flex-column justify-content-center" [class.selected]="selectedBarber === 'any'" (click)="selectBarber('any')">
+                  <span class="radio-dot"></span><div class="any-icon"><span class="person one"></span><span class="person two"></span></div>
+                  <h3>Any Barber</h3><p>We'll assign<br>an available barber</p>
+                </button>
+              </div>
             </div>
 
-            <div class="group-progress" *ngIf="bookingMode === 'group'">
-              <button type="button" *ngFor="let person of participants; let i = index"
-                [class.ready]="person.selectedServices.length && person.selectedBarber" [class.current]="activeParticipantIndex === i" (click)="selectParticipant(i)">
-                <span>{{ person.selectedServices.length && person.selectedBarber ? '✓' : i + 1 }}</span>
-                <div><strong>{{ person.label }}</strong><small>{{ getPersonBarberName(person) }}</small></div>
-              </button>
+            <div class="group-progress row" *ngIf="bookingMode === 'group'">
+              <div class="group-progress-col col-6" *ngFor="let person of participants; let i = index">
+                <button type="button" class="w-100 h-100 d-flex align-items-center"
+                  [class.ready]="person.selectedServices.length && person.selectedBarber" [class.current]="activeParticipantIndex === i" (click)="selectParticipant(i)">
+                  <span class="d-flex align-items-center justify-content-center">{{ person.selectedServices.length && person.selectedBarber ? '✓' : i + 1 }}</span>
+                  <div><strong>{{ person.label }}</strong><small>{{ getPersonBarberName(person) }}</small></div>
+                </button>
+              </div>
             </div>
           </section>
 
@@ -143,35 +149,36 @@
             </div>
 
             <div class="calendar-card">
-              <div class="calendar-header">
+              <div class="calendar-header d-flex align-items-center justify-content-between">
                 <button type="button" [disabled]="!canGoPreviousMonth" (click)="previousMonth()" aria-label="Previous month">‹</button>
-                <strong>{{ monthLabel }}</strong>
+                <strong class="flex-grow-1 text-center">{{ monthLabel }}</strong>
                 <button type="button" (click)="nextMonth()" aria-label="Next month">›</button>
               </div>
-              <div class="calendar-weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
-              <div class="calendar-days">
-                <button type="button" *ngFor="let cell of calendarCells" [class.empty]="!cell.date" [class.past]="isPastDate(cell.date)"
+              <div class="calendar-weekdays d-flex flex-wrap text-center"><span class="calendar-cell">Sun</span><span class="calendar-cell">Mon</span><span class="calendar-cell">Tue</span><span class="calendar-cell">Wed</span><span class="calendar-cell">Thu</span><span class="calendar-cell">Fri</span><span class="calendar-cell">Sat</span></div>
+              <div class="calendar-days d-flex flex-wrap text-center">
+                <button type="button" class="calendar-cell" *ngFor="let cell of calendarCells" [class.empty]="!cell.date" [class.past]="isPastDate(cell.date)"
                   [class.selected]="cell.fullDate === selectedDate?.fullDate" [disabled]="!cell.date || isPastDate(cell.date)" (click)="selectCalendarDay(cell)">{{ cell.dayNumber }}</button>
               </div>
             </div>
 
             <div class="time-area">
-              <div class="time-title-row">
+              <div class="time-title-row d-flex align-items-center justify-content-between">
                 <h3>Available Times</h3>
                 <span class="group-badge" *ngIf="bookingMode === 'group' && allParticipantsReady && groupStrategy === 'parallel'">{{ participants.length }} people together</span>
                 <span class="group-badge sequential-badge" *ngIf="bookingMode === 'group' && allParticipantsReady && groupStrategy === 'sequential'">Same barber · smart time slots</span>
               </div>
 
-              <div class="time-grid">
-                <button type="button" class="time-slot" *ngFor="let time of availableTimes"
-                  [class.selected]="isTimeSelectedForBooking(time)" (click)="selectTime(time)">{{ time }}</button>
+              <div class="time-grid row">
+                <div class="time-col col-4" *ngFor="let time of availableTimes">
+                  <button type="button" class="time-slot w-100" [class.selected]="isTimeSelectedForBooking(time)" (click)="selectTime(time)">{{ time }}</button>
+                </div>
               </div>
 
               <div class="sequential-preview" *ngIf="bookingMode === 'group' && groupStrategy === 'sequential' && selectedTime">
-                <div *ngFor="let person of participants; let i = index" [class.suggested-slot]="isSuggestedPersonTime(i)">
+                <div class="d-flex flex-wrap align-items-center justify-content-between" *ngFor="let person of participants; let i = index" [class.suggested-slot]="isSuggestedPersonTime(i)">
                   <span>{{ person.label }}</span><strong>{{ getPersonBookingTime(i) }}</strong>
-                  <small>{{ getPersonDuration(person) }} min · {{ getPersonBarberName(person) }}</small>
-                  <small class="time-suggestion" *ngIf="isSuggestedPersonTime(i)">↳ {{ getSuggestedTimeMessage(i) }}</small>
+                  <small class="w-100">{{ getPersonDuration(person) }} min · {{ getPersonBarberName(person) }}</small>
+                  <small class="time-suggestion w-100" *ngIf="isSuggestedPersonTime(i)">↳ {{ getSuggestedTimeMessage(i) }}</small>
                 </div>
               </div>
 
@@ -186,37 +193,37 @@
 
         <aside class="booking-summary">
           <div class="summary-card">
-            <div class="summary-heading-row"><h2>Booking Summary</h2><span *ngIf="bookingMode === 'group'">{{ participants.length }} people</span></div>
+            <div class="summary-heading-row d-flex align-items-center justify-content-between"><h2>Booking Summary</h2><span *ngIf="bookingMode === 'group'">{{ participants.length }} people</span></div>
             <div class="summary-divider"></div>
 
             <div class="person-summary" *ngFor="let person of participants; let i = index">
-              <div class="person-summary-head">
-                <span class="person-summary-number">{{ i + 1 }}</span>
-                <div><strong>{{ person.label }}</strong><small *ngIf="bookingMode === 'group'">Appointment {{ i + 1 }}</small></div>
+              <div class="person-summary-head d-flex align-items-center">
+                <span class="person-summary-number d-flex align-items-center justify-content-center">{{ i + 1 }}</span>
+                <div class="flex-grow-1"><strong>{{ person.label }}</strong><small *ngIf="bookingMode === 'group'">Appointment {{ i + 1 }}</small></div>
                 <strong class="person-total">Rs. {{ getPersonPrice(person) | number }}</strong>
               </div>
 
               <div class="empty-person" *ngIf="!person.selectedServices.length">No services selected yet</div>
-              <div class="summary-service" *ngFor="let service of person.selectedServices">
+              <div class="summary-service d-flex align-items-center" *ngFor="let service of person.selectedServices">
                 <img [src]="service.image" [alt]="service.name">
-                <div class="summary-copy"><strong>{{ service.name }}</strong><span>◷ {{ service.duration }} minutes</span></div>
+                <div class="summary-copy flex-grow-1"><strong>{{ service.name }}</strong><span>◷ {{ service.duration }} minutes</span></div>
                 <strong class="summary-price">Rs. {{ service.price | number }}</strong>
               </div>
 
-              <div class="summary-row barber-summary compact-barber-row">
+              <div class="summary-row barber-summary compact-barber-row d-flex align-items-center">
                 <img *ngIf="getPersonBarberImage(person)" class="summary-avatar" [src]="getPersonBarberImage(person)" [alt]="getPersonBarberName(person)">
-                <div *ngIf="!getPersonBarberImage(person)" class="summary-icon">●</div>
+                <div *ngIf="!getPersonBarberImage(person)" class="summary-icon d-flex align-items-center justify-content-center">●</div>
                 <div class="summary-copy"><span>Barber</span><strong>{{ getPersonBarberName(person) }}</strong></div>
               </div>
 
-              <div class="person-time-row" *ngIf="bookingMode === 'group' && selectedTime" [class.suggested]="isSuggestedPersonTime(i)">
+              <div class="person-time-row d-flex align-items-center justify-content-between" *ngIf="bookingMode === 'group' && selectedTime" [class.suggested]="isSuggestedPersonTime(i)">
                 <span>{{ isSuggestedPersonTime(i) ? 'Suggested time' : 'Time' }}</span><strong>{{ getPersonBookingTime(i) }}</strong>
               </div>
             </div>
 
-            <div class="summary-row"><div class="summary-line-icon calendar-icon"></div><strong>{{ selectedDate ? (selectedDate.date | date:'EEE, dd MMM yyyy') : 'Select date' }}</strong></div>
-            <div class="summary-row"><div class="summary-line-icon clock-icon"></div><strong>{{ selectedTime ? selectedTime + ' – ' + bookingEndTime : 'Select time' }}</strong></div>
-            <div class="summary-total"><strong>Total</strong><strong>Rs. {{ totalPrice | number }}</strong></div>
+            <div class="summary-row d-flex align-items-center"><div class="summary-line-icon calendar-icon"></div><strong>{{ selectedDate ? (selectedDate.date | date:'EEE, dd MMM yyyy') : 'Select date' }}</strong></div>
+            <div class="summary-row d-flex align-items-center"><div class="summary-line-icon clock-icon"></div><strong>{{ selectedTime ? selectedTime + ' – ' + bookingEndTime : 'Select time' }}</strong></div>
+            <div class="summary-total d-flex align-items-center justify-content-between"><strong>Total</strong><strong>Rs. {{ totalPrice | number }}</strong></div>
 
             <div id="customer-details-section" class="details-block">
               <h2>4. Your Details</h2>
@@ -227,9 +234,9 @@
               </div>
               <div class="form-group">
                 <label>Phone Number <span>*</span></label>
-                <div class="phone-input" [style.border-color]="phoneTouched && !isPakistanPhoneValid ? '#ff4d4f' : null">
-                  <span class="flag">🇵🇰</span><span class="country-code">+92</span>
-                  <input id="customer-phone-input" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" pattern="3[0-9]{9}"
+                <div class="phone-input d-flex align-items-stretch" [style.border-color]="phoneTouched && !isPakistanPhoneValid ? '#ff4d4f' : null">
+                  <span class="flag d-flex align-items-center justify-content-center">🇵🇰</span><span class="country-code d-flex align-items-center justify-content-center">+92</span>
+                  <input id="customer-phone-input" class="flex-grow-1" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" pattern="3[0-9]{9}"
                     [(ngModel)]="customer.phone" (input)="onPhoneInput($event)" (blur)="onPhoneBlur()" placeholder="300 1234567">
                 </div>
                 <small *ngIf="phoneTouched && !isPakistanPhoneValid" style="display:block; margin-top:5px; color:#ff4d4f; font-size:11px;">
@@ -237,8 +244,8 @@
                 </small>
               </div>
               <div class="form-group"><label>Notes <small>(optional)</small></label><textarea [(ngModel)]="customer.notes" placeholder="Any special requests?"></textarea></div>
-              <button type="button" class="confirm-btn" (click)="confirmBooking()"><span>{{ bookingMode === 'group' ? 'Confirm Group Booking' : 'Confirm Booking' }}</span><b>→</b></button>
-              <div class="whatsapp-note"><span class="wa-icon">✓</span>You'll receive a confirmation on WhatsApp</div>
+              <button type="button" class="confirm-btn d-flex align-items-center justify-content-center" (click)="confirmBooking()"><span>{{ bookingMode === 'group' ? 'Confirm Group Booking' : 'Confirm Booking' }}</span><b>→</b></button>
+              <div class="whatsapp-note d-flex align-items-center justify-content-center"><span class="wa-icon d-flex align-items-center justify-content-center">✓</span>You'll receive a confirmation on WhatsApp</div>
             </div>
           </div>
         </aside>
@@ -247,18 +254,18 @@
   </main>
 
   <footer class="booking-footer">
-    <div class="page-shell footer-inner">
-      <div class="footer-feature"><div class="footer-icon calendar-outline"></div><div><strong>Easy Online Booking</strong><span>Book in seconds</span></div></div>
-      <div class="footer-feature"><div class="footer-icon shield-outline">✓</div><div><strong>100% Secure</strong><span>Your information is safe</span></div></div>
-      <div class="footer-feature"><div class="footer-icon clock-outline"></div><div><strong>Free Cancellation</strong><span>Up to 2 hours before</span></div></div>
-      <div class="footer-feature"><div class="footer-icon headset-outline">⌁</div><div><strong>Need Help?</strong><span>+92 300 1234567</span></div></div>
-      <div class="footer-signature">Stay Sharp <span>♛</span></div>
+    <div class="page-shell footer-inner row align-items-center">
+      <div class="footer-feature col d-flex align-items-center justify-content-center"><div class="footer-icon calendar-outline"></div><div><strong>Easy Online Booking</strong><span>Book in seconds</span></div></div>
+      <div class="footer-feature col d-flex align-items-center justify-content-center"><div class="footer-icon shield-outline d-flex align-items-center justify-content-center">✓</div><div><strong>100% Secure</strong><span>Your information is safe</span></div></div>
+      <div class="footer-feature col d-flex align-items-center justify-content-center"><div class="footer-icon clock-outline"></div><div><strong>Free Cancellation</strong><span>Up to 2 hours before</span></div></div>
+      <div class="footer-feature col d-flex align-items-center justify-content-center"><div class="footer-icon headset-outline d-flex align-items-center justify-content-center">⌁</div><div><strong>Need Help?</strong><span>+92 300 1234567</span></div></div>
+      <div class="footer-signature col-auto ms-auto">Stay Sharp <span>♛</span></div>
     </div>
   </footer>
 
-  <div class="success-overlay" *ngIf="bookingConfirmed">
+  <div class="success-overlay d-flex align-items-center justify-content-center" *ngIf="bookingConfirmed">
     <div class="success-modal group-success-modal">
-      <div class="success-icon">✓</div>
+      <div class="success-icon d-flex align-items-center justify-content-center">✓</div>
       <span class="success-label">{{ bookingMode === 'group' ? 'GROUP BOOKING CONFIRMED' : 'BOOKING CONFIRMED' }}</span>
       <h2>You're all set!</h2>
       <p *ngIf="bookingMode === 'single'">Your appointment at Royal Barbers has been successfully booked.</p>
@@ -266,13 +273,13 @@
       <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">All appointments are booked with the same barber using the available time slots shown below.</p>
 
       <div class="confirmed-people" *ngIf="bookingMode === 'group'">
-        <div *ngFor="let assignment of confirmedAssignments"><span>{{ assignment.person }}</span><strong>{{ assignment.barber }} · {{ assignment.time }}</strong></div>
+        <div class="d-flex align-items-center justify-content-between" *ngFor="let assignment of confirmedAssignments"><span>{{ assignment.person }}</span><strong>{{ assignment.barber }} · {{ assignment.time }}</strong></div>
       </div>
 
       <div class="success-details">
-        <div><span>Date</span><strong>{{ selectedDate?.date | date:'dd MMM yyyy' }}</strong></div>
-        <div><span>Booking window</span><strong>{{ selectedTime }} – {{ bookingEndTime }}</strong></div>
-        <div><span>Total</span><strong>Rs. {{ totalPrice | number }}</strong></div>
+        <div class="d-flex justify-content-between"><span>Date</span><strong>{{ selectedDate?.date | date:'dd MMM yyyy' }}</strong></div>
+        <div class="d-flex justify-content-between"><span>Booking window</span><strong>{{ selectedTime }} – {{ bookingEndTime }}</strong></div>
+        <div class="d-flex justify-content-between"><span>Total</span><strong>Rs. {{ totalPrice | number }}</strong></div>
       </div>
       <button type="button" (click)="closeSuccess()">Done</button>
     </div>
