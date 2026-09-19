@@ -32,7 +32,6 @@
  * selected/hover surface was a centered 30px square. Keep that exact surface. */
 .booking-page .calendar-days button.calendar-cell {
   position: relative;
-  z-index: 0;
   background: transparent !important;
   box-shadow: none !important;
 }
@@ -40,7 +39,6 @@
 .booking-page .calendar-days button.calendar-cell::before {
   content: '';
   position: absolute;
-  z-index: -1;
   left: 50%;
   top: 50%;
   width: 30px;
@@ -48,6 +46,7 @@
   border-radius: 6px;
   transform: translate(-50%, -50%);
   background: transparent;
+  pointer-events: none;
 }
 
 .booking-page .calendar-days button.calendar-cell:hover:not(:disabled):not(.selected)::before {
