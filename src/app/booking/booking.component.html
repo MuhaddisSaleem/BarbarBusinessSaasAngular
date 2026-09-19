@@ -7,17 +7,17 @@
   <section class="booking-stepper">
     <div class="page-shell">
       <div class="steps">
-        <div class="step" [class.active]="!selectedServices.length" [class.completed]="!!selectedServices.length">
-          <div class="step-circle">{{ selectedServices.length ? '✓' : '1' }}</div><span>Select Service</span>
+        <div class="step" [class.active]="!allServicesSelected" [class.completed]="allServicesSelected">
+          <div class="step-circle">{{ allServicesSelected ? '✓' : '1' }}</div><span>Select Service</span>
         </div>
-        <div class="step" [class.active]="!!selectedServices.length && !allParticipantsReady" [class.completed]="allParticipantsReady">
-          <div class="step-circle">{{ allParticipantsReady ? '✓' : '2' }}</div><span>Choose Barber</span>
+        <div class="step" [class.active]="allServicesSelected && !allBarbersSelected" [class.completed]="allServicesSelected && allBarbersSelected">
+          <div class="step-circle">{{ allServicesSelected && allBarbersSelected ? '✓' : '2' }}</div><span>Choose Barber</span>
         </div>
-        <div class="step" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)" [class.completed]="!!selectedDate && !!selectedTime">
-          <div class="step-circle">{{ selectedDate && selectedTime ? '✓' : '3' }}</div><span>Pick Date &amp; Time</span>
+        <div class="step" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)" [class.completed]="allParticipantsReady && !!selectedDate && !!selectedTime">
+          <div class="step-circle">{{ allParticipantsReady && selectedDate && selectedTime ? '✓' : '3' }}</div><span>Pick Date &amp; Time</span>
         </div>
-        <div class="step" [class.active]="!!selectedTime && (!customer.name.trim() || !isPakistanPhoneValid)" [class.completed]="!!selectedTime && !!customer.name.trim() && isPakistanPhoneValid">
-          <div class="step-circle">{{ selectedTime && customer.name.trim() && isPakistanPhoneValid ? '✓' : '4' }}</div><span>Your Details</span>
+        <div class="step" [class.active]="!!selectedTime && !customerDetailsComplete" [class.completed]="!!selectedTime && customerDetailsComplete">
+          <div class="step-circle">{{ selectedTime && customerDetailsComplete ? '✓' : '4' }}</div><span>Your Details</span>
         </div>
         <div class="step" [class.active]="canConfirmBooking() && !bookingConfirmed" [class.completed]="bookingConfirmed">
           <div class="step-circle">{{ bookingConfirmed ? '✓' : '5' }}</div><span>Confirm Booking</span>
