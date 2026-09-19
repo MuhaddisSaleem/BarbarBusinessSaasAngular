@@ -1,6 +1,6 @@
 /* Mobile fallback loaded directly from index.html.
-   This intentionally overrides the legacy booking.component.scss mobile rule
-   that gives .steps a 660px minimum width and creates horizontal scrolling. */
+   This overrides the legacy booking.component.scss mobile rule that gives
+   .steps a 660px minimum width and creates horizontal scrolling. */
 
 @media (max-width: 767.98px) {
   html,
@@ -61,12 +61,12 @@
     white-space: normal !important;
   }
 
-  /* Stepper: remove the legacy 660px mobile width and horizontal scroller. */
+  /* Stepper: all five steps must remain inside the viewport. */
   .booking-page .booking-stepper {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    overflow-x: hidden !important;
+    overflow: hidden !important;
   }
 
   .booking-page .booking-stepper .page-shell {
@@ -86,77 +86,121 @@
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    padding: 16px 0 13px !important;
+    padding: 14px 0 12px !important;
     margin: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
   }
 
   .booking-page .step,
   .booking-page .step.flex-fill {
     position: relative !important;
     display: flex !important;
+    flex-direction: column !important;
     flex: none !important;
-    width: auto !important;
-    max-width: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
     min-width: 0 !important;
-    padding: 0 1px !important;
+    padding: 0 2px !important;
     align-items: center !important;
+    overflow: visible !important;
   }
 
   .booking-page .step-circle {
-    width: 27px !important;
-    height: 27px !important;
-    min-width: 27px !important;
-    flex: 0 0 27px !important;
-    font-size: 12px !important;
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    flex: 0 0 26px !important;
+    font-size: 11px !important;
   }
 
   .booking-page .step span {
     display: block !important;
     width: 100% !important;
-    max-width: 72px !important;
+    max-width: 100% !important;
     min-width: 0 !important;
-    min-height: 24px !important;
-    margin: 8px auto 0 !important;
-    padding: 0 2px !important;
+    min-height: 22px !important;
+    margin: 7px 0 0 !important;
+    padding: 0 1px !important;
     white-space: normal !important;
+    overflow: visible !important;
     overflow-wrap: normal !important;
     word-break: normal !important;
     text-align: center !important;
-    font-size: 9px !important;
-    line-height: 1.2 !important;
+    font-size: 8.5px !important;
+    line-height: 1.15 !important;
   }
 
   .booking-page .step:not(:last-child)::after {
     top: 13px !important;
-    left: calc(50% + 17px) !important;
-    width: calc(100% - 34px) !important;
+    left: calc(50% + 16px) !important;
+    width: calc(100% - 32px) !important;
   }
 }
 
-@media (max-width: 420px) {
+/* Phone widths: tighten the stepper instead of allowing any horizontal crop. */
+@media (max-width: 575.98px) {
   .booking-page .booking-stepper .page-shell {
     padding-left: 2px !important;
     padding-right: 2px !important;
   }
 
+  .booking-page .steps,
+  .booking-page .steps.d-flex {
+    padding: 12px 0 10px !important;
+  }
+
+  .booking-page .step,
+  .booking-page .step.flex-fill {
+    padding: 0 1px !important;
+  }
+
   .booking-page .step-circle {
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-    flex-basis: 24px !important;
-    font-size: 10px !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    flex-basis: 22px !important;
+    font-size: 9px !important;
   }
 
   .booking-page .step span {
-    max-width: 64px !important;
+    min-height: 20px !important;
+    margin-top: 6px !important;
+    padding: 0 !important;
     font-size: 7.5px !important;
-    line-height: 1.15 !important;
+    line-height: 1.12 !important;
   }
 
   .booking-page .step:not(:last-child)::after {
-    top: 12px !important;
-    left: calc(50% + 15px) !important;
-    width: calc(100% - 30px) !important;
+    top: 11px !important;
+    left: calc(50% + 13px) !important;
+    width: calc(100% - 26px) !important;
+  }
+}
+
+/* Very small supported screens (320-360px): keep all content visible. */
+@media (max-width: 360px) {
+  .booking-page .steps,
+  .booking-page .steps.d-flex {
+    padding-top: 10px !important;
+  }
+
+  .booking-page .step-circle {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    flex-basis: 20px !important;
+    font-size: 8px !important;
+  }
+
+  .booking-page .step span {
+    margin-top: 5px !important;
+    font-size: 6.8px !important;
+    line-height: 1.08 !important;
+  }
+
+  .booking-page .step:not(:last-child)::after {
+    top: 10px !important;
+    left: calc(50% + 12px) !important;
+    width: calc(100% - 24px) !important;
   }
 }
