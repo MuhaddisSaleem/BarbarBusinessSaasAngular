@@ -6,7 +6,11 @@ import { HeroComponent } from './hero/hero.component';
   selector: 'app-root',
   standalone: true,
   imports: [HeroComponent, BookingComponent],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  template: `
+    <app-hero></app-hero>
+    <div id="booking">
+      <app-booking></app-booking>
+    </div>
+  `
 })
 export class AppComponent {}
