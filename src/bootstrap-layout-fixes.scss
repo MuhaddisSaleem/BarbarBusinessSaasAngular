@@ -1,0 +1,65 @@
+/*
+ * Bootstrap layout parity layer.
+ * Bootstrap utilities/rows own the layout; these rules only retain the
+ * original proportions that do not map to Bootstrap's 12-column fractions.
+ */
+
+@media (min-width: 1221px) {
+  .booking-page .booking-grid > .left-column {
+    flex: 1.55 1 0 !important;
+    min-width: 540px;
+  }
+
+  .booking-page .booking-grid > .middle-column {
+    flex: .86 1 0 !important;
+    min-width: 310px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1220px) {
+  .booking-page .booking-grid > .left-column {
+    flex: 1.45 1 0 !important;
+    min-width: 500px;
+  }
+
+  .booking-page .booking-grid > .middle-column {
+    flex: .9 1 0 !important;
+    min-width: 300px;
+  }
+}
+
+/* A flex-wrapped Bootstrap calendar needs a 1/7 cell, while the original
+ * selected/hover surface was a centered 30px square. Keep that exact surface. */
+.booking-page .calendar-days button.calendar-cell {
+  position: relative;
+  z-index: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.booking-page .calendar-days button.calendar-cell::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  transform: translate(-50%, -50%);
+  background: transparent;
+}
+
+.booking-page .calendar-days button.calendar-cell:hover:not(:disabled):not(.selected)::before {
+  background: #20292e;
+}
+
+.booking-page .calendar-days button.calendar-cell.selected::before {
+  background: linear-gradient(145deg, #ffd675, #eeb24b);
+  box-shadow: 0 3px 10px rgba(242,191,90,.2);
+}
+
+.booking-page .calendar-days button.calendar-cell.selected {
+  color: #151515;
+  font-weight: 800;
+}
