@@ -3,9 +3,9 @@
   <div class="hero-overlay" aria-hidden="true"></div>
 
   <div class="hero-shell">
-    <header class="site-header row g-0 d-flex align-items-center">
-      <div class="col">
-        <a class="brand d-inline-flex align-items-center" href="#home" aria-label="Royal Barbers home">
+    <header class="site-header navbar navbar-expand-xl navbar-dark p-0">
+      <div class="container-fluid p-0">
+        <a class="brand navbar-brand d-inline-flex align-items-center m-0" href="#home" aria-label="Royal Barbers home">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 64 72" role="img">
               <path d="M15 17 22 8l10 9L42 8l7 9-4 9H19l-4-9Z" fill="currentColor"/>
@@ -20,20 +20,25 @@
             <small>LOOK GOOD · FEEL GREAT</small>
           </span>
         </a>
-      </div>
 
-      <div class="col-auto">
-        <nav class="main-nav d-flex align-items-center justify-content-center" aria-label="Main navigation">
-          <a href="#home">Home</a>
-          <a href="#about">About</a>
-          <a href="#services">Services</a>
-          <a href="#gallery">Gallery</a>
-          <a href="#contact">Contact</a>
-        </nav>
-      </div>
+        <button class="navbar-toggler border-0 shadow-none p-1" type="button" data-bs-toggle="collapse"
+          data-bs-target="#royalBarbersNavbar" aria-controls="royalBarbersNavbar" aria-expanded="false"
+          aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
 
-      <div class="col text-end">
-        <a class="book-button d-inline-block" href="#booking">Book Appointment</a>
+        <div class="collapse navbar-collapse" id="royalBarbersNavbar">
+          <nav class="main-nav navbar-nav mx-xl-auto align-items-xl-center" aria-label="Main navigation">
+            <a class="nav-link" href="#home" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Home</a>
+            <a class="nav-link" href="#about" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">About</a>
+            <a class="nav-link" href="#services" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Services</a>
+            <a class="nav-link" href="#gallery" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Gallery</a>
+            <a class="nav-link" href="#contact" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Contact</a>
+          </nav>
+
+          <a class="book-button d-flex align-items-center justify-content-center mt-3 mt-xl-0" href="#booking"
+            data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Book Appointment</a>
+        </div>
       </div>
     </header>
 
@@ -50,26 +55,26 @@
         <p class="tagline">More Than a Haircut. It's a Lifestyle.</p>
 
         <div class="hero-features row g-0 d-flex align-items-stretch">
-          <div class="hero-feature col-3 d-flex align-items-center">
+          <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon star-icon d-flex align-items-center justify-content-center" aria-hidden="true">★</span>
             <div><strong>4.9</strong><small>(120+ reviews)</small></div>
           </div>
 
-          <div class="hero-feature col-3 d-flex align-items-center">
+          <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v6l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </span>
             <div><strong>Open until</strong><small>09:00 PM</small></div>
           </div>
 
-          <div class="hero-feature col-3 d-flex align-items-center">
+          <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true">
               <svg viewBox="0 0 28 24"><circle cx="9" cy="7" r="4" fill="currentColor"/><circle cx="20" cy="7" r="4" fill="currentColor"/><path d="M2 21v-3c0-4 3-7 7-7s7 3 7 7v3H2Zm12 0v-3c0-2-.6-4-1.8-5.5A7.2 7.2 0 0 1 20 11c4 0 7 3 7 7v3H14Z" fill="currentColor"/></svg>
             </span>
             <div><strong>Professional</strong><small>Barbers</small></div>
           </div>
 
-          <div class="hero-feature col-3 d-flex align-items-center">
+          <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true">
               <svg viewBox="0 0 24 28"><path d="M12 2 21 6v7c0 6-3.7 10.4-9 13-5.3-2.6-9-7-9-13V6l9-4Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m8 14 2.5 2.5L16.5 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </span>
