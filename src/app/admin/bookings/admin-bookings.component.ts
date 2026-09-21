@@ -58,6 +58,15 @@ export class AdminBookingsComponent {
     return this.todayKey;
   }
 
+  get createTimeSlots(): string[] {
+    const service = this.bookingService.services.find(item => item.name === this.newBooking.service);
+    return this.slotsForDuration(service?.duration ?? 30);
+  }
+
+  get editTimeSlots(): string[] {
+    return this.slotsForDuration(this.selectedBooking?.duration ?? 30);
+  }
+
   get bookings(): AdminBooking[] {
     const term = this.searchTerm.trim().toLowerCase();
 
@@ -225,6 +234,10 @@ export class AdminBookingsComponent {
       String(date.getMonth() + 1).padStart(2, '0'),
       String(date.getDate()).padStart(2, '0')
     ].join('-');
+  }
+
+  private slotsForDuration(duration: number): string[] {
+    return this.timeSlots.filter(slot => this.timeValue(slot) + duration <= 21 * 60);
   }
 
   private timeValue(time: string): number {
