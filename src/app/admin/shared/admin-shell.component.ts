@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, HostListener, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminNotification, NotificationService } from '../notifications/notification.service';
+import { AdminBookingService } from '../bookings/admin-booking.service';
 
 @Component({
   selector: 'app-admin-shell',
@@ -26,7 +27,8 @@ export class AdminShellComponent {
 
   constructor(
     public readonly router: Router,
-    public readonly notificationService: NotificationService
+    public readonly notificationService: NotificationService,
+    public readonly bookingService: AdminBookingService
   ) {}
 
   get currentPath(): string {
