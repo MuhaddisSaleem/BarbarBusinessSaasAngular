@@ -379,7 +379,8 @@ app-hero .site-header > .container-fluid {
   .booking-page .step:not(:last-child)::after {
     top: 13px;
     left: calc(50% + 18px);
-    width: calc(100% - 36px);
+    right: calc(-50% + 18px);
+    width: auto;
   }
 
   .booking-page .step-circle {
@@ -466,7 +467,8 @@ app-hero .site-header > .container-fluid {
 
   .booking-page .step:not(:last-child)::after {
     left: calc(50% + 16px);
-    width: calc(100% - 32px);
+    right: calc(-50% + 16px);
+    width: auto;
   }
 
   .booking-page .step-circle {
