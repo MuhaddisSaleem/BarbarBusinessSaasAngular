@@ -275,19 +275,17 @@ app-hero .site-header > .container-fluid {
 }
 
 .booking-page .page-shell {
-  max-width: 1560px;
   width: 100%;
+  max-width: 1560px;
   min-width: 0;
 }
 
 .booking-page .booking-grid,
+.booking-page .booking-grid > *,
 .booking-page .services-grid,
 .booking-page .barber-grid,
 .booking-page .time-grid,
-.booking-page .group-progress,
-.booking-page .left-column,
-.booking-page .middle-column,
-.booking-page .booking-summary {
+.booking-page .group-progress {
   min-width: 0;
 }
 
@@ -297,96 +295,41 @@ app-hero .site-header > .container-fluid {
   max-width: 100%;
 }
 
-/* The original 3-column minimums need roughly 1300px of content width.
-   From 992-1399 the summary therefore moves below the two working columns.
-   This removes the page-level horizontal scrollbar seen around 1200-1400px. */
+/* Bootstrap owns the primary row/column breakpoints.
+ * lg (>=992): services + barber/date use 7/5 columns.
+ * xxl (>=1400): services + barber/date + summary use 6/3/3 columns. */
 @media (min-width: 992px) and (max-width: 1399.98px) {
   .booking-page .page-shell {
     padding-left: 24px;
     padding-right: 24px;
   }
 
-  .booking-page .booking-grid {
-    flex-wrap: wrap !important;
-    gap: 24px !important;
+  .booking-page .summary-card {
     width: 100%;
-  }
-
-  .booking-page .booking-grid > .left-column {
-    flex: 1 1 calc(60% - 12px) !important;
-    width: auto !important;
-    min-width: 0 !important;
-  }
-
-  .booking-page .booking-grid > .middle-column {
-    flex: 1 1 calc(40% - 12px) !important;
-    width: auto !important;
-    min-width: 300px !important;
-  }
-
-  .booking-page .booking-grid > .booking-summary {
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    max-width: none !important;
-    min-width: 0 !important;
-  }
-
-  .booking-page .services-grid,
-  .booking-page .barber-grid,
-  .booking-page .time-grid,
-  .booking-page .group-progress {
-    width: auto;
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
-/* Tablet: stack the three primary booking areas. */
 @media (max-width: 991.98px) {
   .booking-page .page-shell {
     padding-left: 22px;
     padding-right: 22px;
   }
 
-  .booking-page .booking-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 28px !important;
+  .booking-page .barber-section {
+    margin-top: 0;
+  }
+
+  .booking-page .date-section {
+    width: 100%;
+    max-width: 620px;
+  }
+
+  .booking-page .booking-summary {
     width: 100%;
   }
-
-  .booking-page .booking-grid > .left-column,
-  .booking-page .booking-grid > .middle-column,
-  .booking-page .booking-grid > .booking-summary {
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .booking-page .barber-section { margin-top: 0; }
-
-  .booking-page .services-grid,
-  .booking-page .barber-grid,
-  .booking-page .time-grid,
-  .booking-page .group-progress {
-    margin-left: -6px;
-    margin-right: -6px;
-  }
-
-  .booking-page .service-col,
-  .booking-page .barber-col,
-  .booking-page .time-col,
-  .booking-page .group-progress-col {
-    padding-left: 6px;
-    padding-right: 6px;
-    margin-bottom: 12px;
-  }
-
-  .booking-page .service-col {
-    flex: 0 0 33.333333%;
-    max-width: 33.333333%;
-  }
-
-  .booking-page .booking-summary { order: 3; }
 }
 
 /* ---------------- Responsive stepper ---------------- */
@@ -411,9 +354,10 @@ app-hero .site-header > .container-fluid {
     padding-right: 16px;
   }
 
-  .booking-page .booking-content { padding-top: 22px; }
+  .booking-page .booking-content {
+    padding-top: 22px;
+  }
 
-  /* No horizontal stepper scroller: all five steps always fit the viewport. */
   .booking-page .booking-stepper .page-shell {
     overflow: visible;
     padding-left: 8px;
@@ -451,29 +395,17 @@ app-hero .site-header > .container-fluid {
     margin-top: 8px;
     padding: 0 2px;
     white-space: normal;
-    overflow-wrap: normal;
     text-align: center;
     font-size: 9px;
     line-height: 1.25;
   }
 
-  .booking-page .section-heading h2 { font-size: 18px; }
-
-  .booking-page .service-col {
-    flex: 0 0 50%;
-    max-width: 50%;
+  .booking-page .section-heading h2 {
+    font-size: 18px;
   }
 
-  .booking-page .service-image { height: 132px; }
-
-  .booking-page .barber-col {
-    flex: 0 0 50%;
-    max-width: 50%;
-  }
-
-  .booking-page .time-col {
-    flex: 0 0 33.333333%;
-    max-width: 33.333333%;
+  .booking-page .service-image {
+    height: 132px;
   }
 
   .booking-page .booking-for-toggle,
@@ -493,25 +425,30 @@ app-hero .site-header > .container-fluid {
     scrollbar-width: none;
   }
 
-  .booking-page .participant-tabs::-webkit-scrollbar { display: none; }
+  .booking-page .participant-tabs::-webkit-scrollbar {
+    display: none;
+  }
 
   .booking-page .participant-tab {
     flex: 0 0 auto;
     min-width: 150px;
   }
 
-  .booking-page .add-person-btn { width: 100%; }
-  .booking-page .calendar-card { width: 100%; }
+  .booking-page .add-person-btn {
+    width: 100%;
+  }
+
+  .booking-page .calendar-card,
+  .booking-page .summary-card {
+    width: 100%;
+  }
 
   .booking-page .calendar-cell {
     flex: 0 0 14.285714%;
     max-width: 14.285714%;
   }
-
-  .booking-page .summary-card { width: 100%; }
 }
 
-/* Small phones */
 @media (max-width: 575.98px) {
   .booking-page .page-shell {
     padding-left: 12px;
@@ -523,7 +460,9 @@ app-hero .site-header > .container-fluid {
     padding-right: 4px;
   }
 
-  .booking-page .steps { padding-top: 14px; }
+  .booking-page .steps {
+    padding-top: 14px;
+  }
 
   .booking-page .step:not(:last-child)::after {
     left: calc(50% + 16px);
@@ -542,28 +481,8 @@ app-hero .site-header > .container-fluid {
     line-height: 1.2;
   }
 
-  .booking-page .booking-grid { gap: 24px !important; }
-
-  .booking-page .service-col {
-    flex: 0 0 100%;
-    max-width: 100%;
-  }
-
-  .booking-page .service-image { height: 190px; }
-
-  .booking-page .barber-col {
-    flex: 0 0 50%;
-    max-width: 50%;
-  }
-
-  .booking-page .time-col {
-    flex: 0 0 50%;
-    max-width: 50%;
-  }
-
-  .booking-page .group-progress-col {
-    flex: 0 0 100%;
-    max-width: 100%;
+  .booking-page .service-image {
+    height: 190px;
   }
 
   .booking-page .time-title-row {
@@ -583,13 +502,14 @@ app-hero .site-header > .container-fluid {
 }
 
 @media (max-width: 380px) {
-  .booking-page .barber-col,
-  .booking-page .time-col {
+  .booking-page .barber-col {
     flex: 0 0 100%;
     max-width: 100%;
   }
 
-  .booking-page .service-image { height: 170px; }
+  .booking-page .service-image {
+    height: 170px;
+  }
 
   .booking-page .step span {
     max-width: 58px;
