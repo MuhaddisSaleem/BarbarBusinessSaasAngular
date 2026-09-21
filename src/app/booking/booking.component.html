@@ -5,7 +5,7 @@
   </div>
 
   <section class="booking-stepper">
-    <div class="page-shell d-none d-sm-block">
+    <div class="page-shell container-fluid d-none d-sm-block">
       <div class="steps d-flex align-items-start">
         <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="!allServicesSelected" [class.completed]="allServicesSelected">
           <div class="step-circle d-flex align-items-center justify-content-center">{{ allServicesSelected ? '✓' : '1' }}</div><span>Select Service</span>
@@ -27,9 +27,9 @@
   </section>
 
   <main class="booking-content">
-    <div class="page-shell">
-      <div class="booking-grid d-flex align-items-start">
-        <div class="left-column">
+    <div class="page-shell container-fluid">
+      <div class="booking-grid row g-4 align-items-start">
+        <div class="left-column col-12 col-lg-7 col-xxl-6">
           <section id="service-section" class="booking-section service-section">
             <div class="section-heading">
               <h2>1. Choose a Service</h2>
@@ -83,8 +83,8 @@
               </div>
             </div>
 
-            <div class="services-grid row">
-              <div class="service-col col-4" *ngFor="let service of services">
+            <div class="services-grid row g-3">
+              <div class="service-col col-6 col-md-4" *ngFor="let service of services">
                 <button type="button" class="service-card h-100" [class.selected]="isServiceSelected(service.id)" [class.disabled]="isServiceDisabled(service)"
                   [disabled]="isServiceDisabled(service)" (click)="toggleService(service)">
                   <div class="service-image"><img [src]="service.image" [alt]="service.name"></div>
@@ -99,7 +99,7 @@
           </section>
         </div>
 
-        <div class="middle-column d-flex flex-column">
+        <div class="middle-column col-12 col-lg-5 col-xxl-3 d-flex flex-column">
           <section id="barber-section" class="booking-section barber-section">
             <div class="section-heading">
               <h2>2. Choose {{ bookingMode === 'group' ? activeParticipant.label + "'s" : 'Your' }} Barber</h2>
@@ -113,7 +113,7 @@
               <div><strong>Same barber mode</strong><small>Selecting a barber here automatically applies that barber to every person.</small></div>
             </div>
 
-            <div class="barber-grid row">
+            <div class="barber-grid row g-3">
               <div class="barber-col col-6" *ngFor="let barber of barbers">
                 <button type="button" class="barber-card w-100 h-100" [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id" (click)="selectBarber(barber)">
                   <span class="radio-dot"></span><img [src]="barber.image" [alt]="barber.name"><h3>{{ barber.name }}</h3>
@@ -129,7 +129,7 @@
               </div>
             </div>
 
-            <div class="group-progress row" *ngIf="bookingMode === 'group'">
+            <div class="group-progress row g-2" *ngIf="bookingMode === 'group'">
               <div class="group-progress-col col-6" *ngFor="let person of participants; let i = index">
                 <button type="button" class="w-100 h-100 d-flex align-items-center"
                   [class.ready]="person.selectedServices.length && person.selectedBarber" [class.current]="activeParticipantIndex === i" (click)="selectParticipant(i)">
@@ -168,8 +168,8 @@
                 <span class="group-badge sequential-badge" *ngIf="bookingMode === 'group' && allParticipantsReady && groupStrategy === 'sequential'">Same barber · smart time slots</span>
               </div>
 
-              <div class="time-grid row">
-                <div class="time-col col-4" *ngFor="let time of availableTimes">
+              <div class="time-grid row g-2">
+                <div class="time-col col-6 col-sm-4" *ngFor="let time of availableTimes">
                   <button type="button" class="time-slot w-100" [class.selected]="isTimeSelectedForBooking(time)" (click)="selectTime(time)">{{ time }}</button>
                 </div>
               </div>
@@ -191,7 +191,7 @@
           </section>
         </div>
 
-        <aside class="booking-summary">
+        <aside class="booking-summary col-12 col-xxl-3">
           <div class="summary-card">
             <div class="summary-heading-row d-flex align-items-center justify-content-between"><h2>Booking Summary</h2><span *ngIf="bookingMode === 'group'">{{ participants.length }} people</span></div>
             <div class="summary-divider"></div>
@@ -254,12 +254,12 @@
   </main>
 
   <footer class="booking-footer">
-    <div class="page-shell footer-inner row align-items-center">
-      <div class="footer-feature col d-flex align-items-center justify-content-center"><div class="footer-icon calendar-outline"></div><div><strong>Easy Online Booking</strong><span>Book in seconds</span></div></div>
-      <div class="footer-feature col d-flex align-items-center justify-content-center"><div class="footer-icon shield-outline d-flex align-items-center justify-content-center">✓</div><div><strong>100% Secure</strong><span>Your information is safe</span></div></div>
-      <div class="footer-feature col d-flex align-items-center justify-content-center"><div class="footer-icon clock-outline"></div><div><strong>Free Cancellation</strong><span>Up to 2 hours before</span></div></div>
-      <div class="footer-feature col d-flex align-items-center justify-content-center"><div class="footer-icon headset-outline d-flex align-items-center justify-content-center">⌁</div><div><strong>Need Help?</strong><span>+92 300 1234567</span></div></div>
-      <div class="footer-signature col-auto ms-auto">Stay Sharp <span>♛</span></div>
+    <div class="page-shell container-fluid footer-inner row g-3 align-items-center">
+      <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon calendar-outline"></div><div><strong>Easy Online Booking</strong><span>Book in seconds</span></div></div>
+      <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon shield-outline d-flex align-items-center justify-content-center">✓</div><div><strong>100% Secure</strong><span>Your information is safe</span></div></div>
+      <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon clock-outline"></div><div><strong>Free Cancellation</strong><span>Up to 2 hours before</span></div></div>
+      <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon headset-outline d-flex align-items-center justify-content-center">⌁</div><div><strong>Need Help?</strong><span>+92 300 1234567</span></div></div>
+      <div class="footer-signature col-12 col-lg-auto ms-lg-auto">Stay Sharp <span>♛</span></div>
     </div>
   </footer>
 
