@@ -499,3 +499,49 @@ $muted: #a6adb0;
   .group-progress { grid-template-columns: 1fr; }
   .schedule-option { min-height: 72px; }
 }
+
+/* Consistent professional iconography */
+.mode-icon i {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.people-mode i {
+  font-size: 17px;
+}
+
+.schedule-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 20px;
+    line-height: 1;
+  }
+}
+
+.same-barber-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &::before,
+  &::after {
+    content: none !important;
+  }
+
+  i {
+    color: $gold;
+    font-size: 15px;
+    line-height: 1;
+  }
+}
+
+.remove-person i {
+  font-size: 11px;
+}
+
+.add-person-btn i {
+  font-size: 13px;
+}
