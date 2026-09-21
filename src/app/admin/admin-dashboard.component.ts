@@ -66,10 +66,10 @@ export class AdminDashboardComponent {
   }
 
   readonly stats: DashboardStat[] = [
-    { label: 'Today\'s Bookings', value: '18', detail: '4 still upcoming', trend: '+12%', icon: '01' },
-    { label: 'Today\'s Revenue', value: 'Rs. 24,800', detail: 'Rs. 6,200 pending', trend: '+8.4%', icon: '02' },
-    { label: 'Customers', value: '146', detail: '12 new this month', trend: '+18%', icon: '03' },
-    { label: 'Active Barbers', value: '3', detail: 'All available today', trend: '100%', icon: '04' }
+    { label: 'Today\'s Bookings', value: '18', detail: '4 still upcoming', trend: '+12%', icon: 'bi-calendar2-check' },
+    { label: 'Today\'s Revenue', value: 'Rs. 24,800', detail: 'Rs. 6,200 pending', trend: '+8.4%', icon: 'bi-cash-stack' },
+    { label: 'Customers', value: '146', detail: '12 new this month', trend: '+18%', icon: 'bi-people' },
+    { label: 'Active Barbers', value: '3', detail: 'All available today', trend: '100%', icon: 'bi-person-badge' }
   ];
 
   readonly appointments: Appointment[] = [
