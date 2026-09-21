@@ -232,7 +232,7 @@
         <div class="schedule-grid">
           <input type="date" [(ngModel)]="editDate" [min]="minDate">
           <select [(ngModel)]="editTime">
-            <option *ngFor="let slot of timeSlots">{{ slot }}</option>
+            <option *ngFor="let slot of editTimeSlots">{{ slot }}</option>
           </select>
         </div>
         <button type="button" class="save-schedule-btn" (click)="saveSchedule()">
