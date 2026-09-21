@@ -309,3 +309,23 @@ h1 {
   .brand-copy strong { font-size: 12px; }
   .tagline { font-size: 13px; }
 }
+
+/* Unified professional icon set */
+.location-row > i {
+  width: 17px;
+  flex: 0 0 17px;
+  color: #f1b94e;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.feature-icon i {
+  display: block;
+  color: inherit;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.star-icon i {
+  font-size: 22px;
+}
