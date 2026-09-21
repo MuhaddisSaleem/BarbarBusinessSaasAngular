@@ -24,7 +24,7 @@ export const routes: Routes = [
   {
     path: 'admin/calendar',
     component: AdminCalendarComponent,
-    title: 'Royal Barbers | Calendar'
+    title: 'Royal Barbers | Schedule'
   },
   {
     path: 'admin/notifications',
