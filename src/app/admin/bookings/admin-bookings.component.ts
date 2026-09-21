@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus } from './admin-booking.service';
 
@@ -13,7 +14,7 @@ type BookingTab = 'today' | 'upcoming' | 'completed' | 'cancelled';
   templateUrl: './admin-bookings.component.html',
   styleUrl: './admin-bookings.component.scss'
 })
-export class AdminBookingsComponent {
+export class AdminBookingsComponent implements OnInit {
   activeTab: BookingTab = 'today';
   searchTerm = '';
   selectedBarber = 'All';
@@ -48,7 +49,19 @@ export class AdminBookingsComponent {
     '08:00 PM','08:30 PM','09:00 PM'
   ];
 
-  constructor(public readonly bookingService: AdminBookingService) {}
+  constructor(
+    public readonly bookingService: AdminBookingService,
+    private readonly route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    const bookingId = Number(this.route.snapshot.queryParamMap.get('booking'));
+
+    if (bookingId) {
+      const booking = this.bookingService.getById(bookingId);
+      if (booking) this.openBooking(booking);
+    }
+  }
 
   get todayKey(): string {
     return this.toDateKey(new Date());
