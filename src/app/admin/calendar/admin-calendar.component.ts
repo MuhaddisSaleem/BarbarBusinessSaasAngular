@@ -3,9 +3,16 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
-import { AdminBooking, AdminBookingService } from '../bookings/admin-booking.service';
+import { AdminBooking, AdminBookingService, BookingStatus } from '../bookings/admin-booking.service';
 
-type CalendarView = 'day' | 'week';
+type ScheduleView = 'daily' | 'week';
+
+interface BarberScheduleSummary {
+  name: string;
+  bookings: number;
+  nextAvailable: string;
+  bookedMinutes: number;
+}
 
 @Component({
   selector: 'app-admin-calendar',
@@ -15,45 +22,23 @@ type CalendarView = 'day' | 'week';
   styleUrl: './admin-calendar.component.scss'
 })
 export class AdminCalendarComponent {
-  view: CalendarView = 'day';
+  view: ScheduleView = 'daily';
+  selectedDateKey = this.toDateKey(new Date());
   selectedBarber = 'All';
-  selectedDate = new Date();
+  selectedStatus: 'All' | BookingStatus = 'All';
   selectedBooking: AdminBooking | null = null;
 
-  readonly slotHeight = 44;
-  readonly startMinutes = 8 * 60;
-  readonly endMinutes = 21 * 60;
-  readonly timelineSlots = this.buildTimeline();
+  readonly workingStart = 8 * 60;
+  readonly workingEnd = 21 * 60;
+  readonly workingHoursLabel = '8:00 AM – 9:00 PM';
 
   constructor(
     public readonly bookingService: AdminBookingService,
     private readonly router: Router
   ) {}
 
-  get selectedDateKey(): string {
-    return this.toDateKey(this.selectedDate);
-  }
-
-  get visibleBarbers(): string[] {
-    return this.selectedBarber === 'All'
-      ? this.bookingService.barbers
-      : [this.selectedBarber];
-  }
-
-  get dayBookings(): AdminBooking[] {
-    return this.bookingService.all
-      .filter(item => item.date === this.selectedDateKey && item.status !== 'Cancelled')
-      .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
-      .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
-  }
-
-  get weekDays(): Date[] {
-    const start = this.startOfWeek(this.selectedDate);
-    return Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(start);
-      date.setDate(start.getDate() + index);
-      return date;
-    });
+  get selectedDate(): Date {
+    return this.parseDateKey(this.selectedDateKey);
   }
 
   get selectedDateLabel(): string {
@@ -63,6 +48,64 @@ export class AdminCalendarComponent {
       month: 'long',
       year: 'numeric'
     }).format(this.selectedDate);
+  }
+
+  get dailyBookings(): AdminBooking[] {
+    return this.bookingService.all
+      .filter(item => item.date === this.selectedDateKey && item.status !== 'Cancelled')
+      .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
+      .filter(item => this.selectedStatus === 'All' || item.status === this.selectedStatus)
+      .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
+  }
+
+  get allBookingsForSelectedDay(): AdminBooking[] {
+    return this.bookingService.all
+      .filter(item => item.date === this.selectedDateKey && item.status !== 'Cancelled')
+      .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
+  }
+
+  get totalBookings(): number {
+    return this.allBookingsForSelectedDay.length;
+  }
+
+  get confirmedBookings(): number {
+    return this.allBookingsForSelectedDay.filter(item => item.status === 'Confirmed').length;
+  }
+
+  get pendingBookings(): number {
+    return this.allBookingsForSelectedDay.filter(item => item.status === 'Pending').length;
+  }
+
+  get totalBookedValue(): number {
+    return this.allBookingsForSelectedDay.reduce((sum, item) => sum + item.amount, 0);
+  }
+
+  get barberSummaries(): BarberScheduleSummary[] {
+    const barbers = this.selectedBarber === 'All'
+      ? this.bookingService.barbers
+      : [this.selectedBarber];
+
+    return barbers.map(name => {
+      const bookings = this.allBookingsForSelectedDay
+        .filter(item => item.barber === name)
+        .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
+
+      return {
+        name,
+        bookings: bookings.length,
+        nextAvailable: this.findNextAvailable(bookings),
+        bookedMinutes: bookings.reduce((sum, item) => sum + item.duration, 0)
+      };
+    });
+  }
+
+  get weekDays(): Date[] {
+    const start = this.startOfWeek(this.selectedDate);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return date;
+    });
   }
 
   get weekRangeLabel(): string {
@@ -80,53 +123,33 @@ export class AdminCalendarComponent {
       last.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  get totalBookings(): number {
-    return this.dayBookings.length;
-  }
-
-  get confirmedBookings(): number {
-    return this.dayBookings.filter(item => item.status === 'Confirmed').length;
-  }
-
-  get pendingBookings(): number {
-    return this.dayBookings.filter(item => item.status === 'Pending').length;
-  }
-
-  get totalRevenue(): number {
-    return this.dayBookings.reduce((sum, item) => sum + item.amount, 0);
-  }
-
-  setView(view: CalendarView): void {
+  setView(view: ScheduleView): void {
     this.view = view;
     this.selectedBooking = null;
   }
 
   previousPeriod(): void {
-    const date = new Date(this.selectedDate);
-    date.setDate(date.getDate() - (this.view === 'day' ? 1 : 7));
-    this.selectedDate = date;
-    this.selectedBooking = null;
+    this.shiftDate(this.view === 'daily' ? -1 : -7);
   }
 
   nextPeriod(): void {
-    const date = new Date(this.selectedDate);
-    date.setDate(date.getDate() + (this.view === 'day' ? 1 : 7));
-    this.selectedDate = date;
-    this.selectedBooking = null;
+    this.shiftDate(this.view === 'daily' ? 1 : 7);
   }
 
   goToday(): void {
-    this.selectedDate = new Date();
+    this.selectedDateKey = this.toDateKey(new Date());
     this.selectedBooking = null;
   }
 
-  selectWeekDay(date: Date): void {
-    this.selectedDate = new Date(date);
-    this.view = 'day';
+  openDay(date: Date): void {
+    this.selectedDateKey = this.toDateKey(date);
+    this.view = 'daily';
+    this.selectedBooking = null;
   }
 
-  bookingsForBarber(barber: string): AdminBooking[] {
-    return this.dayBookings.filter(item => item.barber === barber);
+  resetFilters(): void {
+    this.selectedBarber = 'All';
+    this.selectedStatus = 'All';
   }
 
   bookingsForDate(date: Date): AdminBooking[] {
@@ -137,24 +160,20 @@ export class AdminCalendarComponent {
       .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
   }
 
-  weekDayRevenue(date: Date): number {
+  weekPending(date: Date): number {
+    return this.bookingsForDate(date).filter(item => item.status === 'Pending').length;
+  }
+
+  weekConfirmed(date: Date): number {
+    return this.bookingsForDate(date).filter(item => item.status === 'Confirmed').length;
+  }
+
+  weekValue(date: Date): number {
     return this.bookingsForDate(date).reduce((sum, item) => sum + item.amount, 0);
   }
 
-  appointmentStyle(booking: AdminBooking): Record<string, string> {
-    const start = this.timeToMinutes(booking.time);
-    const top = ((start - this.startMinutes) / 30) * this.slotHeight;
-    const rawHeight = (booking.duration / 30) * this.slotHeight;
-    const height = Math.max(rawHeight - 5, 28);
-
-    return {
-      top: top + 'px',
-      height: height + 'px'
-    };
-  }
-
-  slotLabelStyle(index: number): Record<string, string> {
-    return { top: (index * this.slotHeight - 7) + 'px' };
+  isToday(date: Date): boolean {
+    return this.toDateKey(date) === this.toDateKey(new Date());
   }
 
   openBooking(booking: AdminBooking): void {
@@ -167,27 +186,70 @@ export class AdminCalendarComponent {
 
   manageBooking(): void {
     if (!this.selectedBooking) return;
+
     void this.router.navigate(['/admin/bookings'], {
       queryParams: { booking: this.selectedBooking.id }
     });
   }
 
-  statusIcon(booking: AdminBooking): string {
-    if (booking.status === 'Pending') return 'bi-clock-history';
-    if (booking.status === 'Completed') return 'bi-check2-all';
+  statusIcon(status: BookingStatus): string {
+    if (status === 'Pending') return 'bi-clock-history';
+    if (status === 'Completed') return 'bi-check2-all';
+    if (status === 'Cancelled') return 'bi-x-circle';
     return 'bi-check-circle';
   }
 
-  isToday(date: Date): boolean {
-    return this.toDateKey(date) === this.toDateKey(new Date());
+  private findNextAvailable(bookings: AdminBooking[]): string {
+    let candidate = this.workingStart;
+
+    if (this.selectedDateKey === this.toDateKey(new Date())) {
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      candidate = Math.max(candidate, Math.ceil(nowMinutes / 30) * 30);
+    }
+
+    while (candidate + 30 <= this.workingEnd) {
+      const candidateEnd = candidate + 30;
+      const conflict = bookings.some(booking => {
+        const start = this.timeToMinutes(booking.time);
+        const end = start + booking.duration;
+        return candidate < end && candidateEnd > start;
+      });
+
+      if (!conflict) return this.minutesToLabel(candidate);
+      candidate += 30;
+    }
+
+    return 'Fully booked';
   }
 
-  private buildTimeline(): string[] {
-    const slots: string[] = [];
-    for (let minute = this.startMinutes; minute <= this.endMinutes; minute += 30) {
-      slots.push(this.minutesToLabel(minute));
-    }
-    return slots;
+  private shiftDate(days: number): void {
+    const date = this.selectedDate;
+    date.setDate(date.getDate() + days);
+    this.selectedDateKey = this.toDateKey(date);
+    this.selectedBooking = null;
+  }
+
+  private startOfWeek(date: Date): Date {
+    const copy = new Date(date);
+    copy.setHours(12, 0, 0, 0);
+    const day = copy.getDay();
+    const difference = day === 0 ? -6 : 1 - day;
+    copy.setDate(copy.getDate() + difference);
+    return copy;
+  }
+
+  private parseDateKey(key: string): Date {
+    const [year, month, day] = key.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
+
+  private toDateKey(date: Date): string {
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0')
+    ].join('-');
   }
 
   private minutesToLabel(total: number): string {
@@ -210,22 +272,5 @@ export class AdminCalendarComponent {
     if (period === 'AM' && hour === 12) hour = 0;
 
     return hour * 60 + minute;
-  }
-
-  private startOfWeek(date: Date): Date {
-    const copy = new Date(date);
-    copy.setHours(12, 0, 0, 0);
-    const day = copy.getDay();
-    const difference = day === 0 ? -6 : 1 - day;
-    copy.setDate(copy.getDate() + difference);
-    return copy;
-  }
-
-  private toDateKey(date: Date): string {
-    return [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, '0'),
-      String(date.getDate()).padStart(2, '0')
-    ].join('-');
   }
 }
