@@ -70,16 +70,16 @@
         </div>
 
         <div class="col-6 col-lg-auto">
-          <select [(ngModel)]="selectedBarber">
-            <option>All</option>
-            <option *ngFor="let barber of bookingService.barbers">{{ barber }}</option>
+          <select [(ngModel)]="selectedBarber" aria-label="Filter by barber">
+            <option value="All">Select Barber</option>
+            <option *ngFor="let barber of bookingService.barbers" [value]="barber">{{ barber }}</option>
           </select>
         </div>
 
         <div class="col-6 col-lg-auto">
-          <select [(ngModel)]="selectedService">
-            <option>All</option>
-            <option *ngFor="let service of bookingService.services">{{ service.name }}</option>
+          <select [(ngModel)]="selectedService" aria-label="Filter by service">
+            <option value="All">Select Service</option>
+            <option *ngFor="let service of bookingService.services" [value]="service.name">{{ service.name }}</option>
           </select>
         </div>
 
