@@ -1,0 +1,223 @@
+<app-admin-shell eyebrow="SCHEDULE OPERATIONS" title="Calendar">
+  <div class="calendar-page container-fluid">
+    <section class="page-heading d-flex flex-wrap align-items-end justify-content-between gap-3">
+      <div>
+        <span class="eyebrow">BARBER SCHEDULE</span>
+        <h2>Calendar</h2>
+        <p>See appointments by barber, day and week from one schedule.</p>
+      </div>
+
+      <div class="heading-actions d-flex flex-wrap align-items-center gap-2">
+        <select class="barber-filter" [(ngModel)]="selectedBarber">
+          <option value="All">All Barbers</option>
+          <option *ngFor="let barber of bookingService.barbers" [value]="barber">{{ barber }}</option>
+        </select>
+
+        <div class="view-switch d-flex">
+          <button type="button" [class.active]="view === 'day'" (click)="setView('day')">Day</button>
+          <button type="button" [class.active]="view === 'week'" (click)="setView('week')">Week</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 calendar-stats">
+      <div class="col-6 col-xl-3">
+        <article class="stat-card">
+          <span class="stat-icon"><i class="bi bi-calendar2-check"></i></span>
+          <div><small>Bookings</small><strong>{{ totalBookings }}</strong></div>
+        </article>
+      </div>
+      <div class="col-6 col-xl-3">
+        <article class="stat-card">
+          <span class="stat-icon confirmed"><i class="bi bi-check2-circle"></i></span>
+          <div><small>Confirmed</small><strong>{{ confirmedBookings }}</strong></div>
+        </article>
+      </div>
+      <div class="col-6 col-xl-3">
+        <article class="stat-card">
+          <span class="stat-icon pending"><i class="bi bi-clock-history"></i></span>
+          <div><small>Pending</small><strong>{{ pendingBookings }}</strong></div>
+        </article>
+      </div>
+      <div class="col-6 col-xl-3">
+        <article class="stat-card">
+          <span class="stat-icon revenue"><i class="bi bi-cash-stack"></i></span>
+          <div><small>Booked Value</small><strong>Rs. {{ totalRevenue | number }}</strong></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="calendar-card">
+      <div class="calendar-toolbar d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="period-nav d-flex align-items-center">
+          <button type="button" class="nav-btn" (click)="previousPeriod()" aria-label="Previous period">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+
+          <button type="button" class="today-btn" (click)="goToday()">Today</button>
+
+          <button type="button" class="nav-btn" (click)="nextPeriod()" aria-label="Next period">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+
+        <div class="period-title">
+          <strong>{{ view === 'day' ? selectedDateLabel : weekRangeLabel }}</strong>
+          <small>{{ selectedBarber === 'All' ? 'All barber schedules' : selectedBarber + ' schedule' }}</small>
+        </div>
+
+        <div class="legend d-flex align-items-center gap-3">
+          <span><i class="legend-dot confirmed"></i>Confirmed</span>
+          <span><i class="legend-dot pending"></i>Pending</span>
+          <span><i class="legend-dot completed"></i>Completed</span>
+        </div>
+      </div>
+
+      <div class="day-view" *ngIf="view === 'day'">
+        <div class="day-scroll">
+          <div class="day-grid" [style.--barber-count]="visibleBarbers.length">
+            <div class="corner-cell">Time</div>
+
+            <div class="barber-head" *ngFor="let barber of visibleBarbers">
+              <div class="barber-avatar">{{ barber.slice(0, 1) }}</div>
+              <div>
+                <strong>{{ barber }}</strong>
+                <small>{{ bookingsForBarber(barber).length }} appointments</small>
+              </div>
+            </div>
+
+            <div class="time-rail">
+              <span class="time-label"
+                *ngFor="let slot of timelineSlots; let i = index"
+                [ngStyle]="slotLabelStyle(i)">
+                {{ slot }}
+              </span>
+            </div>
+
+            <div class="barber-column" *ngFor="let barber of visibleBarbers">
+              <div class="slot-lines"></div>
+
+              <button type="button"
+                class="appointment-block"
+                *ngFor="let booking of bookingsForBarber(barber)"
+                [ngClass]="booking.status.toLowerCase()"
+                [ngStyle]="appointmentStyle(booking)"
+                (click)="openBooking(booking)">
+                <span class="appointment-time">{{ booking.time }}</span>
+                <strong>{{ booking.customerName }}</strong>
+                <small>{{ booking.service }}</small>
+                <span class="appointment-meta">
+                  <i class="bi" [ngClass]="statusIcon(booking)"></i>
+                  {{ booking.status }}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-day" *ngIf="!dayBookings.length">
+          <i class="bi bi-calendar2"></i>
+          <strong>No appointments for this day</strong>
+          <span>Try another date or barber.</span>
+        </div>
+      </div>
+
+      <div class="week-view" *ngIf="view === 'week'">
+        <div class="week-grid">
+          <button type="button"
+            class="week-day"
+            *ngFor="let day of weekDays"
+            [class.today]="isToday(day)"
+            [class.selected]="selectedDateKey === (day | date:'yyyy-MM-dd')"
+            (click)="selectWeekDay(day)">
+            <div class="week-day-head">
+              <span>{{ day | date:'EEE' }}</span>
+              <strong>{{ day | date:'dd' }}</strong>
+            </div>
+
+            <div class="week-day-summary">
+              <span>{{ bookingsForDate(day).length }} bookings</span>
+              <strong>Rs. {{ weekDayRevenue(day) | number }}</strong>
+            </div>
+
+            <div class="week-bookings">
+              <div class="week-booking" *ngFor="let booking of bookingsForDate(day) | slice:0:4">
+                <span>{{ booking.time }}</span>
+                <strong>{{ booking.customerName }}</strong>
+                <small>{{ booking.barber }} · {{ booking.service }}</small>
+              </div>
+
+              <span class="more-bookings" *ngIf="bookingsForDate(day).length > 4">
+                +{{ bookingsForDate(day).length - 4 }} more
+              </span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="preview-backdrop" [class.show]="selectedBooking" (click)="closePreview()"></div>
+
+  <aside class="booking-preview" [class.open]="selectedBooking" *ngIf="selectedBooking">
+    <div class="preview-head d-flex align-items-start justify-content-between">
+      <div>
+        <span class="eyebrow">APPOINTMENT</span>
+        <h3>{{ selectedBooking.code }}</h3>
+      </div>
+      <button type="button" class="icon-btn" (click)="closePreview()" aria-label="Close preview">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="preview-body">
+      <section class="customer-box">
+        <div class="customer-avatar">{{ selectedBooking.customerName.slice(0, 1) }}</div>
+        <div>
+          <strong>{{ selectedBooking.customerName }}</strong>
+          <span>{{ selectedBooking.phone }}</span>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <div class="detail-row">
+          <span><i class="bi bi-scissors"></i> Service</span>
+          <strong>{{ selectedBooking.service }}</strong>
+        </div>
+        <div class="detail-row">
+          <span><i class="bi bi-person-badge"></i> Barber</span>
+          <strong>{{ selectedBooking.barber }}</strong>
+        </div>
+        <div class="detail-row">
+          <span><i class="bi bi-calendar3"></i> Date</span>
+          <strong>{{ selectedBooking.date | date:'dd MMM yyyy' }}</strong>
+        </div>
+        <div class="detail-row">
+          <span><i class="bi bi-clock"></i> Time</span>
+          <strong>{{ selectedBooking.time }}</strong>
+        </div>
+        <div class="detail-row">
+          <span><i class="bi bi-hourglass-split"></i> Duration</span>
+          <strong>{{ selectedBooking.duration }} min</strong>
+        </div>
+        <div class="detail-row">
+          <span><i class="bi bi-cash"></i> Amount</span>
+          <strong class="gold">Rs. {{ selectedBooking.amount | number }}</strong>
+        </div>
+      </section>
+
+      <section class="status-box" [ngClass]="selectedBooking.status.toLowerCase()">
+        <i class="bi" [ngClass]="statusIcon(selectedBooking)"></i>
+        <div>
+          <strong>{{ selectedBooking.status }}</strong>
+          <span>Current booking status</span>
+        </div>
+      </section>
+
+      <button type="button" class="manage-btn" (click)="manageBooking()">
+        Manage booking
+        <i class="bi bi-arrow-right"></i>
+      </button>
+    </div>
+  </aside>
+</app-admin-shell>
