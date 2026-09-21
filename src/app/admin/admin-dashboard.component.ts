@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { AdminNotification, NotificationService } from './notifications/notification.service';
+import { AdminShellComponent } from './shared/admin-shell.component';
 
 type AppointmentStatus = 'Confirmed' | 'Pending' | 'Completed';
 
@@ -26,14 +26,11 @@ interface Appointment {
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AdminShellComponent],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.scss'
 })
 export class AdminDashboardComponent {
-  sidebarOpen = false;
-  profileMenuOpen = false;
-  notificationMenuOpen = false;
   activeStatus: 'All' | AppointmentStatus = 'All';
 
   readonly currentUser = {
@@ -42,22 +39,12 @@ export class AdminDashboardComponent {
     initials: 'MS'
   };
 
-  constructor(
-    private readonly router: Router,
-    public readonly notificationService: NotificationService
-  ) {}
+  constructor(private readonly router: Router) {}
 
   get greeting(): string {
     const hour = new Date().getHours();
-
-    if (hour < 12) {
-      return 'Good morning';
-    }
-
-    if (hour < 17) {
-      return 'Good afternoon';
-    }
-
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   }
 
@@ -110,71 +97,7 @@ export class AdminDashboardComponent {
     this.activeStatus = status;
   }
 
-  toggleSidebar(): void {
-    this.sidebarOpen = !this.sidebarOpen;
-  }
-
-  closeSidebar(): void {
-    this.sidebarOpen = false;
-  }
-
-  toggleProfileMenu(event: MouseEvent): void {
-    event.stopPropagation();
-    this.notificationMenuOpen = false;
-    this.profileMenuOpen = !this.profileMenuOpen;
-  }
-
-  toggleNotificationMenu(event: MouseEvent): void {
-    event.stopPropagation();
-    this.profileMenuOpen = false;
-    this.notificationMenuOpen = !this.notificationMenuOpen;
-  }
-
-  openNotification(notification: AdminNotification): void {
-    this.notificationService.markAsRead(notification.id);
-  }
-
-  markAllNotificationsAsRead(event: MouseEvent): void {
-    event.stopPropagation();
-    this.notificationService.markAllAsRead();
-  }
-
-  viewAllNotifications(): void {
-    this.notificationMenuOpen = false;
-    void this.router.navigateByUrl('/admin/notifications');
-  }
-
-  goToNotifications(): void {
-    this.closeSidebar();
-    void this.router.navigateByUrl('/admin/notifications');
-  }
-
-  closeProfileMenu(): void {
-    this.profileMenuOpen = false;
-  }
-
-  logout(): void {
-    this.profileMenuOpen = false;
-
-    // Ready for the real authentication phase: clear any persisted admin
-    // session values if they exist, then return to the public booking site.
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    sessionStorage.removeItem('adminToken');
-    sessionStorage.removeItem('adminUser');
-
-    void this.router.navigateByUrl('/');
-  }
-
-  @HostListener('document:click')
-  onDocumentClick(): void {
-    this.closeProfileMenu();
-    this.notificationMenuOpen = false;
-  }
-
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    this.closeProfileMenu();
-    this.notificationMenuOpen = false;
+  goToBookings(): void {
+    void this.router.navigateByUrl('/admin/bookings');
   }
 }
