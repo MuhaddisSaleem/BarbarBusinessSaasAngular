@@ -135,7 +135,8 @@
   .booking-page .step:not(:last-child)::after {
     top: 13px !important;
     left: calc(50% + 17px) !important;
-    width: calc(100% - 34px) !important;
+    right: calc(-50% + 17px) !important;
+    width: auto !important;
   }
 }
 
@@ -187,6 +188,7 @@
   .booking-page .step:not(:last-child)::after {
     top: 12px !important;
     left: calc(50% + 15px) !important;
-    width: calc(100% - 30px) !important;
+    right: calc(-50% + 15px) !important;
+    width: auto !important;
   }
 }
