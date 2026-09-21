@@ -24,7 +24,7 @@
       <button type="button" class="nav-item" [class.active]="isActive('/admin/bookings')" (click)="navigate('/admin/bookings')">
         <span class="nav-icon"><i class="bi bi-calendar2-check"></i></span>
         <span>Bookings</span>
-        <span class="nav-count">18</span>
+        <span class="nav-count">{{ bookingService.all.length }}</span>
       </button>
 
       <button type="button" class="nav-item">
