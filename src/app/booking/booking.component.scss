@@ -938,3 +938,103 @@ button { -webkit-tap-highlight-color: transparent; }
   .time-grid { gap: 7px; }
   .time-slot { font-size: 10px; }
 }
+
+
+/* Unified Bootstrap Icons treatment */
+.clock-mini i {
+  font-size: 11px;
+  vertical-align: -1px;
+}
+
+.rating i {
+  color: $gold;
+  font-size: 11px;
+  margin-right: 2px;
+}
+
+.any-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    color: #f0f2f3;
+    font-size: 24px;
+    line-height: 1;
+  }
+}
+
+.calendar-header button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 15px;
+    line-height: 1;
+  }
+}
+
+.summary-icon i {
+  color: #eef1f2;
+  font-size: 16px;
+}
+
+.summary-line-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #edf0f1;
+
+  i {
+    font-size: 17px;
+    line-height: 1;
+  }
+}
+
+.summary-copy span i {
+  margin-right: 2px;
+  font-size: 9px;
+}
+
+.confirm-btn i {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.wa-icon {
+  background: transparent;
+
+  i {
+    color: #27c66a;
+    font-size: 17px;
+    line-height: 1;
+  }
+}
+
+.footer-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    color: $gold;
+    font-size: 25px;
+    line-height: 1;
+  }
+}
+
+.footer-signature span i {
+  font-size: 15px;
+  vertical-align: 2px;
+}
+
+.success-icon i {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.step-circle i {
+  font-size: .92em;
+  line-height: 1;
+}
