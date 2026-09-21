@@ -1,29 +1,19 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminNotification, NotificationService } from './notification.service';
 
 @Component({
   selector: 'app-admin-notifications',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AdminShellComponent],
   templateUrl: './admin-notifications.component.html',
   styleUrl: './admin-notifications.component.scss'
 })
 export class AdminNotificationsComponent {
-  sidebarOpen = false;
   activeFilter: 'all' | 'unread' = 'all';
 
-  readonly currentUser = {
-    name: 'Salon Owner',
-    role: 'Administrator',
-    initials: 'MS'
-  };
-
-  constructor(
-    private readonly router: Router,
-    public readonly notificationService: NotificationService
-  ) {}
+  constructor(public readonly notificationService: NotificationService) {}
 
   get notifications(): AdminNotification[] {
     return this.activeFilter === 'unread'
@@ -50,17 +40,5 @@ export class AdminNotificationsComponent {
 
   markAllAsRead(): void {
     this.notificationService.markAllAsRead();
-  }
-
-  goToDashboard(): void {
-    void this.router.navigateByUrl('/admin');
-  }
-
-  toggleSidebar(): void {
-    this.sidebarOpen = !this.sidebarOpen;
-  }
-
-  closeSidebar(): void {
-    this.sidebarOpen = false;
   }
 }
