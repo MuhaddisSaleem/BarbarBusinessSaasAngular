@@ -28,10 +28,10 @@ body {
   background: transparent !important;
 }
 
-/* Booking flow layout helpers. Bootstrap now owns the layout display model;
- * these rules only preserve the original pixel proportions and gaps. */
+/* Bootstrap owns the booking rows/columns. Keep only non-grid visual helpers. */
 .booking-page .left-column,
-.booking-page .middle-column {
+.booking-page .middle-column,
+.booking-page .booking-summary {
   min-width: 0;
 }
 
@@ -45,90 +45,7 @@ body {
   margin-top: 0;
 }
 
-/* Bootstrap migration: keep the original 3-column desktop proportions. */
-.booking-page .booking-grid.d-flex {
-  display: flex !important;
-  flex-wrap: nowrap;
-  gap: 24px;
-}
-
-.booking-page .booking-grid > .left-column {
-  flex: 1.55 1 540px;
-}
-
-.booking-page .booking-grid > .middle-column {
-  flex: .86 1 310px;
-}
-
-.booking-page .booking-grid > .booking-summary {
-  flex: 0 0 350px;
-  width: 350px;
-}
-
-/* Bootstrap rows replace the former custom CSS grids while retaining the
- * original 13px / 12px / 10px visual spacing. */
-.booking-page .services-grid.row,
-.booking-page .barber-grid.row,
-.booking-page .time-grid.row,
-.booking-page .group-progress.row,
-.booking-page .footer-inner.row {
-  display: flex !important;
-  flex-wrap: wrap;
-  margin-right: 0;
-  margin-left: 0;
-}
-
-.booking-page .services-grid.row {
-  gap: 13px;
-}
-
-.booking-page .services-grid > .service-col {
-  flex: 0 0 calc((100% - 26px) / 3);
-  width: calc((100% - 26px) / 3);
-  max-width: calc((100% - 26px) / 3);
-  padding: 0;
-}
-
-.booking-page .barber-grid.row {
-  gap: 12px;
-}
-
-.booking-page .barber-grid > .barber-col {
-  flex: 0 0 calc((100% - 12px) / 2);
-  width: calc((100% - 12px) / 2);
-  max-width: calc((100% - 12px) / 2);
-  padding: 0;
-}
-
-.booking-page .barber-section .barber-card img {
-  width: 64px;
-  height: 62px;
-}
-
-.booking-page .time-grid.row {
-  gap: 10px;
-}
-
-.booking-page .time-grid > .time-col {
-  flex: 0 0 calc((100% - 20px) / 3);
-  width: calc((100% - 20px) / 3);
-  max-width: calc((100% - 20px) / 3);
-  padding: 0;
-}
-
-.booking-page .group-progress.row {
-  gap: 8px;
-}
-
-.booking-page .group-progress > .group-progress-col {
-  flex: 0 0 calc((100% - 8px) / 2);
-  width: calc((100% - 8px) / 2);
-  max-width: calc((100% - 8px) / 2);
-  padding: 0;
-}
-
-/* Preserve the original group-progress card styling after adding Bootstrap
- * column wrappers. No booking behavior is changed. */
+/* Group progress card visuals. Layout is controlled by Bootstrap columns. */
 .booking-page .group-progress .group-progress-col > button {
   min-height: 48px;
   padding: 7px 9px;
@@ -173,25 +90,7 @@ body {
   color: #71d396;
 }
 
-/* Seven equal calendar cells using Bootstrap flex wrapping rather than a
- * custom seven-column CSS grid. */
-.booking-page .calendar-weekdays.d-flex,
-.booking-page .calendar-days.d-flex {
-  display: flex !important;
-  flex-wrap: wrap;
-}
-
-.booking-page .calendar-weekdays .calendar-cell,
-.booking-page .calendar-days .calendar-cell {
-  flex: 0 0 14.285714%;
-  max-width: 14.285714%;
-}
-
-.booking-page .calendar-days .calendar-cell {
-  margin: 0;
-}
-
-/* Summary rows are Bootstrap flex layouts now. */
+/* Summary row spacing. */
 .booking-page .summary-service.d-flex {
   gap: 10px;
 }
@@ -200,29 +99,7 @@ body {
   gap: 8px;
 }
 
-/* Footer stays visually identical to the former 4 + signature grid. */
-.booking-page .footer-inner.row {
-  min-height: 76px;
-  flex-wrap: nowrap;
-  gap: 18px;
-}
-
-.booking-page .footer-inner > .footer-feature.col {
-  flex: 1 1 0;
-  width: auto;
-  max-width: none;
-  padding: 0;
-}
-
-.booking-page .footer-inner > .footer-signature.col-auto {
-  flex: 1.1 1 0;
-  width: auto;
-  max-width: none;
-  padding: 0;
-}
-
-/* Hero uses Bootstrap row/col utilities. Override Bootstrap column widths on
- * feature items so their original intrinsic spacing remains unchanged. */
+/* Hero keeps its existing visual alignment while Bootstrap handles structure. */
 .royal-hero .site-header.row {
   margin-right: 0;
   margin-left: 0;
@@ -240,11 +117,7 @@ body {
   max-width: none;
 }
 
-/* Booking stepper progress states.
- * Current step = gold outline.
- * Completed step = gold tick.
- * Completed connector = gold progress line.
- */
+/* Booking stepper progress states. */
 .booking-page .booking-stepper .step.active:not(.completed) .step-circle {
   border: 2px solid #ffd16f;
   background: #20292e;
@@ -278,114 +151,3 @@ body {
 .booking-page img[alt='Hair Wash'] { content: url('/assets/images/services/hair-wash.webp'); }
 .booking-page img[alt='Hair Coloring'] { content: url('/assets/images/services/hair-color.webp'); }
 .booking-page img[alt='6 Step Face Massage'] { content: url('/assets/images/services/face-massage.webp'); }
-
-/* Existing responsive behavior is intentionally preserved. A dedicated
- * responsiveness pass will follow after this layout migration. */
-@media (max-width: 1220px) {
-  .booking-page .booking-grid.d-flex {
-    flex-wrap: wrap;
-  }
-
-  .booking-page .booking-grid > .left-column {
-    flex: 1.45 1 500px;
-  }
-
-  .booking-page .booking-grid > .middle-column {
-    flex: .9 1 300px;
-  }
-
-  .booking-page .booking-grid > .booking-summary {
-    flex: 0 0 100%;
-    width: 100%;
-  }
-
-  .booking-page .footer-inner.row {
-    flex-wrap: wrap;
-  }
-
-  .booking-page .footer-inner > .footer-feature.col {
-    flex: 1 1 calc(25% - 14px);
-  }
-
-  .booking-page .footer-signature {
-    display: none;
-  }
-}
-
-@media (max-width: 900px) {
-  .booking-page .booking-grid.d-flex {
-    flex-direction: column;
-  }
-
-  .booking-page .booking-grid > .left-column,
-  .booking-page .booking-grid > .middle-column,
-  .booking-page .booking-grid > .booking-summary {
-    flex: 0 0 100%;
-    width: 100%;
-  }
-
-  .booking-page .middle-column {
-    gap: 24px;
-  }
-
-  .booking-page .barber-grid > .barber-col {
-    flex: 0 0 calc((100% - 36px) / 4);
-    width: calc((100% - 36px) / 4);
-    max-width: calc((100% - 36px) / 4);
-  }
-
-  .booking-page .footer-inner.row {
-    flex-wrap: wrap;
-    padding-top: 16px;
-    padding-bottom: 16px;
-  }
-
-  .booking-page .footer-inner > .footer-feature.col {
-    flex: 0 0 calc(50% - 9px);
-  }
-}
-
-@media (max-width: 700px) {
-  .booking-page .services-grid > .service-col {
-    flex: 0 0 calc((100% - 13px) / 2);
-    width: calc((100% - 13px) / 2);
-    max-width: calc((100% - 13px) / 2);
-  }
-
-  .booking-page .footer-inner > .footer-feature.col {
-    flex: 0 0 100%;
-    width: 100%;
-    max-width: 100%;
-    justify-content: flex-start !important;
-  }
-}
-
-@media (max-width: 600px) {
-  .booking-page .barber-grid > .barber-col {
-    flex: 0 0 calc((100% - 12px) / 2);
-    width: calc((100% - 12px) / 2);
-    max-width: calc((100% - 12px) / 2);
-  }
-}
-
-@media (max-width: 430px) {
-  .booking-page .services-grid.row {
-    gap: 9px;
-  }
-
-  .booking-page .services-grid > .service-col {
-    flex-basis: calc((100% - 9px) / 2);
-    width: calc((100% - 9px) / 2);
-    max-width: calc((100% - 9px) / 2);
-  }
-
-  .booking-page .time-grid.row {
-    gap: 7px;
-  }
-
-  .booking-page .time-grid > .time-col {
-    flex-basis: calc((100% - 14px) / 3);
-    width: calc((100% - 14px) / 3);
-    max-width: calc((100% - 14px) / 3);
-  }
-}
