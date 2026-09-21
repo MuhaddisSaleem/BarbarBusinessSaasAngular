@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
+import { Router } from '@angular/router';
 
 type AppointmentStatus = 'Confirmed' | 'Pending' | 'Completed';
 
@@ -30,7 +31,39 @@ interface Appointment {
 })
 export class AdminDashboardComponent {
   sidebarOpen = false;
+  profileMenuOpen = false;
   activeStatus: 'All' | AppointmentStatus = 'All';
+
+  readonly currentUser = {
+    name: 'Salon Owner',
+    role: 'Administrator',
+    initials: 'MS'
+  };
+
+  constructor(private readonly router: Router) {}
+
+  get greeting(): string {
+    const hour = new Date().getHours();
+
+    if (hour < 12) {
+      return 'Good morning';
+    }
+
+    if (hour < 17) {
+      return 'Good afternoon';
+    }
+
+    return 'Good evening';
+  }
+
+  get currentDateLabel(): string {
+    return new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    }).format(new Date());
+  }
 
   readonly stats: DashboardStat[] = [
     { label: 'Today\'s Bookings', value: '18', detail: '4 still upcoming', trend: '+12%', icon: '01' },
@@ -78,5 +111,37 @@ export class AdminDashboardComponent {
 
   closeSidebar(): void {
     this.sidebarOpen = false;
+  }
+
+  toggleProfileMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.profileMenuOpen = !this.profileMenuOpen;
+  }
+
+  closeProfileMenu(): void {
+    this.profileMenuOpen = false;
+  }
+
+  logout(): void {
+    this.profileMenuOpen = false;
+
+    // Ready for the real authentication phase: clear any persisted admin
+    // session values if they exist, then return to the public booking site.
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    sessionStorage.removeItem('adminToken');
+    sessionStorage.removeItem('adminUser');
+
+    void this.router.navigateByUrl('/');
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.closeProfileMenu();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeProfileMenu();
   }
 }
