@@ -1,370 +1,199 @@
-<div class="admin-app">
-  <div class="sidebar-backdrop" [class.show]="sidebarOpen" (click)="closeSidebar()"></div>
-
-  <aside class="admin-sidebar d-flex flex-column" [class.open]="sidebarOpen">
-    <div class="sidebar-brand d-flex align-items-center">
-      <div class="brand-mark">RB</div>
+<app-admin-shell eyebrow="SALON OVERVIEW" [title]="greeting + ', ' + currentUser.name">
+  <div class="admin-content container-fluid">
+    <section class="welcome-row d-flex flex-wrap align-items-end justify-content-between">
       <div>
-        <strong>ROYAL BARBERS</strong>
-        <small>MANAGEMENT</small>
+        <h2>Dashboard</h2>
+        <p>Here is what is happening at Royal Barbers today.</p>
       </div>
-      <button type="button" class="sidebar-close d-lg-none" (click)="closeSidebar()" aria-label="Close menu"><i class="bi bi-x-lg"></i></button>
-    </div>
-
-    <nav class="sidebar-nav flex-grow-1">
-      <small class="nav-label">WORKSPACE</small>
-
-      <button type="button" class="nav-item active">
-        <span class="nav-icon"><i class="bi bi-grid-1x2-fill"></i></span>
-        <span>Dashboard</span>
-      </button>
-      <button type="button" class="nav-item">
-        <span class="nav-icon"><i class="bi bi-calendar2-check"></i></span>
-        <span>Bookings</span>
-        <span class="nav-count">18</span>
-      </button>
-      <button type="button" class="nav-item">
-        <span class="nav-icon"><i class="bi bi-calendar3"></i></span>
-        <span>Calendar</span>
-      </button>
-      <button type="button" class="nav-item">
-        <span class="nav-icon"><i class="bi bi-person-badge"></i></span>
-        <span>Barbers</span>
-      </button>
-      <button type="button" class="nav-item">
-        <span class="nav-icon"><i class="bi bi-scissors"></i></span>
-        <span>Services</span>
-      </button>
-      <button type="button" class="nav-item">
-        <span class="nav-icon"><i class="bi bi-people"></i></span>
-        <span>Customers</span>
-      </button>
-      <button type="button" class="nav-item" (click)="goToNotifications()">
-        <span class="nav-icon"><i class="bi bi-bell"></i></span>
-        <span>Notifications</span>
-        <span class="nav-count" *ngIf="notificationService.unreadCount">{{ notificationService.unreadCount }}</span>
-      </button>
-
-      <small class="nav-label nav-label-secondary">INSIGHTS</small>
-
-      <button type="button" class="nav-item">
-        <span class="nav-icon"><i class="bi bi-bar-chart-line"></i></span>
-        <span>Revenue & Reports</span>
-      </button>
-      <button type="button" class="nav-item">
-        <span class="nav-icon"><i class="bi bi-gear"></i></span>
-        <span>Settings</span>
-      </button>
-    </nav>
-
-    <div class="sidebar-shop">
-      <div class="shop-avatar">RB</div>
-      <div class="flex-grow-1">
-        <strong>Royal Barbers</strong>
-        <small>Bahawalpur</small>
+      <div class="dashboard-date">
+        <i class="bi bi-calendar-event"></i>
+        {{ currentDateLabel }}
       </div>
-      <span><i class="bi bi-three-dots-vertical"></i></span>
-    </div>
-  </aside>
+    </section>
 
-  <main class="admin-main">
-    <header class="admin-topbar d-flex align-items-center justify-content-between">
-      <div class="d-flex align-items-center">
-        <button type="button" class="menu-toggle d-lg-none me-3" (click)="toggleSidebar()" aria-label="Open menu"><i class="bi bi-list"></i></button>
-        <div>
-          <span class="eyebrow">SALON OVERVIEW</span>
-          <h1>{{ greeting }}, {{ currentUser.name }}</h1>
-        </div>
+    <section class="row g-3 g-xl-4 stats-row">
+      <div class="col-12 col-sm-6 col-xl-3" *ngFor="let stat of stats">
+        <article class="stat-card h-100">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="stat-icon"><i class="bi" [ngClass]="stat.icon"></i></div>
+            <span class="trend">{{ stat.trend }}</span>
+          </div>
+          <span class="stat-label">{{ stat.label }}</span>
+          <strong class="stat-value">{{ stat.value }}</strong>
+          <small>{{ stat.detail }}</small>
+        </article>
       </div>
+    </section>
 
-      <div class="topbar-actions d-flex align-items-center">
-        <a href="/" class="booking-site-link d-none d-md-inline-flex">View booking site <i class="bi bi-box-arrow-up-right"></i></a>
-        <div class="notification-menu-wrap" (click)="$event.stopPropagation()">
-          <button type="button"
-            class="notification-btn"
-            [class.menu-open]="notificationMenuOpen"
-            [attr.aria-expanded]="notificationMenuOpen"
-            aria-haspopup="menu"
-            aria-label="Notifications"
-            (click)="toggleNotificationMenu($event)">
-            <i class="bi bi-bell"></i>
-            <span *ngIf="notificationService.unreadCount"></span>
-            <b class="notification-count" *ngIf="notificationService.unreadCount">{{ notificationService.unreadCount }}</b>
-          </button>
-
-          <div class="notification-panel" *ngIf="notificationMenuOpen" role="menu" (click)="$event.stopPropagation()">
-            <div class="notification-panel-head d-flex align-items-center justify-content-between">
-              <div>
-                <strong>Notifications</strong>
-                <small>{{ notificationService.unreadCount }} unread</small>
-              </div>
-              <button type="button"
-                class="mark-all-link"
-                [disabled]="!notificationService.unreadCount"
-                (click)="markAllNotificationsAsRead($event)">
-                Mark all read
+    <section class="row g-4 dashboard-grid">
+      <div class="col-12 col-xxl-8">
+        <article class="dashboard-card appointments-card h-100">
+          <div class="card-heading d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+              <span class="eyebrow">TODAY</span>
+              <h3>Appointments</h3>
+            </div>
+            <div class="status-filters d-flex flex-wrap">
+              <button type="button" *ngFor="let status of ['All', 'Confirmed', 'Pending', 'Completed']"
+                [class.active]="activeStatus === status"
+                (click)="setStatus($any(status))">
+                {{ status }}
               </button>
             </div>
-
-            <div class="notification-preview-list">
-              <button type="button"
-                class="notification-preview"
-                *ngFor="let notification of notificationService.previewNotifications"
-                [class.unread]="notification.unread"
-                (click)="openNotification(notification)">
-                <span class="notification-preview-icon" [ngClass]="notification.type">
-                  <i class="bi" [ngClass]="notification.icon"></i>
-                </span>
-                <span class="notification-preview-copy">
-                  <span class="notification-preview-title">
-                    <strong>{{ notification.title }}</strong>
-                    <i class="notification-unread-dot" *ngIf="notification.unread"></i>
-                  </span>
-                  <span>{{ notification.message }}</span>
-                  <small>{{ notification.time }}</small>
-                </span>
-              </button>
-            </div>
-
-            <button type="button" class="view-all-notifications" (click)="viewAllNotifications()">
-              View all notifications
-              <i class="bi bi-arrow-right"></i>
-            </button>
           </div>
-        </div>
-        <div class="profile-menu-wrap d-none d-sm-block" (click)="$event.stopPropagation()">
-          <button type="button"
-            class="admin-profile d-flex align-items-center"
-            [class.menu-open]="profileMenuOpen"
-            [attr.aria-expanded]="profileMenuOpen"
-            aria-haspopup="menu"
-            (click)="toggleProfileMenu($event)">
-            <div class="profile-avatar">{{ currentUser.initials }}</div>
-            <div class="profile-copy">
-              <strong>{{ currentUser.name }}</strong>
-              <small>{{ currentUser.role }}</small>
-            </div>
-            <span class="profile-chevron" [class.open]="profileMenuOpen"><i class="bi bi-chevron-down"></i></span>
-          </button>
 
-          <div class="profile-dropdown" *ngIf="profileMenuOpen" role="menu" (click)="$event.stopPropagation()">
-            <div class="profile-dropdown-head d-flex align-items-center">
-              <div class="profile-avatar large">{{ currentUser.initials }}</div>
-              <div>
-                <strong>{{ currentUser.name }}</strong>
-                <small>{{ currentUser.role }}</small>
+          <div class="appointments-table">
+            <div class="appointment-row appointment-head d-none d-md-grid">
+              <span>Time</span>
+              <span>Customer</span>
+              <span>Service</span>
+              <span>Barber</span>
+              <span>Status</span>
+              <span class="text-end">Amount</span>
+            </div>
+
+            <div class="appointment-row" *ngFor="let item of filteredAppointments">
+              <div class="time-cell">
+                <span class="mobile-label">Time</span>
+                <strong>{{ item.time }}</strong>
               </div>
+
+              <div class="customer-cell d-flex align-items-center">
+                <div class="customer-avatar">{{ item.initials }}</div>
+                <div>
+                  <strong>{{ item.customer }}</strong>
+                  <small>Customer</small>
+                </div>
+              </div>
+
+              <div>
+                <span class="mobile-label">Service</span>
+                <strong>{{ item.service }}</strong>
+              </div>
+
+              <div>
+                <span class="mobile-label">Barber</span>
+                <strong>{{ item.barber }}</strong>
+              </div>
+
+              <div>
+                <span class="status-pill" [class.pending]="item.status === 'Pending'" [class.completed]="item.status === 'Completed'">
+                  <i></i>{{ item.status }}
+                </span>
+              </div>
+
+              <strong class="amount">Rs. {{ item.price | number }}</strong>
             </div>
-
-            <div class="profile-dropdown-divider"></div>
-
-            <button type="button" class="profile-dropdown-item logout-item" role="menuitem" (click)="logout()">
-              <span class="logout-icon"><i class="bi bi-box-arrow-right"></i></span>
-              <span>
-                <strong>Logout</strong>
-                <small>Sign out of admin dashboard</small>
-              </span>
-            </button>
           </div>
-        </div>
+
+          <button type="button" class="view-all-btn" (click)="goToBookings()">View all bookings <span><i class="bi bi-arrow-right"></i></span></button>
+        </article>
       </div>
-    </header>
 
-    <div class="admin-content container-fluid">
-      <section class="welcome-row d-flex flex-wrap align-items-end justify-content-between">
-        <div>
-          <h2>Dashboard</h2>
-          <p>Here is what is happening at Royal Barbers today.</p>
-        </div>
-        <div class="dashboard-date">
-          <i class="bi bi-calendar-event"></i>
-          {{ currentDateLabel }}
-        </div>
-      </section>
+      <div class="col-12 col-xxl-4">
+        <article class="dashboard-card revenue-card">
+          <div class="card-heading">
+            <span class="eyebrow">PERFORMANCE</span>
+            <h3>Revenue Today</h3>
+          </div>
 
-      <section class="row g-3 g-xl-4 stats-row">
-        <div class="col-12 col-sm-6 col-xl-3" *ngFor="let stat of stats">
-          <article class="stat-card h-100">
-            <div class="d-flex justify-content-between align-items-start">
-              <div class="stat-icon"><i class="bi" [ngClass]="stat.icon"></i></div>
-              <span class="trend">{{ stat.trend }}</span>
+          <div class="revenue-total">
+            <strong>Rs. 24,800</strong>
+            <span>+8.4% vs yesterday</span>
+          </div>
+
+          <div class="revenue-bar"><span></span></div>
+
+          <div class="revenue-breakdown row g-3">
+            <div class="col-6">
+              <small>Received</small>
+              <strong>Rs. 18,600</strong>
             </div>
-            <span class="stat-label">{{ stat.label }}</span>
-            <strong class="stat-value">{{ stat.value }}</strong>
-            <small>{{ stat.detail }}</small>
-          </article>
-        </div>
-      </section>
-
-      <section class="row g-4 dashboard-grid">
-        <div class="col-12 col-xxl-8">
-          <article class="dashboard-card appointments-card h-100">
-            <div class="card-heading d-flex flex-wrap align-items-center justify-content-between gap-3">
-              <div>
-                <span class="eyebrow">TODAY</span>
-                <h3>Appointments</h3>
-              </div>
-              <div class="status-filters d-flex flex-wrap">
-                <button type="button" *ngFor="let status of ['All', 'Confirmed', 'Pending', 'Completed']"
-                  [class.active]="activeStatus === status"
-                  (click)="setStatus($any(status))">
-                  {{ status }}
-                </button>
-              </div>
+            <div class="col-6">
+              <small>Pending</small>
+              <strong>Rs. 6,200</strong>
             </div>
-
-            <div class="appointments-table">
-              <div class="appointment-row appointment-head d-none d-md-grid">
-                <span>Time</span>
-                <span>Customer</span>
-                <span>Service</span>
-                <span>Barber</span>
-                <span>Status</span>
-                <span class="text-end">Amount</span>
-              </div>
-
-              <div class="appointment-row" *ngFor="let item of filteredAppointments">
-                <div class="time-cell">
-                  <span class="mobile-label">Time</span>
-                  <strong>{{ item.time }}</strong>
-                </div>
-
-                <div class="customer-cell d-flex align-items-center">
-                  <div class="customer-avatar">{{ item.initials }}</div>
-                  <div>
-                    <strong>{{ item.customer }}</strong>
-                    <small>Customer</small>
-                  </div>
-                </div>
-
-                <div>
-                  <span class="mobile-label">Service</span>
-                  <strong>{{ item.service }}</strong>
-                </div>
-
-                <div>
-                  <span class="mobile-label">Barber</span>
-                  <strong>{{ item.barber }}</strong>
-                </div>
-
-                <div>
-                  <span class="status-pill" [class.pending]="item.status === 'Pending'" [class.completed]="item.status === 'Completed'">
-                    <i></i>{{ item.status }}
-                  </span>
-                </div>
-
-                <strong class="amount">Rs. {{ item.price | number }}</strong>
-              </div>
+            <div class="col-6">
+              <small>Appointments</small>
+              <strong>18</strong>
             </div>
-
-            <button type="button" class="view-all-btn">View all bookings <span><i class="bi bi-arrow-right"></i></span></button>
-          </article>
-        </div>
-
-        <div class="col-12 col-xxl-4">
-          <article class="dashboard-card revenue-card">
-            <div class="card-heading">
-              <span class="eyebrow">PERFORMANCE</span>
-              <h3>Revenue Today</h3>
+            <div class="col-6">
+              <small>Avg. booking</small>
+              <strong>Rs. 1,378</strong>
             </div>
+          </div>
+        </article>
 
-            <div class="revenue-total">
-              <strong>Rs. 24,800</strong>
-              <span>+8.4% vs yesterday</span>
+        <article class="dashboard-card occupancy-card mt-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <span class="eyebrow">TODAY</span>
+              <h3>Barber Load</h3>
             </div>
+            <strong class="load-total">72%</strong>
+          </div>
 
-            <div class="revenue-bar"><span></span></div>
-
-            <div class="revenue-breakdown row g-3">
-              <div class="col-6">
-                <small>Received</small>
-                <strong>Rs. 18,600</strong>
-              </div>
-              <div class="col-6">
-                <small>Pending</small>
-                <strong>Rs. 6,200</strong>
-              </div>
-              <div class="col-6">
-                <small>Appointments</small>
-                <strong>18</strong>
-              </div>
-              <div class="col-6">
-                <small>Avg. booking</small>
-                <strong>Rs. 1,378</strong>
-              </div>
+          <div class="barber-load" *ngFor="let barber of [
+            {name: 'Ahmed', value: 86, appointments: 7},
+            {name: 'Ali', value: 72, appointments: 6},
+            {name: 'Usman', value: 58, appointments: 5}
+          ]">
+            <div class="d-flex justify-content-between">
+              <strong>{{ barber.name }}</strong>
+              <span>{{ barber.appointments }} bookings</span>
             </div>
-          </article>
+            <div class="load-track"><span [style.width.%]="barber.value"></span></div>
+          </div>
+        </article>
+      </div>
 
-          <article class="dashboard-card occupancy-card mt-4">
+      <div class="col-12 col-xl-7">
+        <article class="dashboard-card">
+          <div class="card-heading d-flex align-items-center justify-content-between">
+            <div>
+              <span class="eyebrow">LAST 30 DAYS</span>
+              <h3>Top Services</h3>
+            </div>
+            <span class="subtle-link">View report <i class="bi bi-arrow-right"></i></span>
+          </div>
+
+          <div class="service-performance" *ngFor="let service of topServices">
             <div class="d-flex align-items-center justify-content-between">
               <div>
-                <span class="eyebrow">TODAY</span>
-                <h3>Barber Load</h3>
+                <strong>{{ service.name }}</strong>
+                <small>{{ service.bookings }} bookings</small>
               </div>
-              <strong class="load-total">72%</strong>
+              <strong class="service-revenue">{{ service.revenue }}</strong>
             </div>
+            <div class="service-track"><span [style.width.%]="service.percent"></span></div>
+          </div>
+        </article>
+      </div>
 
-            <div class="barber-load" *ngFor="let barber of [
-              {name: 'Ahmed', value: 86, appointments: 7},
-              {name: 'Ali', value: 72, appointments: 6},
-              {name: 'Usman', value: 58, appointments: 5}
-            ]">
-              <div class="d-flex justify-content-between">
-                <strong>{{ barber.name }}</strong>
-                <span>{{ barber.appointments }} bookings</span>
-              </div>
-              <div class="load-track"><span [style.width.%]="barber.value"></span></div>
+      <div class="col-12 col-xl-5">
+        <article class="dashboard-card h-100">
+          <div class="card-heading d-flex align-items-center justify-content-between">
+            <div>
+              <span class="eyebrow">CUSTOMERS</span>
+              <h3>Recent Customers</h3>
             </div>
-          </article>
-        </div>
+            <span class="subtle-link">View all <i class="bi bi-arrow-right"></i></span>
+          </div>
 
-        <div class="col-12 col-xl-7">
-          <article class="dashboard-card">
-            <div class="card-heading d-flex align-items-center justify-content-between">
-              <div>
-                <span class="eyebrow">LAST 30 DAYS</span>
-                <h3>Top Services</h3>
-              </div>
-              <span class="subtle-link">View report <i class="bi bi-arrow-right"></i></span>
+          <div class="recent-customer d-flex align-items-center" *ngFor="let customer of recentCustomers">
+            <div class="customer-avatar">{{ customer.initials }}</div>
+            <div class="flex-grow-1">
+              <strong>{{ customer.name }}</strong>
+              <small>{{ customer.phone }}</small>
             </div>
+            <div class="customer-meta text-end">
+              <strong>{{ customer.visits }} visits</strong>
+              <small>{{ customer.spend }}</small>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
 
-            <div class="service-performance" *ngFor="let service of topServices">
-              <div class="d-flex align-items-center justify-content-between">
-                <div>
-                  <strong>{{ service.name }}</strong>
-                  <small>{{ service.bookings }} bookings</small>
-                </div>
-                <strong class="service-revenue">{{ service.revenue }}</strong>
-              </div>
-              <div class="service-track"><span [style.width.%]="service.percent"></span></div>
-            </div>
-          </article>
-        </div>
-
-        <div class="col-12 col-xl-5">
-          <article class="dashboard-card h-100">
-            <div class="card-heading d-flex align-items-center justify-content-between">
-              <div>
-                <span class="eyebrow">CUSTOMERS</span>
-                <h3>Recent Customers</h3>
-              </div>
-              <span class="subtle-link">View all <i class="bi bi-arrow-right"></i></span>
-            </div>
-
-            <div class="recent-customer d-flex align-items-center" *ngFor="let customer of recentCustomers">
-              <div class="customer-avatar">{{ customer.initials }}</div>
-              <div class="flex-grow-1">
-                <strong>{{ customer.name }}</strong>
-                <small>{{ customer.phone }}</small>
-              </div>
-              <div class="customer-meta text-end">
-                <strong>{{ customer.visits }} visits</strong>
-                <small>{{ customer.spend }}</small>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-    </div>
-  </main>
-</div>
+</app-admin-shell>
