@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
+import { AdminNotification, NotificationService } from './notifications/notification.service';
 
 type AppointmentStatus = 'Confirmed' | 'Pending' | 'Completed';
 
@@ -32,6 +33,7 @@ interface Appointment {
 export class AdminDashboardComponent {
   sidebarOpen = false;
   profileMenuOpen = false;
+  notificationMenuOpen = false;
   activeStatus: 'All' | AppointmentStatus = 'All';
 
   readonly currentUser = {
@@ -40,7 +42,10 @@ export class AdminDashboardComponent {
     initials: 'MS'
   };
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    public readonly notificationService: NotificationService
+  ) {}
 
   get greeting(): string {
     const hour = new Date().getHours();
@@ -115,7 +120,33 @@ export class AdminDashboardComponent {
 
   toggleProfileMenu(event: MouseEvent): void {
     event.stopPropagation();
+    this.notificationMenuOpen = false;
     this.profileMenuOpen = !this.profileMenuOpen;
+  }
+
+  toggleNotificationMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.profileMenuOpen = false;
+    this.notificationMenuOpen = !this.notificationMenuOpen;
+  }
+
+  openNotification(notification: AdminNotification): void {
+    this.notificationService.markAsRead(notification.id);
+  }
+
+  markAllNotificationsAsRead(event: MouseEvent): void {
+    event.stopPropagation();
+    this.notificationService.markAllAsRead();
+  }
+
+  viewAllNotifications(): void {
+    this.notificationMenuOpen = false;
+    void this.router.navigateByUrl('/admin/notifications');
+  }
+
+  goToNotifications(): void {
+    this.closeSidebar();
+    void this.router.navigateByUrl('/admin/notifications');
   }
 
   closeProfileMenu(): void {
@@ -138,10 +169,12 @@ export class AdminDashboardComponent {
   @HostListener('document:click')
   onDocumentClick(): void {
     this.closeProfileMenu();
+    this.notificationMenuOpen = false;
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.closeProfileMenu();
+    this.notificationMenuOpen = false;
   }
 }
