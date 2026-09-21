@@ -8,46 +8,46 @@
         <strong>ROYAL BARBERS</strong>
         <small>MANAGEMENT</small>
       </div>
-      <button type="button" class="sidebar-close d-lg-none" (click)="closeSidebar()" aria-label="Close menu">×</button>
+      <button type="button" class="sidebar-close d-lg-none" (click)="closeSidebar()" aria-label="Close menu"><i class="bi bi-x-lg"></i></button>
     </div>
 
     <nav class="sidebar-nav flex-grow-1">
       <small class="nav-label">WORKSPACE</small>
 
       <button type="button" class="nav-item active">
-        <span class="nav-icon">⌂</span>
+        <span class="nav-icon"><i class="bi bi-grid-1x2-fill"></i></span>
         <span>Dashboard</span>
       </button>
       <button type="button" class="nav-item">
-        <span class="nav-icon">▣</span>
+        <span class="nav-icon"><i class="bi bi-calendar2-check"></i></span>
         <span>Bookings</span>
         <span class="nav-count">18</span>
       </button>
       <button type="button" class="nav-item">
-        <span class="nav-icon">□</span>
+        <span class="nav-icon"><i class="bi bi-calendar3"></i></span>
         <span>Calendar</span>
       </button>
       <button type="button" class="nav-item">
-        <span class="nav-icon">♙</span>
+        <span class="nav-icon"><i class="bi bi-person-badge"></i></span>
         <span>Barbers</span>
       </button>
       <button type="button" class="nav-item">
-        <span class="nav-icon">✂</span>
+        <span class="nav-icon"><i class="bi bi-scissors"></i></span>
         <span>Services</span>
       </button>
       <button type="button" class="nav-item">
-        <span class="nav-icon">◎</span>
+        <span class="nav-icon"><i class="bi bi-people"></i></span>
         <span>Customers</span>
       </button>
 
       <small class="nav-label nav-label-secondary">INSIGHTS</small>
 
       <button type="button" class="nav-item">
-        <span class="nav-icon">↗</span>
+        <span class="nav-icon"><i class="bi bi-bar-chart-line"></i></span>
         <span>Revenue & Reports</span>
       </button>
       <button type="button" class="nav-item">
-        <span class="nav-icon">⚙</span>
+        <span class="nav-icon"><i class="bi bi-gear"></i></span>
         <span>Settings</span>
       </button>
     </nav>
@@ -58,14 +58,14 @@
         <strong>Royal Barbers</strong>
         <small>Bahawalpur</small>
       </div>
-      <span>⋮</span>
+      <span><i class="bi bi-three-dots-vertical"></i></span>
     </div>
   </aside>
 
   <main class="admin-main">
     <header class="admin-topbar d-flex align-items-center justify-content-between">
       <div class="d-flex align-items-center">
-        <button type="button" class="menu-toggle d-lg-none me-3" (click)="toggleSidebar()" aria-label="Open menu">☰</button>
+        <button type="button" class="menu-toggle d-lg-none me-3" (click)="toggleSidebar()" aria-label="Open menu"><i class="bi bi-list"></i></button>
         <div>
           <span class="eyebrow">SALON OVERVIEW</span>
           <h1>{{ greeting }}, {{ currentUser.name }}</h1>
@@ -73,9 +73,9 @@
       </div>
 
       <div class="topbar-actions d-flex align-items-center">
-        <a href="/" class="booking-site-link d-none d-md-inline-flex">View booking site ↗</a>
+        <a href="/" class="booking-site-link d-none d-md-inline-flex">View booking site <i class="bi bi-box-arrow-up-right"></i></a>
         <button type="button" class="notification-btn" aria-label="Notifications">
-          ♢
+          <i class="bi bi-bell"></i>
           <span></span>
         </button>
         <div class="profile-menu-wrap d-none d-sm-block" (click)="$event.stopPropagation()">
@@ -90,7 +90,7 @@
               <strong>{{ currentUser.name }}</strong>
               <small>{{ currentUser.role }}</small>
             </div>
-            <span class="profile-chevron" [class.open]="profileMenuOpen">⌄</span>
+            <span class="profile-chevron" [class.open]="profileMenuOpen"><i class="bi bi-chevron-down"></i></span>
           </button>
 
           <div class="profile-dropdown" *ngIf="profileMenuOpen" role="menu" (click)="$event.stopPropagation()">
@@ -105,7 +105,7 @@
             <div class="profile-dropdown-divider"></div>
 
             <button type="button" class="profile-dropdown-item logout-item" role="menuitem" (click)="logout()">
-              <span class="logout-icon">↪</span>
+              <span class="logout-icon"><i class="bi bi-box-arrow-right"></i></span>
               <span>
                 <strong>Logout</strong>
                 <small>Sign out of admin dashboard</small>
@@ -123,7 +123,7 @@
           <p>Here is what is happening at Royal Barbers today.</p>
         </div>
         <div class="dashboard-date">
-          <span>●</span>
+          <i class="bi bi-calendar-event"></i>
           {{ currentDateLabel }}
         </div>
       </section>
@@ -132,7 +132,7 @@
         <div class="col-12 col-sm-6 col-xl-3" *ngFor="let stat of stats">
           <article class="stat-card h-100">
             <div class="d-flex justify-content-between align-items-start">
-              <div class="stat-icon">{{ stat.icon }}</div>
+              <div class="stat-icon"><i class="bi" [ngClass]="stat.icon"></i></div>
               <span class="trend">{{ stat.trend }}</span>
             </div>
             <span class="stat-label">{{ stat.label }}</span>
@@ -203,7 +203,7 @@
               </div>
             </div>
 
-            <button type="button" class="view-all-btn">View all bookings <span>→</span></button>
+            <button type="button" class="view-all-btn">View all bookings <span><i class="bi bi-arrow-right"></i></span></button>
           </article>
         </div>
 
@@ -271,7 +271,7 @@
                 <span class="eyebrow">LAST 30 DAYS</span>
                 <h3>Top Services</h3>
               </div>
-              <span class="subtle-link">View report →</span>
+              <span class="subtle-link">View report <i class="bi bi-arrow-right"></i></span>
             </div>
 
             <div class="service-performance" *ngFor="let service of topServices">
@@ -294,7 +294,7 @@
                 <span class="eyebrow">CUSTOMERS</span>
                 <h3>Recent Customers</h3>
               </div>
-              <span class="subtle-link">View all →</span>
+              <span class="subtle-link">View all <i class="bi bi-arrow-right"></i></span>
             </div>
 
             <div class="recent-customer d-flex align-items-center" *ngFor="let customer of recentCustomers">
