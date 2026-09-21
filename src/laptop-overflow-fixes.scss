@@ -6,11 +6,17 @@
 html,
 body,
 app-root {
+  width: 100%;
   max-width: 100%;
   overflow-x: hidden;
 }
 
-@media (min-width: 992px) and (max-width: 1399.98px) {
+/* The full desktop booking layout needs more room than a 1200-1400px
+ * viewport provides. Keep services + barber/date side-by-side here and move
+ * the summary to its own full-width row. At >1400px the original 3-column
+ * desktop layout remains unchanged.
+ */
+@media (min-width: 992px) and (max-width: 1400px) {
   app-hero,
   app-booking,
   .royal-hero,
@@ -25,12 +31,16 @@ app-root {
     box-sizing: border-box !important;
   }
 
-  /* Keep the booking work area on one exact 100% flex line. The summary
-     remains on its own line, as intended for this breakpoint. */
+  .booking-page .page-shell {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
   .booking-page .booking-grid,
   .booking-page .booking-grid.d-flex {
     display: flex !important;
     flex-wrap: wrap !important;
+    align-items: flex-start !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
@@ -59,6 +69,28 @@ app-root {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  .booking-page .booking-summary .summary-card {
+    width: 100% !important;
+    max-width: 620px !important;
+    margin: 0 auto !important;
+  }
+
+  .booking-page .left-column,
+  .booking-page .middle-column,
+  .booking-page .booking-summary,
+  .booking-page .booking-section,
+  .booking-page .services-grid,
+  .booking-page .barber-grid,
+  .booking-page .time-grid,
+  .booking-page .group-progress,
+  .booking-page .calendar-card,
+  .booking-page .summary-card,
+  .booking-page .footer-inner {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
   }
 
   .booking-page .services-grid,
@@ -68,11 +100,12 @@ app-root {
   .booking-page .calendar-card,
   .booking-page .summary-card,
   .booking-page .footer-inner {
+    width: 100% !important;
     max-width: 100% !important;
-    min-width: 0 !important;
   }
 
-  /* Bootstrap rows must not introduce negative side width here. */
+  /* Bootstrap rows add negative side margins by default. They are not needed
+     because these sections already control their own gaps. */
   .booking-page .services-grid.row,
   .booking-page .barber-grid.row,
   .booking-page .time-grid.row,
