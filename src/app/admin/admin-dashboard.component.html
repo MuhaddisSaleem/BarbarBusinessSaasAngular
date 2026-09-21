@@ -39,6 +39,11 @@
         <span class="nav-icon"><i class="bi bi-people"></i></span>
         <span>Customers</span>
       </button>
+      <button type="button" class="nav-item" (click)="goToNotifications()">
+        <span class="nav-icon"><i class="bi bi-bell"></i></span>
+        <span>Notifications</span>
+        <span class="nav-count" *ngIf="notificationService.unreadCount">{{ notificationService.unreadCount }}</span>
+      </button>
 
       <small class="nav-label nav-label-secondary">INSIGHTS</small>
 
@@ -74,10 +79,59 @@
 
       <div class="topbar-actions d-flex align-items-center">
         <a href="/" class="booking-site-link d-none d-md-inline-flex">View booking site <i class="bi bi-box-arrow-up-right"></i></a>
-        <button type="button" class="notification-btn" aria-label="Notifications">
-          <i class="bi bi-bell"></i>
-          <span></span>
-        </button>
+        <div class="notification-menu-wrap" (click)="$event.stopPropagation()">
+          <button type="button"
+            class="notification-btn"
+            [class.menu-open]="notificationMenuOpen"
+            [attr.aria-expanded]="notificationMenuOpen"
+            aria-haspopup="menu"
+            aria-label="Notifications"
+            (click)="toggleNotificationMenu($event)">
+            <i class="bi bi-bell"></i>
+            <span *ngIf="notificationService.unreadCount"></span>
+            <b class="notification-count" *ngIf="notificationService.unreadCount">{{ notificationService.unreadCount }}</b>
+          </button>
+
+          <div class="notification-panel" *ngIf="notificationMenuOpen" role="menu" (click)="$event.stopPropagation()">
+            <div class="notification-panel-head d-flex align-items-center justify-content-between">
+              <div>
+                <strong>Notifications</strong>
+                <small>{{ notificationService.unreadCount }} unread</small>
+              </div>
+              <button type="button"
+                class="mark-all-link"
+                [disabled]="!notificationService.unreadCount"
+                (click)="markAllNotificationsAsRead($event)">
+                Mark all read
+              </button>
+            </div>
+
+            <div class="notification-preview-list">
+              <button type="button"
+                class="notification-preview"
+                *ngFor="let notification of notificationService.previewNotifications"
+                [class.unread]="notification.unread"
+                (click)="openNotification(notification)">
+                <span class="notification-preview-icon" [ngClass]="notification.type">
+                  <i class="bi" [ngClass]="notification.icon"></i>
+                </span>
+                <span class="notification-preview-copy">
+                  <span class="notification-preview-title">
+                    <strong>{{ notification.title }}</strong>
+                    <i class="notification-unread-dot" *ngIf="notification.unread"></i>
+                  </span>
+                  <span>{{ notification.message }}</span>
+                  <small>{{ notification.time }}</small>
+                </span>
+              </button>
+            </div>
+
+            <button type="button" class="view-all-notifications" (click)="viewAllNotifications()">
+              View all notifications
+              <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
+        </div>
         <div class="profile-menu-wrap d-none d-sm-block" (click)="$event.stopPropagation()">
           <button type="button"
             class="admin-profile d-flex align-items-center"
