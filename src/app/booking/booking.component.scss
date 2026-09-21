@@ -59,7 +59,8 @@ button { -webkit-tap-highlight-color: transparent; }
     z-index: 0;
     top: 15px;
     left: calc(50% + 24px);
-    width: calc(100% - 48px);
+    right: calc(-50% + 24px);
+    width: auto;
     height: 1px;
     background: #6d7478;
   }
