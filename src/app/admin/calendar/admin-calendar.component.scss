@@ -76,7 +76,7 @@ button,select { font:inherit; }
   display:grid;
   grid-template-columns:76px repeat(var(--barber-count), minmax(220px,1fr));
   grid-template-rows:60px auto;
-  min-width:max(100%, calc(76px + (var(--barber-count) * 220px)));
+  min-width:760px;
 }
 .corner-cell,.barber-head {
   min-height:60px; border-bottom:1px solid #202b30; background:#0d1417;
@@ -98,7 +98,7 @@ button,select { font:inherit; }
 .barber-head small { margin-top:3px; color:#6f7d82; font-size:7.5px; }
 
 .time-rail,.barber-column {
-  position:relative; height:calc(26 * #{$slot}); min-height:calc(26 * #{$slot});
+  position:relative; height:$slot * 26; min-height:$slot * 26;
 }
 .time-rail {
   border-right:1px solid #202b30; background:#0a1012;
