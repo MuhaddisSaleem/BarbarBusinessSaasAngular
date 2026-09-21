@@ -1,16 +1,10 @@
 import { Component } from '@angular/core';
-import { BookingComponent } from './booking/booking.component';
-import { HeroComponent } from './hero/hero.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [HeroComponent, BookingComponent],
-  template: `
-    <app-hero></app-hero>
-    <div id="booking">
-      <app-booking></app-booking>
-    </div>
-  `
+  imports: [RouterOutlet],
+  template: '<router-outlet></router-outlet>'
 })
 export class AppComponent {}
