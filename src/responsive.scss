@@ -388,7 +388,7 @@ app-hero .site-header > .container-fluid {
     font-size: 12px;
   }
 
-  .booking-page .step span {
+  .booking-page .step > .step-label {
     width: 100%;
     max-width: 76px;
     min-height: 24px;
@@ -475,7 +475,7 @@ app-hero .site-header > .container-fluid {
     font-size: 11px;
   }
 
-  .booking-page .step span {
+  .booking-page .step > .step-label {
     max-width: 62px;
     font-size: 8px;
     line-height: 1.2;
@@ -511,7 +511,7 @@ app-hero .site-header > .container-fluid {
     height: 170px;
   }
 
-  .booking-page .step span {
+  .booking-page .step > .step-label {
     max-width: 58px;
     font-size: 7.5px;
   }
