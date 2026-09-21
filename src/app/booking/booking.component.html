@@ -6,21 +6,21 @@
 
   <section class="booking-stepper">
     <div class="page-shell container-fluid d-none d-sm-block">
-      <div class="steps d-flex align-items-start">
-        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="!allServicesSelected" [class.completed]="allServicesSelected">
-          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="allServicesSelected" class="bi bi-check-lg"></i><span *ngIf="!allServicesSelected">1</span></div><span>Select Service</span>
+      <div class="steps">
+        <div class="step d-flex flex-column align-items-center" [class.active]="!allServicesSelected" [class.completed]="allServicesSelected">
+          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="allServicesSelected" class="bi bi-check-lg"></i><span class="step-number" *ngIf="!allServicesSelected">1</span></div><span class="step-label">Select Service</span>
         </div>
-        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="allServicesSelected && !allBarbersSelected" [class.completed]="allServicesSelected && allBarbersSelected">
-          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="allServicesSelected && allBarbersSelected" class="bi bi-check-lg"></i><span *ngIf="!(allServicesSelected && allBarbersSelected)">2</span></div><span>Choose Barber</span>
+        <div class="step d-flex flex-column align-items-center" [class.active]="allServicesSelected && !allBarbersSelected" [class.completed]="allServicesSelected && allBarbersSelected">
+          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="allServicesSelected && allBarbersSelected" class="bi bi-check-lg"></i><span class="step-number" *ngIf="!(allServicesSelected && allBarbersSelected)">2</span></div><span class="step-label">Choose Barber</span>
         </div>
-        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)" [class.completed]="allParticipantsReady && !!selectedDate && !!selectedTime">
-          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="allParticipantsReady && selectedDate && selectedTime" class="bi bi-check-lg"></i><span *ngIf="!(allParticipantsReady && selectedDate && selectedTime)">3</span></div><span>Pick Date &amp; Time</span>
+        <div class="step d-flex flex-column align-items-center" [class.active]="allParticipantsReady && (!selectedDate || !selectedTime)" [class.completed]="allParticipantsReady && !!selectedDate && !!selectedTime">
+          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="allParticipantsReady && selectedDate && selectedTime" class="bi bi-check-lg"></i><span class="step-number" *ngIf="!(allParticipantsReady && selectedDate && selectedTime)">3</span></div><span class="step-label">Pick Date &amp; Time</span>
         </div>
-        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="!!selectedTime && !customerDetailsComplete" [class.completed]="!!selectedTime && customerDetailsComplete">
-          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="selectedTime && customerDetailsComplete" class="bi bi-check-lg"></i><span *ngIf="!(selectedTime && customerDetailsComplete)">4</span></div><span>Your Details</span>
+        <div class="step d-flex flex-column align-items-center" [class.active]="!!selectedTime && !customerDetailsComplete" [class.completed]="!!selectedTime && customerDetailsComplete">
+          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="selectedTime && customerDetailsComplete" class="bi bi-check-lg"></i><span class="step-number" *ngIf="!(selectedTime && customerDetailsComplete)">4</span></div><span class="step-label">Your Details</span>
         </div>
-        <div class="step flex-fill d-flex flex-column align-items-center" [class.active]="canConfirmBooking() && !bookingConfirmed" [class.completed]="bookingConfirmed">
-          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="bookingConfirmed" class="bi bi-check-lg"></i><span *ngIf="!bookingConfirmed">5</span></div><span>Confirm Booking</span>
+        <div class="step d-flex flex-column align-items-center" [class.active]="canConfirmBooking() && !bookingConfirmed" [class.completed]="bookingConfirmed">
+          <div class="step-circle d-flex align-items-center justify-content-center"><i *ngIf="bookingConfirmed" class="bi bi-check-lg"></i><span class="step-number" *ngIf="!bookingConfirmed">5</span></div><span class="step-label">Confirm Booking</span>
         </div>
       </div>
     </div>
