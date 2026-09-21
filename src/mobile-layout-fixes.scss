@@ -116,7 +116,7 @@
     font-size: 12px !important;
   }
 
-  .booking-page .step span {
+  .booking-page .step > .step-label {
     display: block !important;
     width: 100% !important;
     max-width: 72px !important;
@@ -178,7 +178,7 @@
     font-size: 10px !important;
   }
 
-  .booking-page .step span {
+  .booking-page .step > .step-label {
     max-width: 64px !important;
     font-size: 7.5px !important;
     line-height: 1.15 !important;
