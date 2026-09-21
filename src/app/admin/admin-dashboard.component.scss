@@ -1016,3 +1016,74 @@ a {
     font-size: 8px;
   }
 }
+
+
+/* Professional icon system */
+.nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 15px;
+    line-height: 1;
+  }
+}
+
+.menu-toggle,
+.notification-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  > i {
+    font-size: 16px;
+    line-height: 1;
+  }
+}
+
+.menu-toggle > i {
+  font-size: 22px;
+}
+
+.booking-site-link i {
+  margin-left: 7px;
+  font-size: 10px;
+}
+
+.profile-chevron i {
+  display: block;
+  font-size: 10px;
+}
+
+.logout-icon i {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.dashboard-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  > i {
+    color: $gold;
+    font-size: 12px;
+  }
+}
+
+.stat-icon i {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.view-all-btn i,
+.subtle-link i {
+  margin-left: 4px;
+  font-size: 10px;
+  vertical-align: -1px;
+}
+
+.sidebar-shop > span i {
+  font-size: 15px;
+}
