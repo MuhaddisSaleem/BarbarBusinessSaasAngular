@@ -1,0 +1,158 @@
+<div class="notifications-admin">
+  <div class="sidebar-backdrop" [class.show]="sidebarOpen" (click)="closeSidebar()"></div>
+
+  <aside class="admin-sidebar d-flex flex-column" [class.open]="sidebarOpen">
+    <div class="sidebar-brand d-flex align-items-center">
+      <div class="brand-mark">RB</div>
+      <div>
+        <strong>ROYAL BARBERS</strong>
+        <small>MANAGEMENT</small>
+      </div>
+      <button type="button" class="sidebar-close d-lg-none" (click)="closeSidebar()" aria-label="Close menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav flex-grow-1">
+      <small class="nav-label">WORKSPACE</small>
+
+      <button type="button" class="nav-item" (click)="goToDashboard()">
+        <span class="nav-icon"><i class="bi bi-grid-1x2-fill"></i></span>
+        <span>Dashboard</span>
+      </button>
+      <button type="button" class="nav-item">
+        <span class="nav-icon"><i class="bi bi-calendar2-check"></i></span>
+        <span>Bookings</span>
+      </button>
+      <button type="button" class="nav-item">
+        <span class="nav-icon"><i class="bi bi-calendar3"></i></span>
+        <span>Calendar</span>
+      </button>
+      <button type="button" class="nav-item">
+        <span class="nav-icon"><i class="bi bi-person-badge"></i></span>
+        <span>Barbers</span>
+      </button>
+      <button type="button" class="nav-item">
+        <span class="nav-icon"><i class="bi bi-scissors"></i></span>
+        <span>Services</span>
+      </button>
+      <button type="button" class="nav-item">
+        <span class="nav-icon"><i class="bi bi-people"></i></span>
+        <span>Customers</span>
+      </button>
+      <button type="button" class="nav-item active">
+        <span class="nav-icon"><i class="bi bi-bell"></i></span>
+        <span>Notifications</span>
+        <span class="nav-count" *ngIf="notificationService.unreadCount">{{ notificationService.unreadCount }}</span>
+      </button>
+
+      <small class="nav-label nav-label-secondary">INSIGHTS</small>
+
+      <button type="button" class="nav-item">
+        <span class="nav-icon"><i class="bi bi-bar-chart-line"></i></span>
+        <span>Revenue &amp; Reports</span>
+      </button>
+      <button type="button" class="nav-item">
+        <span class="nav-icon"><i class="bi bi-gear"></i></span>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-shop">
+      <div class="shop-avatar">RB</div>
+      <div class="flex-grow-1">
+        <strong>Royal Barbers</strong>
+        <small>Bahawalpur</small>
+      </div>
+      <i class="bi bi-three-dots-vertical"></i>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center">
+        <button type="button" class="menu-toggle d-lg-none me-3" (click)="toggleSidebar()" aria-label="Open menu">
+          <i class="bi bi-list"></i>
+        </button>
+        <div>
+          <span class="eyebrow">ADMIN CENTER</span>
+          <h1>Notifications</h1>
+        </div>
+      </div>
+
+      <div class="topbar-actions d-flex align-items-center">
+        <a href="/" class="booking-site-link d-none d-md-inline-flex">
+          View booking site <i class="bi bi-box-arrow-up-right"></i>
+        </a>
+        <div class="profile-avatar">{{ currentUser.initials }}</div>
+      </div>
+    </header>
+
+    <div class="admin-content container-fluid">
+      <section class="page-heading d-flex flex-wrap align-items-end justify-content-between gap-3">
+        <div>
+          <span class="eyebrow">ACTIVITY CENTER</span>
+          <h2>Notifications</h2>
+          <p>Stay updated on bookings, payments, schedule changes and salon activity.</p>
+        </div>
+
+        <div class="heading-actions d-flex align-items-center gap-2">
+          <div class="dashboard-date d-none d-md-inline-flex">
+            <i class="bi bi-calendar-event"></i>
+            {{ currentDateLabel }}
+          </div>
+          <button type="button" class="mark-read-btn" (click)="markAllAsRead()" [disabled]="!notificationService.unreadCount">
+            <i class="bi bi-check2-all"></i>
+            Mark all as read
+          </button>
+        </div>
+      </section>
+
+      <section class="notification-card">
+        <div class="notification-toolbar d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div class="notification-tabs d-flex">
+            <button type="button" [class.active]="activeFilter === 'all'" (click)="setFilter('all')">
+              All
+              <span>{{ notificationService.notifications.length }}</span>
+            </button>
+            <button type="button" [class.active]="activeFilter === 'unread'" (click)="setFilter('unread')">
+              Unread
+              <span>{{ notificationService.unreadCount }}</span>
+            </button>
+          </div>
+
+          <span class="notification-summary">{{ notificationService.unreadCount }} unread notifications</span>
+        </div>
+
+        <div class="notification-list">
+          <button type="button"
+            class="notification-row"
+            *ngFor="let notification of notifications"
+            [class.unread]="notification.unread"
+            (click)="openNotification(notification)">
+            <span class="notification-icon" [ngClass]="notification.type">
+              <i class="bi" [ngClass]="notification.icon"></i>
+            </span>
+
+            <span class="notification-content">
+              <span class="notification-title-row">
+                <strong>{{ notification.title }}</strong>
+                <i class="unread-dot" *ngIf="notification.unread"></i>
+              </span>
+              <span class="notification-message">{{ notification.message }}</span>
+              <small><i class="bi bi-clock"></i>{{ notification.time }}</small>
+            </span>
+
+            <i class="bi bi-chevron-right notification-chevron"></i>
+          </button>
+
+          <div class="empty-state" *ngIf="!notifications.length">
+            <i class="bi bi-bell-slash"></i>
+            <strong>You’re all caught up</strong>
+            <span>There are no unread notifications right now.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
