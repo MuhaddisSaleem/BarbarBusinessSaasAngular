@@ -305,7 +305,7 @@
           <span>Time *</span>
           <select [(ngModel)]="newBooking.time">
             <option value="">Select time</option>
-            <option *ngFor="let slot of timeSlots">{{ slot }}</option>
+            <option *ngFor="let slot of createTimeSlots">{{ slot }}</option>
           </select>
         </label>
 
