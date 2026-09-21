@@ -1,35 +1,82 @@
 /*
  * Bootstrap layout parity layer.
- * Bootstrap utilities/rows own the layout; these rules only retain the
- * original proportions that do not map to Bootstrap's 12-column fractions.
+ * Bootstrap rows/columns own the structure. Custom rules below only preserve
+ * the Royal Barbers visual proportions and card behavior.
  */
 
-@media (min-width: 1221px) {
-  .booking-page .booking-grid > .left-column {
-    flex: 1.55 1 0 !important;
-    min-width: 540px;
+.booking-page .booking-grid.row,
+.booking-page .services-grid.row,
+.booking-page .barber-grid.row,
+.booking-page .time-grid.row,
+.booking-page .group-progress.row,
+.booking-page .footer-inner.row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+}
+
+.booking-page .booking-grid.row {
+  gap: 0 !important;
+}
+
+.booking-page .services-grid.row,
+.booking-page .barber-grid.row,
+.booking-page .time-grid.row,
+.booking-page .group-progress.row,
+.booking-page .footer-inner.row {
+  gap: 0 !important;
+}
+
+.booking-page .booking-grid > .left-column,
+.booking-page .booking-grid > .middle-column,
+.booking-page .booking-grid > .booking-summary,
+.booking-page .service-col,
+.booking-page .barber-col,
+.booking-page .time-col,
+.booking-page .group-progress-col {
+  min-width: 0 !important;
+}
+
+.booking-page .summary-card,
+.booking-page .calendar-card,
+.booking-page .service-card,
+.booking-page .barber-card,
+.booking-page .time-slot {
+  max-width: 100%;
+}
+
+/* 992-1399: Bootstrap lg columns keep services and barber/date side-by-side;
+ * the summary naturally occupies its own full-width row until xxl (1400px). */
+@media (min-width: 992px) and (max-width: 1399.98px) {
+  .booking-page .booking-summary {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  .booking-page .booking-grid > .middle-column {
-    flex: .86 1 0 !important;
-    min-width: 310px;
+  .booking-page .summary-card {
+    width: 100%;
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
-@media (min-width: 901px) and (max-width: 1220px) {
-  .booking-page .booking-grid > .left-column {
-    flex: 1.45 1 0 !important;
-    min-width: 500px;
-  }
-
-  .booking-page .booking-grid > .middle-column {
-    flex: .9 1 0 !important;
-    min-width: 300px;
+/* >= 1400: Bootstrap xxl 6/3/3 recreates the desktop three-column layout. */
+@media (min-width: 1400px) {
+  .booking-page .summary-card {
+    width: 100%;
+    max-width: none;
+    margin: 0;
   }
 }
 
-/* A flex-wrapped Bootstrap calendar needs a 1/7 cell, while the original
- * selected/hover surface was a centered 30px square. Keep that exact surface. */
+/* Calendar uses seven equal cells; Bootstrap does not provide a native 7-col
+ * utility, so only this tiny 1/7 helper remains custom. */
+.booking-page .calendar-cell {
+  flex: 0 0 14.285714%;
+  max-width: 14.285714%;
+}
+
+/* Preserve the original centered 30px calendar selection surface. */
 .booking-page .calendar-days button.calendar-cell {
   position: relative;
   background: transparent !important;
