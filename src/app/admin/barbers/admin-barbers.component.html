@@ -314,6 +314,28 @@
             </label>
             <small>JPG, PNG or WebP · max 2 MB</small>
           </div>
+
+          <div class="face-check"
+            *ngIf="imageValidationState !== 'idle'"
+            [class.checking]="imageValidationState === 'checking'"
+            [class.valid]="imageValidationState === 'valid'"
+            [class.invalid]="imageValidationState === 'invalid'"
+            [class.unsupported]="imageValidationState === 'unsupported'">
+            <i class="bi"
+              [ngClass]="{
+                'bi-hourglass-split': imageValidationState === 'checking',
+                'bi-person-check': imageValidationState === 'valid',
+                'bi-person-x': imageValidationState === 'invalid',
+                'bi-exclamation-triangle': imageValidationState === 'unsupported'
+              }"></i>
+            <span>{{ imageValidationMessage }}</span>
+          </div>
+
+          <label class="manual-face-confirm d-flex align-items-start gap-2"
+            *ngIf="imageValidationState === 'unsupported'">
+            <input type="checkbox" [(ngModel)]="manualFaceConfirmed">
+            <span>I confirm this image contains one clear photo of the barber.</span>
+          </label>
         </label>
 
         <label>
@@ -342,9 +364,12 @@
         </label>
       </div>
 
-      <button type="button" class="submit-btn" (click)="addBarber()">
-        <i class="bi bi-person-plus"></i>
-        Add Barber
+      <button type="button"
+        class="submit-btn"
+        [disabled]="imageValidationState === 'checking'"
+        (click)="addBarber()">
+        <i class="bi" [ngClass]="imageValidationState === 'checking' ? 'bi-hourglass-split' : 'bi-person-plus'"></i>
+        {{ imageValidationState === 'checking' ? 'Checking Photo...' : 'Add Barber' }}
       </button>
     </div>
   </section>
