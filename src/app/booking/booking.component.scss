@@ -1053,3 +1053,47 @@ button { -webkit-tap-highlight-color: transparent; }
   font-size: .92em;
   line-height: 1;
 }
+
+
+/* Dynamic barber availability - intentionally scoped to barber cards only */
+.barber-card.unavailable {
+  cursor: not-allowed;
+  opacity: .68;
+  border-color: rgba(255, 117, 117, .28);
+
+  &:hover {
+    border-color: rgba(255, 117, 117, .28);
+    transform: none;
+  }
+
+  .radio-dot {
+    opacity: .35;
+  }
+
+  img {
+    filter: grayscale(.6);
+  }
+}
+
+.barber-status-badge {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 117, 117, .38);
+  border-radius: 20px;
+  background: rgba(36, 13, 14, .92);
+  color: #ff8d8d;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1.1;
+
+  i {
+    font-size: 8px;
+  }
+}
