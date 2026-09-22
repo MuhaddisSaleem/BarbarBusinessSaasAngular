@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 
 interface Service { id: number; name: string; duration: number; price: number; image: string; }
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
@@ -39,11 +40,15 @@ export class BookingComponent implements OnInit {
     { id: 7, name: '6 Step Face Massage', duration: 60, price: 5000, image: this.serviceImages.faceMassage }
   ];
 
-  barbers: Barber[] = [
-    { id: 1, name: 'Ahmed', rating: 4.9, experience: '5+ years', image: 'https://images.pexels.com/photos/4997508/pexels-photo-4997508.jpeg?auto=compress&cs=tinysrgb&w=700' },
-    { id: 2, name: 'Ali', rating: 4.8, experience: '4+ years', image: 'https://images.pexels.com/photos/26903605/pexels-photo-26903605.jpeg?auto=compress&cs=tinysrgb&w=700' },
-    { id: 3, name: 'Usman', rating: 4.7, experience: '3+ years', image: 'https://images.pexels.com/photos/18885730/pexels-photo-18885730.jpeg?auto=compress&cs=tinysrgb&w=700' }
-  ];
+  get barbers(): Barber[] {
+    return this.barberService.active.map(barber => ({
+      id: barber.id,
+      name: barber.name,
+      rating: barber.rating,
+      experience: barber.experience,
+      image: barber.image || 'assets/images/barber-placeholder.svg'
+    }));
+  }
 
   bookingMode: 'single' | 'group' = 'single';
   groupStrategy: 'parallel' | 'sequential' = 'parallel';
@@ -64,6 +69,8 @@ export class BookingComponent implements OnInit {
   bookingValidationMessage = '';
   bookingConfirmed = false;
   confirmedAssignments: ConfirmedAssignment[] = [];
+
+  constructor(private readonly barberService: AdminBarberService) {}
 
   ngOnInit(): void {
     this.buildCalendar();
@@ -190,6 +197,12 @@ export class BookingComponent implements OnInit {
   selectBarber(barber: Barber | 'any'): void {
     this.clearValidationMessage();
 
+    if (barber !== 'any' && this.isBarberUnavailable(barber)) {
+      const label = this.getBarberAvailabilityLabel(barber) || 'Not available';
+      this.bookingValidationMessage = barber.name + ' is ' + label.toLowerCase() + ' for this date.';
+      return;
+    }
+
     if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
       this.participants.forEach(person => person.selectedBarber = barber);
     } else {
@@ -205,6 +218,13 @@ export class BookingComponent implements OnInit {
 
     this.clearValidationMessage();
     this.setSelectedDate(cell.date);
+
+    this.participants.forEach(person => {
+      if (person.selectedBarber && person.selectedBarber !== 'any' && this.isBarberUnavailable(person.selectedBarber)) {
+        person.selectedBarber = null;
+      }
+    });
+
     this.clearSelectedTime();
     this.generateAvailableTimes();
   }
@@ -212,6 +232,18 @@ export class BookingComponent implements OnInit {
   isPastDate(date: Date | null): boolean {
     if (!date) return false;
     return this.startOfDay(date).getTime() < this.startOfDay(new Date()).getTime();
+  }
+
+  isBarberUnavailable(barber: Barber): boolean {
+    return !this.barberService.isAvailableOnDate(barber.id, this.barberStatusDate);
+  }
+
+  getBarberAvailabilityLabel(barber: Barber): string {
+    return this.barberService.availabilityLabelForDate(barber.id, this.barberStatusDate);
+  }
+
+  private get barberStatusDate(): string {
+    return this.selectedDate?.fullDate || this.formatDate(new Date());
   }
 
   previousMonth(): void {
@@ -627,6 +659,8 @@ export class BookingComponent implements OnInit {
   }
 
   private isBarberAvailable(barberId: number, requestedTime: string, date: string, duration: number): boolean {
+    if (!this.barberService.isAvailableOnDate(barberId, date)) return false;
+
     const requestedStart = this.timeToMinutes(requestedTime);
     const requestedEnd = requestedStart + duration;
 
