@@ -98,7 +98,7 @@
             <tr *ngFor="let barber of filteredBarbers">
               <td>
                 <div class="barber-person d-flex align-items-center">
-                  <div class="barber-avatar">{{ barber.name.slice(0,1) }}</div>
+                  <img class="barber-avatar barber-photo" [src]="barber.image || 'assets/images/barber-placeholder.svg'" [alt]="barber.name">
                   <div>
                     <strong>{{ barber.name }}</strong>
                     <small>{{ barber.phone }}</small>
@@ -166,6 +166,14 @@
                     (click)="toggleAccountStatus(barber)">
                     {{ barber.accountStatus === 'Active' ? 'Deactivate' : 'Activate' }}
                   </button>
+
+                  <button
+                    type="button"
+                    class="quick-action delete-action"
+                    (click)="requestDelete(barber)"
+                    title="Delete barber">
+                    <i class="bi bi-trash3"></i>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -176,7 +184,7 @@
       <div class="mobile-barbers d-md-none">
         <article class="mobile-barber-card" *ngFor="let barber of filteredBarbers">
           <div class="mobile-barber-head d-flex align-items-start gap-3">
-            <div class="barber-avatar">{{ barber.name.slice(0,1) }}</div>
+            <img class="barber-avatar barber-photo" [src]="barber.image || 'assets/images/barber-placeholder.svg'" [alt]="barber.name">
 
             <div class="flex-grow-1">
               <strong>{{ barber.name }}</strong>
@@ -242,6 +250,13 @@
               (click)="toggleAccountStatus(barber)">
               {{ barber.accountStatus === 'Active' ? 'Deactivate' : 'Activate' }}
             </button>
+
+            <button
+              type="button"
+              class="quick-text-btn delete-action flex-fill"
+              (click)="requestDelete(barber)">
+              Delete
+            </button>
           </div>
         </article>
       </div>
@@ -285,6 +300,19 @@
               (ngModelChange)="onPhoneInput($event)"
               maxlength="10"
               placeholder="3001234567">
+          </div>
+        </label>
+
+        <label class="full">
+          <span>Barber Photo</span>
+          <div class="photo-upload-row d-flex align-items-center gap-3">
+            <img class="photo-preview" [src]="newBarber.image || 'assets/images/barber-placeholder.svg'" alt="Barber preview">
+            <label class="photo-upload-btn">
+              <input type="file" accept="image/*" (change)="onImageSelected($event)">
+              <i class="bi bi-camera"></i>
+              Choose Photo
+            </label>
+            <small>JPG, PNG or WebP · max 2 MB</small>
           </div>
         </label>
 
@@ -375,3 +403,15 @@
     </div>
   </section>
 </app-admin-shell>
+
+
+  <div class="modal-backdrop delete-layer" *ngIf="deleteModalOpen" (click)="closeDeleteModal()"></div>
+  <section class="delete-dialog" *ngIf="deleteModalOpen && deleteCandidate">
+    <span class="danger-icon"><i class="bi bi-trash3"></i></span>
+    <h3>Delete {{ deleteCandidate.name }}?</h3>
+    <p>This barber will immediately disappear from the public barber list and future barber selections.</p>
+    <div class="d-flex gap-2">
+      <button type="button" class="keep-btn flex-fill" (click)="closeDeleteModal()">Keep Barber</button>
+      <button type="button" class="confirm-delete-btn flex-fill" (click)="confirmDelete()">Delete Barber</button>
+    </div>
+  </section>
