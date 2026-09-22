@@ -912,3 +912,46 @@ button,input,select,textarea { font:inherit; }
   opacity: .58;
   cursor: wait;
 }
+
+
+.edit-action {
+  color: #8fc4ff !important;
+  border-color: rgba(121,183,255,.24) !important;
+
+  &:hover {
+    color: #b3d8ff !important;
+    border-color: rgba(121,183,255,.45) !important;
+    background: rgba(121,183,255,.06) !important;
+  }
+}
+
+.edit-layer {
+  z-index: 160;
+}
+
+.edit-modal {
+  z-index: 170;
+}
+
+.edit-profile-preview {
+  padding: 11px;
+  border: 1px solid #29363b;
+  border-radius: 9px;
+  background: #101719;
+
+  strong,
+  small {
+    display: block;
+  }
+
+  strong {
+    font-size: 10px;
+  }
+
+  small {
+    margin-top: 3px;
+    color: #718086;
+    font-size: 8px;
+    line-height: 1.4;
+  }
+}
