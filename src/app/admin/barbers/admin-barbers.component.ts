@@ -30,6 +30,10 @@ export class AdminBarbersComponent {
   feedbackMessage = '';
   feedbackType: 'success' | 'error' = 'success';
 
+  imageValidationState: 'idle' | 'checking' | 'valid' | 'invalid' | 'unsupported' = 'idle';
+  imageValidationMessage = '';
+  manualFaceConfirmed = false;
+
   newBarber = this.emptyBarberForm();
 
   leaveForm = {
@@ -97,6 +101,9 @@ export class AdminBarbersComponent {
 
   openAddModal(): void {
     this.newBarber = this.emptyBarberForm();
+    this.imageValidationState = 'idle';
+    this.imageValidationMessage = '';
+    this.manualFaceConfirmed = false;
     this.addModalOpen = true;
     this.feedbackMessage = '';
   }
@@ -115,6 +122,20 @@ export class AdminBarbersComponent {
 
     if (!this.newBarber.specialties.length) {
       this.showFeedback(false, 'Select at least one specialty.');
+      return;
+    }
+
+    if (!this.newBarber.image) {
+      this.showFeedback(false, 'Upload a barber photo before adding the barber.');
+      return;
+    }
+
+    const photoAccepted =
+      this.imageValidationState === 'valid'
+      || (this.imageValidationState === 'unsupported' && this.manualFaceConfirmed);
+
+    if (!photoAccepted) {
+      this.showFeedback(false, 'Please complete the barber face check before adding the barber.');
       return;
     }
 
@@ -142,28 +163,106 @@ export class AdminBarbersComponent {
     this.newBarber.phone = value.replace(/\D/g, '').slice(0, 10);
   }
 
-  onImageSelected(event: Event): void {
+  async onImageSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
+
+    this.newBarber.image = '';
+    this.imageValidationState = 'idle';
+    this.imageValidationMessage = '';
+    this.manualFaceConfirmed = false;
+
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      this.showFeedback(false, 'Please select an image file.');
+      this.imageValidationState = 'invalid';
+      this.imageValidationMessage = 'Please select a valid image file.';
+      this.showFeedback(false, this.imageValidationMessage);
       input.value = '';
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      this.showFeedback(false, 'Barber image must be smaller than 2 MB.');
+      this.imageValidationState = 'invalid';
+      this.imageValidationMessage = 'Barber image must be smaller than 2 MB.';
+      this.showFeedback(false, this.imageValidationMessage);
       input.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.newBarber.image = String(reader.result || '');
-    };
-    reader.readAsDataURL(file);
+    this.imageValidationState = 'checking';
+    this.imageValidationMessage = 'Checking the photo for a clear barber face...';
+
+    try {
+      const dataUrl = await this.readFileAsDataUrl(file);
+      const faceCheck = await this.detectFaces(file);
+
+      if (faceCheck.supported && faceCheck.count === 0) {
+        this.imageValidationState = 'invalid';
+        this.imageValidationMessage = 'No face detected. Upload a clear photo of the barber.';
+        this.showFeedback(false, this.imageValidationMessage);
+        input.value = '';
+        return;
+      }
+
+      if (faceCheck.supported && faceCheck.count > 1) {
+        this.imageValidationState = 'invalid';
+        this.imageValidationMessage = 'Multiple faces detected. Upload a photo containing only the barber.';
+        this.showFeedback(false, this.imageValidationMessage);
+        input.value = '';
+        return;
+      }
+
+      this.newBarber.image = dataUrl;
+
+      if (faceCheck.supported) {
+        this.imageValidationState = 'valid';
+        this.imageValidationMessage = 'Face detected successfully. This photo can be used as the barber profile image.';
+      } else {
+        this.imageValidationState = 'unsupported';
+        this.imageValidationMessage = 'Automatic face detection is not available in this browser. Please confirm the photo contains one clear barber face.';
+      }
+    } catch {
+      this.imageValidationState = 'invalid';
+      this.imageValidationMessage = 'We could not validate this image. Please try another clear photo.';
+      this.showFeedback(false, this.imageValidationMessage);
+      input.value = '';
+    }
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private async detectFaces(file: File): Promise<{ supported: boolean; count: number }> {
+    const FaceDetectorConstructor = (window as unknown as {
+      FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
+        detect(source: ImageBitmap): Promise<unknown[]>;
+      };
+    }).FaceDetector;
+
+    if (!FaceDetectorConstructor || typeof createImageBitmap !== 'function') {
+      return { supported: false, count: 0 };
+    }
+
+    const bitmap = await createImageBitmap(file);
+
+    try {
+      const detector = new FaceDetectorConstructor({
+        fastMode: true,
+        maxDetectedFaces: 2
+      });
+
+      const faces = await detector.detect(bitmap);
+      return { supported: true, count: faces.length };
+    } finally {
+      bitmap.close();
+    }
   }
 
   onAvailabilityChange(barber: AdminBarber, availability: BarberAvailability): void {
