@@ -115,9 +115,23 @@
 
             <div class="barber-grid row g-3">
               <div class="barber-col col-6" *ngFor="let barber of barbers">
-                <button type="button" class="barber-card w-100 h-100" [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id" (click)="selectBarber(barber)">
-                  <span class="radio-dot"></span><img [src]="barber.image" [alt]="barber.name"><h3>{{ barber.name }}</h3>
-                  <div class="barber-meta d-flex align-items-center justify-content-between"><span class="rating"><i class="bi bi-star-fill"></i> {{ barber.rating }}</span><span>{{ barber.experience }}</span></div>
+                <button type="button"
+                  class="barber-card w-100 h-100"
+                  [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id"
+                  [class.unavailable]="isBarberUnavailable(barber)"
+                  [disabled]="isBarberUnavailable(barber)"
+                  (click)="selectBarber(barber)">
+                  <span class="radio-dot"></span>
+                  <span class="barber-status-badge" *ngIf="isBarberUnavailable(barber)">
+                    <i class="bi bi-exclamation-circle"></i>
+                    {{ getBarberAvailabilityLabel(barber) }}
+                  </span>
+                  <img [src]="barber.image" [alt]="barber.name">
+                  <h3>{{ barber.name }}</h3>
+                  <div class="barber-meta d-flex align-items-center justify-content-between">
+                    <span class="rating"><i class="bi bi-star-fill"></i> {{ barber.rating }}</span>
+                    <span>{{ barber.experience }}</span>
+                  </div>
                 </button>
               </div>
 
