@@ -109,6 +109,7 @@ export class AdminBarberService {
         id: nextId,
         name: input.name.trim(),
         phone: input.phone.trim(),
+        experience: this.normalizeExperience(input.experience),
         image: input.image || 'assets/images/barber-placeholder.svg',
         rating: input.rating || 5,
         specialties: input.specialties.filter(Boolean)
@@ -266,11 +267,29 @@ export class AdminBarberService {
         ...item,
         image: item.image || 'assets/images/barber-placeholder.svg',
         rating: Number(item.rating || 5),
+        experience: this.normalizeExperience(item.experience),
         specialties: Array.isArray(item.specialties) ? item.specialties : []
       }));
     } catch {
       return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
     }
+  }
+
+  private normalizeExperience(value: string): string {
+    const raw = String(value || '').trim();
+
+    if (!raw) return 'New';
+
+    if (/\byears?\b/i.test(raw)) {
+      return raw;
+    }
+
+    const numeric = raw.match(/\d+(?:\.\d+)?/);
+    if (numeric) {
+      return numeric[0] + '+ years';
+    }
+
+    return raw;
   }
 
   private persist(): boolean {
