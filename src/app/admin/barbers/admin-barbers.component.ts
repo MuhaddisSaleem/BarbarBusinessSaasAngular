@@ -23,7 +23,9 @@ export class AdminBarbersComponent {
 
   addModalOpen = false;
   leaveModalOpen = false;
+  deleteModalOpen = false;
   selectedBarber: AdminBarber | null = null;
+  deleteCandidate: AdminBarber | null = null;
 
   feedbackMessage = '';
   feedbackType: 'success' | 'error' = 'success';
@@ -122,6 +124,8 @@ export class AdminBarbersComponent {
       experience: this.newBarber.experience || 'New',
       specialties: this.newBarber.specialties,
       workingHours: this.newBarber.workingHours || '8:00 AM – 9:00 PM',
+      image: this.newBarber.image || 'assets/images/barber-placeholder.svg',
+      rating: 5,
       availability: 'Available Today',
       accountStatus: 'Active',
       note: ''
@@ -136,6 +140,30 @@ export class AdminBarbersComponent {
 
   onPhoneInput(value: string): void {
     this.newBarber.phone = value.replace(/\D/g, '').slice(0, 10);
+  }
+
+  onImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.showFeedback(false, 'Please select an image file.');
+      input.value = '';
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      this.showFeedback(false, 'Barber image must be smaller than 2 MB.');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.newBarber.image = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
   }
 
   onAvailabilityChange(barber: AdminBarber, availability: BarberAvailability): void {
@@ -197,6 +225,27 @@ export class AdminBarbersComponent {
     this.showFeedback(result.success, result.message);
   }
 
+  requestDelete(barber: AdminBarber): void {
+    this.deleteCandidate = barber;
+    this.deleteModalOpen = true;
+  }
+
+  closeDeleteModal(): void {
+    this.deleteModalOpen = false;
+    this.deleteCandidate = null;
+  }
+
+  confirmDelete(): void {
+    if (!this.deleteCandidate) return;
+
+    const result = this.barberService.deleteBarber(this.deleteCandidate.id);
+    this.showFeedback(result.success, result.message);
+
+    if (result.success) {
+      this.closeDeleteModal();
+    }
+  }
+
   resetFilters(): void {
     this.searchTerm = '';
     this.selectedAvailability = 'All';
@@ -233,7 +282,8 @@ export class AdminBarbersComponent {
       phone: '',
       experience: '',
       specialties: [] as string[],
-      workingHours: '8:00 AM – 9:00 PM'
+      workingHours: '8:00 AM – 9:00 PM',
+      image: ''
     };
   }
 
