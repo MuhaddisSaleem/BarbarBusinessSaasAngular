@@ -339,8 +339,15 @@
         </label>
 
         <label>
-          <span>Experience</span>
-          <input type="text" [(ngModel)]="newBarber.experience" placeholder="e.g. 4+ years">
+          <span>Years of Experience</span>
+          <div class="experience-field d-flex align-items-center">
+            <input
+              type="text"
+              inputmode="decimal"
+              [(ngModel)]="newBarber.experience"
+              placeholder="e.g. 4">
+            <b>+ years</b>
+          </div>
         </label>
 
         <label>
