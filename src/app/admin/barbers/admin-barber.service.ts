@@ -127,6 +127,61 @@ export class AdminBarberService {
     return { success: true, message: input.name.trim() + ' added successfully.' };
   }
 
+  updateBarber(
+    id: number,
+    changes: Pick<AdminBarber, 'name' | 'phone' | 'experience' | 'specialties' | 'workingHours'>
+  ): BarberMutationResult {
+    const barber = this.getById(id);
+    if (!barber) return { success: false, message: 'Barber not found.' };
+
+    const normalizedPhone = changes.phone.replace(/\s/g, '');
+
+    if (!changes.name.trim()) {
+      return { success: false, message: 'Barber name is required.' };
+    }
+
+    if (!/^\+923\d{9}$/.test(normalizedPhone)) {
+      return { success: false, message: 'Enter a valid Pakistan mobile number.' };
+    }
+
+    if (
+      this.barbers.some(
+        item => item.id !== id && item.phone.replace(/\s/g, '') === normalizedPhone
+      )
+    ) {
+      return { success: false, message: 'Another barber already uses this mobile number.' };
+    }
+
+    if (!changes.specialties.length) {
+      return { success: false, message: 'Select at least one specialty.' };
+    }
+
+    const previous = {
+      name: barber.name,
+      phone: barber.phone,
+      experience: barber.experience,
+      specialties: [...barber.specialties],
+      workingHours: barber.workingHours
+    };
+
+    barber.name = changes.name.trim();
+    barber.phone = changes.phone.trim();
+    barber.experience = this.normalizeExperience(changes.experience);
+    barber.specialties = changes.specialties.filter(Boolean);
+    barber.workingHours = changes.workingHours.trim() || '8:00 AM – 9:00 PM';
+
+    if (!this.persist()) {
+      barber.name = previous.name;
+      barber.phone = previous.phone;
+      barber.experience = previous.experience;
+      barber.specialties = previous.specialties;
+      barber.workingHours = previous.workingHours;
+      return { success: false, message: 'Could not save the barber changes.' };
+    }
+
+    return { success: true, message: barber.name + ' updated successfully.' };
+  }
+
   deleteBarber(id: number): BarberMutationResult {
     const barber = this.getById(id);
     if (!barber) return { success: false, message: 'Barber not found.' };
