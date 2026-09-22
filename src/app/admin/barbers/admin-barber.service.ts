@@ -24,46 +24,49 @@ export interface BarberMutationResult {
   message: string;
 }
 
+const DEFAULT_BARBERS: AdminBarber[] = [
+  {
+    id: 1,
+    name: 'Ahmed',
+    phone: '+92 300 1122334',
+    experience: '5+ years',
+    specialties: ['Haircut', 'Beard Trim', 'Fade'],
+    workingHours: '8:00 AM – 9:00 PM',
+    image: 'https://images.pexels.com/photos/4997508/pexels-photo-4997508.jpeg?auto=compress&cs=tinysrgb&w=700',
+    rating: 4.9,
+    availability: 'Available Today',
+    accountStatus: 'Active'
+  },
+  {
+    id: 2,
+    name: 'Ali',
+    phone: '+92 321 4455667',
+    experience: '4+ years',
+    specialties: ['Haircut', 'Hair Coloring', 'Styling'],
+    workingHours: '8:00 AM – 9:00 PM',
+    image: 'https://images.pexels.com/photos/26903605/pexels-photo-26903605.jpeg?auto=compress&cs=tinysrgb&w=700',
+    rating: 4.8,
+    availability: 'Available Today',
+    accountStatus: 'Active'
+  },
+  {
+    id: 3,
+    name: 'Usman',
+    phone: '+92 333 7788990',
+    experience: '3+ years',
+    specialties: ['Hair + Beard', 'Face Massage', 'Hair Wash'],
+    workingHours: '8:00 AM – 9:00 PM',
+    image: 'https://images.pexels.com/photos/18885730/pexels-photo-18885730.jpeg?auto=compress&cs=tinysrgb&w=700',
+    rating: 4.7,
+    availability: 'Available Today',
+    accountStatus: 'Active'
+  }
+];
+
 @Injectable({ providedIn: 'root' })
 export class AdminBarberService {
-  private barbers: AdminBarber[] = [
-    {
-      id: 1,
-      name: 'Ahmed',
-      phone: '+92 300 1122334',
-      experience: '5+ years',
-      specialties: ['Haircut', 'Beard Trim', 'Fade'],
-      workingHours: '8:00 AM – 9:00 PM',
-      image: 'https://images.pexels.com/photos/4997508/pexels-photo-4997508.jpeg?auto=compress&cs=tinysrgb&w=700',
-      rating: 4.9,
-      availability: 'Available Today',
-      accountStatus: 'Active'
-    },
-    {
-      id: 2,
-      name: 'Ali',
-      phone: '+92 321 4455667',
-      experience: '4+ years',
-      specialties: ['Haircut', 'Hair Coloring', 'Styling'],
-      workingHours: '8:00 AM – 9:00 PM',
-      image: 'https://images.pexels.com/photos/26903605/pexels-photo-26903605.jpeg?auto=compress&cs=tinysrgb&w=700',
-      rating: 4.8,
-      availability: 'Available Today',
-      accountStatus: 'Active'
-    },
-    {
-      id: 3,
-      name: 'Usman',
-      phone: '+92 333 7788990',
-      experience: '3+ years',
-      specialties: ['Hair + Beard', 'Face Massage', 'Hair Wash'],
-      workingHours: '8:00 AM – 9:00 PM',
-      image: 'https://images.pexels.com/photos/18885730/pexels-photo-18885730.jpeg?auto=compress&cs=tinysrgb&w=700',
-      rating: 4.7,
-      availability: 'Available Today',
-      accountStatus: 'Active'
-    }
-  ];
+  private readonly storageKey = 'royal-barbers.admin-barbers.v1';
+  private barbers: AdminBarber[] = this.loadBarbers();
 
   get all(): AdminBarber[] {
     return this.barbers;
@@ -112,6 +115,14 @@ export class AdminBarberService {
       }
     ];
 
+    if (!this.persist()) {
+      this.barbers = this.barbers.filter(item => item.id !== nextId);
+      return {
+        success: false,
+        message: 'Could not save the barber locally. Try a smaller profile image.'
+      };
+    }
+
     return { success: true, message: input.name.trim() + ' added successfully.' };
   }
 
@@ -119,7 +130,14 @@ export class AdminBarberService {
     const barber = this.getById(id);
     if (!barber) return { success: false, message: 'Barber not found.' };
 
+    const previous = [...this.barbers];
     this.barbers = this.barbers.filter(item => item.id !== id);
+
+    if (!this.persist()) {
+      this.barbers = previous;
+      return { success: false, message: 'Could not save the barber change.' };
+    }
+
     return { success: true, message: barber.name + ' removed from the barber list.' };
   }
 
@@ -127,12 +145,18 @@ export class AdminBarberService {
     const barber = this.getById(id);
     if (!barber) return { success: false, message: 'Barber not found.' };
 
+    const previous = { ...barber };
     barber.availability = availability;
 
     if (availability === 'Available Today' || availability === 'Not Available Today') {
       barber.leaveFrom = undefined;
       barber.leaveTo = undefined;
       barber.note = '';
+    }
+
+    if (!this.persist()) {
+      Object.assign(barber, previous);
+      return { success: false, message: 'Could not save the barber availability.' };
     }
 
     return { success: true, message: barber.name + ' availability updated.' };
@@ -156,10 +180,16 @@ export class AdminBarberService {
       return { success: false, message: 'Leave end date cannot be before the start date.' };
     }
 
+    const previous = { ...barber };
     barber.availability = availability;
     barber.leaveFrom = leaveFrom;
     barber.leaveTo = leaveTo;
     barber.note = note.trim();
+
+    if (!this.persist()) {
+      Object.assign(barber, previous);
+      return { success: false, message: 'Could not save the leave information.' };
+    }
 
     return { success: true, message: barber.name + ' marked ' + availability.toLowerCase() + '.' };
   }
@@ -168,12 +198,18 @@ export class AdminBarberService {
     const barber = this.getById(id);
     if (!barber) return { success: false, message: 'Barber not found.' };
 
+    const previous = { ...barber };
     barber.accountStatus = barber.accountStatus === 'Active' ? 'Inactive' : 'Active';
 
     if (barber.accountStatus === 'Inactive') {
       barber.availability = 'Not Available Today';
     } else {
       barber.availability = 'Available Today';
+    }
+
+    if (!this.persist()) {
+      Object.assign(barber, previous);
+      return { success: false, message: 'Could not save the barber status.' };
     }
 
     return {
@@ -208,6 +244,44 @@ export class AdminBarberService {
     if (barber.availability === 'Vacation') return 'On Vacation';
     if (barber.availability === 'On Leave') return 'On Leave';
     return 'Not Available Today';
+  }
+
+  private loadBarbers(): AdminBarber[] {
+    if (typeof window === 'undefined') {
+      return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
+    }
+
+    try {
+      const saved = window.localStorage.getItem(this.storageKey);
+      if (!saved) {
+        return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
+      }
+
+      const parsed = JSON.parse(saved) as AdminBarber[];
+      if (!Array.isArray(parsed) || !parsed.length) {
+        return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
+      }
+
+      return parsed.map(item => ({
+        ...item,
+        image: item.image || 'assets/images/barber-placeholder.svg',
+        rating: Number(item.rating || 5),
+        specialties: Array.isArray(item.specialties) ? item.specialties : []
+      }));
+    } catch {
+      return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
+    }
+  }
+
+  private persist(): boolean {
+    if (typeof window === 'undefined') return true;
+
+    try {
+      window.localStorage.setItem(this.storageKey, JSON.stringify(this.barbers));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private todayKey(): string {
