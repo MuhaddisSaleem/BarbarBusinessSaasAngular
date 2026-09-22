@@ -606,7 +606,7 @@ button,input,select,textarea { font:inherit; }
 
   span {
     min-height:31px;
-    display:inline-flex;
+    display:inline-flex!important;
     align-items:center;
     padding:0 9px;
     margin:0 !important;
@@ -911,34 +911,4 @@ button,input,select,textarea { font:inherit; }
 .submit-btn:disabled {
   opacity: .58;
   cursor: wait;
-}
-
-
-.experience-field {
-  min-height: 39px;
-  overflow: hidden;
-  border: 1px solid #303c41;
-  border-radius: 7px;
-  background: #10181b;
-
-  input {
-    min-width: 0;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-  }
-
-  b {
-    align-self: stretch;
-    min-width: 62px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 9px;
-    border-left: 1px solid #303c41;
-    color: #8f9b9f;
-    font-size: 8px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
 }
