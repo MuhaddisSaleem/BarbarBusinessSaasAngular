@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { AdminBarberService } from '../barbers/admin-barber.service';
 
 export type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
 
@@ -26,7 +27,12 @@ export interface BookingMutationResult {
 
 @Injectable({ providedIn: 'root' })
 export class AdminBookingService {
-  readonly barbers = ['Ahmed', 'Ali', 'Usman'];
+  constructor(private readonly barberService: AdminBarberService) {}
+
+  get barbers(): string[] {
+    return this.barberService.active.map(barber => barber.name);
+  }
+
   readonly services = [
     { name: 'Haircut', duration: 30, amount: 700 },
     { name: 'Beard Trim', duration: 20, amount: 400 },
