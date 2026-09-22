@@ -22,9 +22,11 @@ export class AdminBarbersComponent {
   selectedStatus: 'All' | BarberAccountStatus = 'All';
 
   addModalOpen = false;
+  editModalOpen = false;
   leaveModalOpen = false;
   deleteModalOpen = false;
   selectedBarber: AdminBarber | null = null;
+  editCandidate: AdminBarber | null = null;
   deleteCandidate: AdminBarber | null = null;
 
   feedbackMessage = '';
@@ -35,6 +37,7 @@ export class AdminBarbersComponent {
   manualFaceConfirmed = false;
 
   newBarber = this.emptyBarberForm();
+  editBarber = this.emptyBarberForm();
 
   leaveForm = {
     type: 'On Leave' as 'On Leave' | 'Vacation',
@@ -265,6 +268,59 @@ export class AdminBarbersComponent {
     }
   }
 
+  openEditModal(barber: AdminBarber): void {
+    this.editCandidate = barber;
+    this.editBarber = {
+      name: barber.name,
+      phone: barber.phone.replace(/\D/g, '').replace(/^92/, '').slice(-10),
+      experience: this.experienceNumber(barber.experience),
+      specialties: [...barber.specialties],
+      workingHours: barber.workingHours,
+      image: barber.image
+    };
+    this.editModalOpen = true;
+    this.feedbackMessage = '';
+  }
+
+  closeEditModal(): void {
+    this.editModalOpen = false;
+    this.editCandidate = null;
+  }
+
+  onEditPhoneInput(value: string): void {
+    this.editBarber.phone = value.replace(/\D/g, '').slice(0, 10);
+  }
+
+  saveBarberChanges(): void {
+    if (!this.editCandidate) return;
+
+    const digits = this.editBarber.phone.replace(/\D/g, '');
+
+    if (!this.editBarber.name.trim() || !/^3\d{9}$/.test(digits)) {
+      this.showFeedback(false, 'Enter barber name and a valid Pakistan mobile number.');
+      return;
+    }
+
+    if (!this.editBarber.specialties.length) {
+      this.showFeedback(false, 'Select at least one specialty.');
+      return;
+    }
+
+    const result = this.barberService.updateBarber(this.editCandidate.id, {
+      name: this.editBarber.name,
+      phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
+      experience: this.editBarber.experience,
+      specialties: this.editBarber.specialties,
+      workingHours: this.editBarber.workingHours
+    });
+
+    this.showFeedback(result.success, result.message);
+
+    if (result.success) {
+      this.closeEditModal();
+    }
+  }
+
   onAvailabilityChange(barber: AdminBarber, availability: BarberAvailability): void {
     if (availability === 'On Leave' || availability === 'Vacation') {
       this.openLeaveModal(barber, availability);
@@ -373,6 +429,10 @@ export class AdminBarbersComponent {
       String(date.getMonth() + 1).padStart(2, '0'),
       String(date.getDate()).padStart(2, '0')
     ].join('-');
+  }
+
+  private experienceNumber(value: string): string {
+    return String(value || '').match(/\d+(?:\.\d+)?/)?.[0] || '';
   }
 
   private emptyBarberForm() {
