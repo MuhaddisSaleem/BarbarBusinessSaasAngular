@@ -161,6 +161,14 @@
 
                   <button
                     type="button"
+                    class="quick-action edit-action"
+                    (click)="openEditModal(barber)"
+                    title="Edit barber">
+                    <i class="bi bi-pencil-square"></i>
+                  </button>
+
+                  <button
+                    type="button"
                     class="status-toggle"
                     [class.activate]="barber.accountStatus === 'Inactive'"
                     (click)="toggleAccountStatus(barber)">
@@ -241,6 +249,13 @@
               *ngIf="barber.accountStatus === 'Active' && barber.availability !== 'Available Today'"
               (click)="markAvailableToday(barber)">
               Available Today
+            </button>
+
+            <button
+              type="button"
+              class="quick-text-btn edit-action flex-fill"
+              (click)="openEditModal(barber)">
+              Edit
             </button>
 
             <button
@@ -377,6 +392,91 @@
         (click)="addBarber()">
         <i class="bi" [ngClass]="imageValidationState === 'checking' ? 'bi-hourglass-split' : 'bi-person-plus'"></i>
         {{ imageValidationState === 'checking' ? 'Checking Photo...' : 'Add Barber' }}
+      </button>
+    </div>
+  </section>
+
+  <div class="modal-backdrop edit-layer" *ngIf="editModalOpen" (click)="closeEditModal()"></div>
+  <section class="barber-modal edit-modal" *ngIf="editModalOpen && editCandidate">
+    <div class="modal-header d-flex align-items-start justify-content-between">
+      <div>
+        <span class="eyebrow">BARBER PROFILE</span>
+        <h3>Edit {{ editCandidate.name }}</h3>
+      </div>
+
+      <button type="button" class="icon-btn" (click)="closeEditModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="edit-profile-preview d-flex align-items-center gap-3">
+        <img
+          class="photo-preview"
+          [src]="editCandidate.image || 'assets/images/barber-placeholder.svg'"
+          [alt]="editCandidate.name">
+        <div>
+          <strong>{{ editCandidate.name }}</strong>
+          <small>Update barber details and assigned services below.</small>
+        </div>
+      </div>
+
+      <div class="form-grid mt-3">
+        <label>
+          <span>Barber Name *</span>
+          <input type="text" [(ngModel)]="editBarber.name" placeholder="Enter full name">
+        </label>
+
+        <label>
+          <span>Pakistan Mobile *</span>
+          <div class="phone-field d-flex">
+            <b>+92</b>
+            <input
+              type="tel"
+              inputmode="numeric"
+              [ngModel]="editBarber.phone"
+              (ngModelChange)="onEditPhoneInput($event)"
+              maxlength="10"
+              placeholder="3001234567">
+          </div>
+        </label>
+
+        <label>
+          <span>Years of Experience</span>
+          <div class="experience-field d-flex align-items-center">
+            <input
+              type="text"
+              inputmode="decimal"
+              [(ngModel)]="editBarber.experience"
+              placeholder="e.g. 4">
+            <b>+ years</b>
+          </div>
+        </label>
+
+        <label>
+          <span>Working Hours</span>
+          <input type="text" [(ngModel)]="editBarber.workingHours" placeholder="8:00 AM – 9:00 PM">
+        </label>
+
+        <label class="full">
+          <span>Services / Specialties *</span>
+          <div class="specialty-picker">
+            <label class="specialty-option" *ngFor="let specialty of specialtyOptions">
+              <input
+                type="checkbox"
+                [checked]="editBarber.specialties.includes(specialty)"
+                (change)="$any($event.target).checked
+                  ? editBarber.specialties.push(specialty)
+                  : editBarber.specialties.splice(editBarber.specialties.indexOf(specialty), 1)">
+              <span>{{ specialty }}</span>
+            </label>
+          </div>
+        </label>
+      </div>
+
+      <button type="button" class="submit-btn" (click)="saveBarberChanges()">
+        <i class="bi bi-check2-circle"></i>
+        Save Changes
       </button>
     </div>
   </section>
