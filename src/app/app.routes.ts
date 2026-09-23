@@ -44,6 +44,12 @@ export const routes: Routes = [
     title: 'Royal Barbers | Customers'
   },
   {
+    path: 'admin/reports',
+    loadComponent: () =>
+      import('./admin/reports/admin-reports.component').then(m => m.AdminReportsComponent),
+    title: 'Royal Barbers | Revenue & Reports'
+  },
+  {
     path: 'admin/notifications',
     loadComponent: () =>
       import('./admin/notifications/admin-notifications.component').then(m => m.AdminNotificationsComponent),
