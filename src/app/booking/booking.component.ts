@@ -2,8 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
+import { AdminServiceService } from '../admin/services/admin-service.service';
 
-interface Service { id: number; name: string; duration: number; price: number; image: string; }
+interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
 interface BookingDate { date: Date; day: string; dateNumber: number; month: string; fullDate: string; }
 interface CalendarCell { date: Date | null; dayNumber: number | null; fullDate: string | null; }
@@ -20,25 +21,17 @@ interface PersonSchedule { personId: number; time: string; barber: Barber; sugge
   styleUrls: ['./booking.component.scss', './group-booking.component.scss']
 })
 export class BookingComponent implements OnInit {
-  readonly serviceImages = {
-    haircut: 'assets/images/services/haircut.webp',
-    beard: 'assets/images/services/beard-trim.webp',
-    hairBeard: 'assets/images/services/hair-beard-massage.webp',
-    kids: 'assets/images/services/kids-haircut.webp',
-    wash: 'assets/images/services/hair-wash.webp',
-    color: 'assets/images/services/hair-color.webp',
-    faceMassage: 'assets/images/services/face-massage.webp'
-  };
-
-  services: Service[] = [
-    { id: 1, name: 'Haircut', duration: 30, price: 700, image: this.serviceImages.haircut },
-    { id: 2, name: 'Beard Trim', duration: 20, price: 400, image: this.serviceImages.beard },
-    { id: 3, name: 'Hair + Beard + Free Hair Massage', duration: 45, price: 1000, image: this.serviceImages.hairBeard },
-    { id: 4, name: 'Kids Haircut', duration: 30, price: 600, image: this.serviceImages.kids },
-    { id: 5, name: 'Hair Wash', duration: 15, price: 300, image: this.serviceImages.wash },
-    { id: 6, name: 'Hair Coloring', duration: 60, price: 2000, image: this.serviceImages.color },
-    { id: 7, name: '6 Step Face Massage', duration: 60, price: 5000, image: this.serviceImages.faceMassage }
-  ];
+  get services(): Service[] {
+    return this.serviceService.active.map(service => ({
+      id: service.id,
+      name: service.name,
+      duration: service.duration,
+      price: this.serviceService.effectivePrice(service),
+      originalPrice: service.originalPrice,
+      discountPrice: service.discountPrice,
+      image: service.image
+    }));
+  }
 
   get barbers(): Barber[] {
     return this.barberService.active.map(barber => ({
@@ -70,7 +63,10 @@ export class BookingComponent implements OnInit {
   bookingConfirmed = false;
   confirmedAssignments: ConfirmedAssignment[] = [];
 
-  constructor(private readonly barberService: AdminBarberService) {}
+  constructor(
+    private readonly barberService: AdminBarberService,
+    private readonly serviceService: AdminServiceService
+  ) {}
 
   ngOnInit(): void {
     this.buildCalendar();
@@ -498,7 +494,21 @@ export class BookingComponent implements OnInit {
   }
 
   getPersonPrice(person: BookingPerson): number {
-    return person.selectedServices.reduce((total, service) => total + service.price, 0);
+    return person.selectedServices.reduce((total, selected) => {
+      const current = this.services.find(service => service.id === selected.id);
+      return total + (current?.price ?? selected.price);
+    }, 0);
+  }
+
+  hasServiceDiscount(service: Service): boolean {
+    return service.discountPrice !== null
+      && service.discountPrice > 0
+      && service.discountPrice < service.originalPrice;
+  }
+
+  getServiceDiscountPercent(service: Service): number {
+    if (!this.hasServiceDiscount(service)) return 0;
+    return Math.round(((service.originalPrice - Number(service.discountPrice)) / service.originalPrice) * 100);
   }
 
   getPersonDuration(person: BookingPerson): number {
