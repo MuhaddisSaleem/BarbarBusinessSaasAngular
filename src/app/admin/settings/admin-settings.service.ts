@@ -199,6 +199,15 @@ export class AdminSettingsService {
       return { success: false, message: 'Advance booking window must be at least 1 day.' };
     }
 
+    if (
+      settings.sendAppointmentReminder
+      && (!Number.isInteger(Number(settings.reminderHoursBefore))
+        || Number(settings.reminderHoursBefore) < 1
+        || Number(settings.reminderHoursBefore) > 72)
+    ) {
+      return { success: false, message: 'Reminder time must be a whole number from 1 to 72 hours.' };
+    }
+
     for (const day of settings.businessHours.filter(item => item.enabled)) {
       if (!day.open || !day.close || day.close <= day.open) {
         return {
