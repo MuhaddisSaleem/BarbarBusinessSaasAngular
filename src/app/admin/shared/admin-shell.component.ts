@@ -3,6 +3,7 @@ import { Component, HostListener, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminNotification, NotificationService } from '../notifications/notification.service';
 import { AdminBookingService } from '../bookings/admin-booking.service';
+import { AdminSettingsService } from '../settings/admin-settings.service';
 
 @Component({
   selector: 'app-admin-shell',
@@ -28,7 +29,8 @@ export class AdminShellComponent {
   constructor(
     public readonly router: Router,
     public readonly notificationService: NotificationService,
-    public readonly bookingService: AdminBookingService
+    public readonly bookingService: AdminBookingService,
+    public readonly settingsService: AdminSettingsService
   ) {}
 
   get currentPath(): string {
