@@ -56,6 +56,12 @@ export class AdminBookingsComponent implements OnInit {
 
   ngOnInit(): void {
     const bookingId = Number(this.route.snapshot.queryParamMap.get('booking'));
+    const customer = this.route.snapshot.queryParamMap.get('customer');
+
+    if (customer) {
+      this.searchTerm = customer;
+      this.activeTab = 'today';
+    }
 
     if (bookingId) {
       const booking = this.bookingService.getById(bookingId);
