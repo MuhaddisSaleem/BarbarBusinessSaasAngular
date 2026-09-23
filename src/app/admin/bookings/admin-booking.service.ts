@@ -103,6 +103,59 @@ export class AdminBookingService {
     return this.updateStatus(id, 'Cancelled');
   }
 
+  addOnlineBookings(
+    inputs: Array<Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>>
+  ): BookingMutationResult {
+    if (!inputs.length) {
+      return { success: false, message: 'No booking details were provided.' };
+    }
+
+    const staged: Array<Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>> = [];
+
+    for (const input of inputs) {
+      const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration);
+      if (!scheduleValidation.success) return scheduleValidation;
+
+      const barberId = this.barberIdByName(input.barber);
+      if (!barberId || !this.barberService.isAvailableOnDate(barberId, input.date)) {
+        return { success: false, message: input.barber + ' is not available on this date.' };
+      }
+
+      if (
+        this.hasConflict(input.barber, input.date, input.time, input.duration)
+        || staged.some(item => this.bookingsOverlap(item, input))
+      ) {
+        return {
+          success: false,
+          message: input.barber + ' already has an overlapping appointment at this time.'
+        };
+      }
+
+      staged.push(input);
+    }
+
+    let nextId = Math.max(0, ...this.bookings.map(item => item.id)) + 1;
+    const created: AdminBooking[] = staged.map(input => {
+      const id = nextId++;
+      return {
+        ...input,
+        id,
+        code: 'RB-' + String(2600 + id),
+        status: 'Confirmed',
+        source: 'Online'
+      };
+    });
+
+    this.bookings = [...created.reverse(), ...this.bookings];
+
+    return {
+      success: true,
+      message: created.length > 1
+        ? created.length + ' appointments booked successfully.'
+        : 'Booking created successfully.'
+    };
+  }
+
   addBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
     const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration);
     if (!scheduleValidation.success) return scheduleValidation;
@@ -150,6 +203,20 @@ export class AdminBookingService {
 
   private barberIdByName(name: string): number {
     return this.barberService.active.find(barber => barber.name === name)?.id || 0;
+  }
+
+  private bookingsOverlap(
+    first: Pick<AdminBooking, 'barber' | 'date' | 'time' | 'duration'>,
+    second: Pick<AdminBooking, 'barber' | 'date' | 'time' | 'duration'>
+  ): boolean {
+    if (first.barber !== second.barber || first.date !== second.date) return false;
+
+    const firstStart = this.timeToMinutes(first.time);
+    const firstEnd = firstStart + first.duration;
+    const secondStart = this.timeToMinutes(second.time);
+    const secondEnd = secondStart + second.duration;
+
+    return firstStart < secondEnd && firstEnd > secondStart;
   }
 
   private hasConflict(barber: string, date: string, time: string, duration: number, ignoreId?: number): boolean {
