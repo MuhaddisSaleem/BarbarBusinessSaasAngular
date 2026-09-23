@@ -1097,3 +1097,43 @@ button { -webkit-tap-highlight-color: transparent; }
     font-size: 8px;
   }
 }
+
+
+/* Dynamic service pricing - scoped to service cards and booking summary only */
+.service-price-wrap {
+  gap: 6px;
+  margin-top: 7px;
+
+  .service-price {
+    margin-top: 0;
+  }
+}
+
+.service-original-price {
+  color: #7c888d;
+  font-size: 11px;
+  text-decoration: line-through;
+}
+
+.service-discount-badge {
+  padding: 3px 6px;
+  border-radius: 20px;
+  background: rgba(92, 205, 140, .1);
+  color: #67d49a;
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.summary-price-wrap {
+  margin-left: auto;
+  text-align: right;
+}
+
+.summary-original-price {
+  display: block;
+  margin-bottom: 2px;
+  color: #748086;
+  font-size: 8px;
+  text-decoration: line-through;
+}
