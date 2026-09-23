@@ -253,7 +253,14 @@
           <label class="reminder-field" *ngIf="settings.sendAppointmentReminder">
             <span>Reminder Time</span>
             <div class="suffix-field">
-              <input type="number" min="1" [(ngModel)]="settings.reminderHoursBefore">
+              <input
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                maxlength="2"
+                [ngModel]="settings.reminderHoursBefore || ''"
+                (input)="onReminderHoursInput($event)"
+                placeholder="2">
               <b>hours before</b>
             </div>
           </label>
