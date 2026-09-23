@@ -3,9 +3,9 @@
 
   <aside class="admin-sidebar d-flex flex-column" [class.open]="sidebarOpen">
     <div class="sidebar-brand d-flex align-items-center">
-      <div class="brand-mark">RB</div>
+      <div class="brand-mark">{{ businessInitials }}</div>
       <div>
-        <strong>ROYAL BARBERS</strong>
+        <strong>{{ businessName | uppercase }}</strong>
         <small>MANAGEMENT</small>
       </div>
       <button type="button" class="sidebar-close d-lg-none" (click)="closeSidebar()" aria-label="Close menu">
@@ -67,10 +67,10 @@
     </nav>
 
     <div class="sidebar-shop">
-      <div class="shop-avatar">RB</div>
+      <div class="shop-avatar">{{ businessInitials }}</div>
       <div class="flex-grow-1">
-        <strong>{{ settingsService.current.businessName }}</strong>
-        <small>{{ settingsService.current.city || 'Salon' }}</small>
+        <strong>{{ businessName }}</strong>
+        <small>{{ businessCity }}</small>
       </div>
       <i class="bi bi-three-dots-vertical"></i>
     </div>
