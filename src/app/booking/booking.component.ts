@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 import { AdminServiceService } from '../admin/services/admin-service.service';
+import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 
 interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
@@ -65,7 +66,8 @@ export class BookingComponent implements OnInit {
 
   constructor(
     private readonly barberService: AdminBarberService,
-    private readonly serviceService: AdminServiceService
+    private readonly serviceService: AdminServiceService,
+    private readonly settingsService: AdminSettingsService
   ) {}
 
   ngOnInit(): void {
@@ -84,6 +86,12 @@ export class BookingComponent implements OnInit {
   get totalDuration(): number { return this.getPersonDuration(this.activeParticipant); }
   get monthLabel(): string { return this.calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
   get canGoPreviousMonth(): boolean { return this.calendarDate.getTime() > this.startOfMonth(new Date()).getTime(); }
+
+  get canGoNextMonth(): boolean {
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + this.settingsService.maxAdvanceDays);
+    return this.calendarDate.getTime() < this.startOfMonth(maxDate).getTime();
+  }
 
   onPhoneInput(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -210,7 +218,7 @@ export class BookingComponent implements OnInit {
   }
 
   selectCalendarDay(cell: CalendarCell): void {
-    if (!cell.date || this.isPastDate(cell.date)) return;
+    if (!cell.date || this.isDateDisabled(cell.date)) return;
 
     this.clearValidationMessage();
     this.setSelectedDate(cell.date);
@@ -228,6 +236,11 @@ export class BookingComponent implements OnInit {
   isPastDate(date: Date | null): boolean {
     if (!date) return false;
     return this.startOfDay(date).getTime() < this.startOfDay(new Date()).getTime();
+  }
+
+  isDateDisabled(date: Date | null): boolean {
+    if (!date) return false;
+    return !this.settingsService.isBookingDateAllowed(date);
   }
 
   isBarberUnavailable(barber: Barber): boolean {
@@ -252,6 +265,7 @@ export class BookingComponent implements OnInit {
   }
 
   nextMonth(): void {
+    if (!this.canGoNextMonth) return;
     this.calendarDate = new Date(this.calendarDate.getFullYear(), this.calendarDate.getMonth() + 1, 1);
     this.buildCalendar();
   }
@@ -286,7 +300,7 @@ export class BookingComponent implements OnInit {
   }
 
   generateAvailableTimes(): void {
-    if (!this.selectedDate || this.isPastDate(this.selectedDate.date) || !this.allParticipantsReady) {
+    if (!this.selectedDate || this.isDateDisabled(this.selectedDate.date) || !this.allParticipantsReady) {
       this.availableTimes = [];
       return;
     }
@@ -298,7 +312,7 @@ export class BookingComponent implements OnInit {
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
     for (const window of this.businessWindows) {
-      for (let minutes = window.start; minutes < window.end; minutes += 30) {
+      for (let minutes = window.start; minutes < window.end; minutes += this.settingsService.bookingInterval) {
         if (selectedDay.getTime() === today.getTime() && minutes <= nowMinutes) continue;
 
         const time = this.minutesToTime(minutes);
@@ -411,8 +425,8 @@ export class BookingComponent implements OnInit {
       return this.showValidationError('Please select an appointment date.', 'date-time-section');
     }
 
-    if (this.isPastDate(this.selectedDate.date)) {
-      return this.showValidationError('Please select a valid upcoming appointment date.', 'date-time-section');
+    if (this.isDateDisabled(this.selectedDate.date)) {
+      return this.showValidationError('This date is not available under the current salon booking settings.', 'date-time-section');
     }
 
     if (!this.selectedTime || !this.availableTimes.includes(this.selectedTime)) {
@@ -456,7 +470,7 @@ export class BookingComponent implements OnInit {
     return !!(
       this.allParticipantsReady
       && this.selectedDate
-      && !this.isPastDate(this.selectedDate.date)
+      && !this.isDateDisabled(this.selectedDate.date)
       && this.selectedTime
       && this.availableTimes.includes(this.selectedTime)
       && this.customerDetailsComplete
@@ -558,11 +572,13 @@ export class BookingComponent implements OnInit {
   }
 
   private get businessWindows(): { start: number; end: number }[] {
-    return [{ start: 8 * 60, end: 21 * 60 }];
+    const date = this.selectedDate?.date || new Date();
+    const hours = this.settingsService.hoursForDate(date);
+    return hours ? [hours] : [];
   }
 
   private resolveBarberAssignments(time: string): Map<number, Barber> | null {
-    if (!this.selectedDate || this.isPastDate(this.selectedDate.date) || !this.allParticipantsReady) return null;
+    if (!this.selectedDate || this.isDateDisabled(this.selectedDate.date) || !this.allParticipantsReady) return null;
 
     if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
       const schedule = this.buildSequentialSchedule(time);
@@ -624,9 +640,10 @@ export class BookingComponent implements OnInit {
       if (earliestStart >= window.end) continue;
 
       let start = Math.max(earliestStart, window.start);
-      start = Math.ceil(start / 30) * 30;
+      const interval = this.settingsService.bookingInterval;
+      start = Math.ceil(start / interval) * interval;
 
-      for (let minutes = start; minutes + duration <= window.end; minutes += 30) {
+      for (let minutes = start; minutes + duration <= window.end; minutes += interval) {
         const time = this.minutesToTime(minutes);
         if (this.isBarberAvailable(barberId, time, this.selectedDate.fullDate, duration)) return minutes;
       }
@@ -674,7 +691,7 @@ export class BookingComponent implements OnInit {
     const requestedStart = this.timeToMinutes(requestedTime);
     const requestedEnd = requestedStart + duration;
 
-    // A service must both start and finish inside opening hours (08:00–21:00).
+    // A service must both start and finish inside the configured business hours.
     const insideBusinessHours = this.businessWindows.some(window =>
       requestedStart >= window.start && requestedEnd <= window.end
     );
