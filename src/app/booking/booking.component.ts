@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 import { AdminServiceService } from '../admin/services/admin-service.service';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
+import { AdminBookingService } from '../admin/bookings/admin-booking.service';
 
 interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
@@ -67,7 +68,8 @@ export class BookingComponent implements OnInit {
   constructor(
     private readonly barberService: AdminBarberService,
     private readonly serviceService: AdminServiceService,
-    private readonly settingsService: AdminSettingsService
+    private readonly settingsService: AdminSettingsService,
+    private readonly bookingService: AdminBookingService
   ) {}
 
   ngOnInit(): void {
@@ -387,6 +389,39 @@ export class BookingComponent implements OnInit {
     }
 
     this.bookingValidationMessage = '';
+
+    const phone = '+92 ' + this.customer.phone.slice(0, 3) + ' ' + this.customer.phone.slice(3);
+    const onlineBookings = this.participants.map((person, index) => {
+      const barber = assignments.get(person.id);
+      const time = this.getPersonBookingTime(index);
+
+      return {
+        customerName: this.customer.name.trim(),
+        phone,
+        service: person.selectedServices.map(service => service.name).join(', '),
+        duration: this.getPersonDuration(person),
+        barber: barber?.name || '',
+        date: this.selectedDate!.fullDate,
+        time,
+        amount: this.getPersonPrice(person),
+        notes: this.customer.notes.trim(),
+        groupSize: this.participants.length
+      };
+    });
+
+    if (onlineBookings.some(item => !item.barber || !item.time)) {
+      this.showValidationError('We could not complete the barber assignment. Please choose another time.', 'date-time-section');
+      return;
+    }
+
+    const bookingResult = this.bookingService.addOnlineBookings(onlineBookings);
+    if (!bookingResult.success) {
+      this.clearSelectedTime();
+      this.generateAvailableTimes();
+      this.showValidationError(bookingResult.message, 'date-time-section');
+      return;
+    }
+
     this.confirmedAssignments = [];
 
     this.participants.forEach((person, index) => {
@@ -697,12 +732,29 @@ export class BookingComponent implements OnInit {
     );
     if (!insideBusinessHours) return false;
 
-    const barberBookings = this.bookedAppointments.filter(booking =>
+    const localBookings = this.bookedAppointments.filter(booking =>
       booking.barberId === barberId && booking.date === date
     );
 
-    return !barberBookings.some(booking => {
+    const barberName = this.barbers.find(barber => barber.id === barberId)?.name;
+    const adminBookings = barberName
+      ? this.bookingService.all.filter(booking =>
+          booking.status !== 'Cancelled'
+          && booking.barber === barberName
+          && booking.date === date
+        )
+      : [];
+
+    const localConflict = localBookings.some(booking => {
       const bookingStart = this.timeToMinutes(booking.startTime);
+      const bookingEnd = bookingStart + booking.duration;
+      return requestedStart < bookingEnd && requestedEnd > bookingStart;
+    });
+
+    if (localConflict) return false;
+
+    return !adminBookings.some(booking => {
+      const bookingStart = this.timeToMinutes(booking.time);
       const bookingEnd = bookingStart + booking.duration;
       return requestedStart < bookingEnd && requestedEnd > bookingStart;
     });
