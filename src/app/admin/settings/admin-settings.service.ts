@@ -84,6 +84,49 @@ export class AdminSettingsService {
     return this.clone(this.settings);
   }
 
+  get bookingInterval(): number {
+    return Math.max(5, Number(this.settings.bookingInterval) || 30);
+  }
+
+  get maxAdvanceDays(): number {
+    return Math.max(1, Number(this.settings.maxAdvanceDays) || 30);
+  }
+
+  isBookingDateAllowed(date: Date): boolean {
+    const candidate = this.startOfDay(date);
+    const today = this.startOfDay(new Date());
+
+    if (candidate.getTime() < today.getTime()) return false;
+    if (!this.settings.allowSameDayBooking && candidate.getTime() === today.getTime()) return false;
+
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + this.maxAdvanceDays);
+    if (candidate.getTime() > maxDate.getTime()) return false;
+
+    return !!this.hoursForDate(candidate);
+  }
+
+  hoursForDate(date: Date): { start: number; end: number } | null {
+    const dayKey = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday'
+    ][date.getDay()];
+
+    const day = this.settings.businessHours.find(item => item.key === dayKey);
+    if (!day?.enabled) return null;
+
+    const start = this.clockToMinutes(day.open);
+    const end = this.clockToMinutes(day.close);
+
+    if (start === null || end === null || end <= start) return null;
+    return { start, end };
+  }
+
   save(next: AdminSettings): SettingsSaveResult {
     const validation = this.validate(next);
     if (!validation.success) return validation;
@@ -166,6 +209,21 @@ export class AdminSettingsService {
     }
 
     return { success: true, message: '' };
+  }
+
+  private clockToMinutes(value: string): number | null {
+    const match = String(value || '').match(/^(\d{2}):(\d{2})$/);
+    if (!match) return null;
+
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+
+    if (hour > 23 || minute > 59) return null;
+    return hour * 60 + minute;
+  }
+
+  private startOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
 
   private validPakistanPhone(value: string): boolean {
