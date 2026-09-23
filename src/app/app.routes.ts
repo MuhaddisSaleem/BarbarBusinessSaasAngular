@@ -6,6 +6,7 @@ import { AdminBookingsComponent } from './admin/bookings/admin-bookings.componen
 import { AdminCalendarComponent } from './admin/calendar/admin-calendar.component';
 import { AdminBarbersComponent } from './admin/barbers/admin-barbers.component';
 import { AdminServicesComponent } from './admin/services/admin-services.component';
+import { AdminCustomersComponent } from './admin/customers/admin-customers.component';
 
 export const routes: Routes = [
   {
@@ -37,6 +38,11 @@ export const routes: Routes = [
     path: 'admin/services',
     component: AdminServicesComponent,
     title: 'Royal Barbers | Services'
+  },
+  {
+    path: 'admin/customers',
+    component: AdminCustomersComponent,
+    title: 'Royal Barbers | Customers'
   },
   {
     path: 'admin/notifications',
