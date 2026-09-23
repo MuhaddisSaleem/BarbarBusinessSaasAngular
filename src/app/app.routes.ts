@@ -1,12 +1,5 @@
 import { Routes } from '@angular/router';
-import { AdminDashboardComponent } from './admin/admin-dashboard.component';
 import { CustomerBookingComponent } from './customer-booking/customer-booking.component';
-import { AdminNotificationsComponent } from './admin/notifications/admin-notifications.component';
-import { AdminBookingsComponent } from './admin/bookings/admin-bookings.component';
-import { AdminCalendarComponent } from './admin/calendar/admin-calendar.component';
-import { AdminBarbersComponent } from './admin/barbers/admin-barbers.component';
-import { AdminServicesComponent } from './admin/services/admin-services.component';
-import { AdminCustomersComponent } from './admin/customers/admin-customers.component';
 
 export const routes: Routes = [
   {
@@ -16,37 +9,44 @@ export const routes: Routes = [
   },
   {
     path: 'admin',
-    component: AdminDashboardComponent,
+    loadComponent: () =>
+      import('./admin/admin-dashboard.component').then(m => m.AdminDashboardComponent),
     title: 'Royal Barbers | Admin Dashboard'
   },
   {
     path: 'admin/bookings',
-    component: AdminBookingsComponent,
+    loadComponent: () =>
+      import('./admin/bookings/admin-bookings.component').then(m => m.AdminBookingsComponent),
     title: 'Royal Barbers | Bookings'
   },
   {
     path: 'admin/calendar',
-    component: AdminCalendarComponent,
+    loadComponent: () =>
+      import('./admin/calendar/admin-calendar.component').then(m => m.AdminCalendarComponent),
     title: 'Royal Barbers | Schedule'
   },
   {
     path: 'admin/barbers',
-    component: AdminBarbersComponent,
+    loadComponent: () =>
+      import('./admin/barbers/admin-barbers.component').then(m => m.AdminBarbersComponent),
     title: 'Royal Barbers | Barbers'
   },
   {
     path: 'admin/services',
-    component: AdminServicesComponent,
+    loadComponent: () =>
+      import('./admin/services/admin-services.component').then(m => m.AdminServicesComponent),
     title: 'Royal Barbers | Services'
   },
   {
     path: 'admin/customers',
-    component: AdminCustomersComponent,
+    loadComponent: () =>
+      import('./admin/customers/admin-customers.component').then(m => m.AdminCustomersComponent),
     title: 'Royal Barbers | Customers'
   },
   {
     path: 'admin/notifications',
-    component: AdminNotificationsComponent,
+    loadComponent: () =>
+      import('./admin/notifications/admin-notifications.component').then(m => m.AdminNotificationsComponent),
     title: 'Royal Barbers | Notifications'
   },
   {
