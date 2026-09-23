@@ -50,6 +50,12 @@ export const routes: Routes = [
     title: 'Royal Barbers | Revenue & Reports'
   },
   {
+    path: 'admin/settings',
+    loadComponent: () =>
+      import('./admin/settings/admin-settings.component').then(m => m.AdminSettingsComponent),
+    title: 'Royal Barbers | Settings'
+  },
+  {
     path: 'admin/notifications',
     loadComponent: () =>
       import('./admin/notifications/admin-notifications.component').then(m => m.AdminNotificationsComponent),
