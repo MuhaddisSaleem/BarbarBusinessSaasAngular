@@ -37,7 +37,7 @@
         <span>Barbers</span>
       </button>
 
-      <button type="button" class="nav-item">
+      <button type="button" class="nav-item" [class.active]="isActive('/admin/services')" (click)="navigate('/admin/services')">
         <span class="nav-icon"><i class="bi bi-scissors"></i></span>
         <span>Services</span>
       </button>
