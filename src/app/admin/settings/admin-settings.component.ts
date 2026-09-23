@@ -64,6 +64,21 @@ export class AdminSettingsComponent {
     input.value = this.settings[field];
   }
 
+  onReminderHoursInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digits = input.value.replace(/\D/g, '').slice(0, 2);
+
+    if (!digits) {
+      this.settings.reminderHoursBefore = 0;
+      input.value = '';
+      return;
+    }
+
+    const hours = Math.min(72, Math.max(1, Number(digits)));
+    this.settings.reminderHoursBefore = hours;
+    input.value = String(hours);
+  }
+
   copyBusinessPhoneToWhatsapp(): void {
     this.settings.whatsappNumber = this.settings.businessPhone;
   }
