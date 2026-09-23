@@ -60,7 +60,7 @@
         <span>Revenue &amp; Reports</span>
       </button>
 
-      <button type="button" class="nav-item">
+      <button type="button" class="nav-item" [class.active]="isActive('/admin/settings')" (click)="navigate('/admin/settings')">
         <span class="nav-icon"><i class="bi bi-gear"></i></span>
         <span>Settings</span>
       </button>
@@ -69,8 +69,8 @@
     <div class="sidebar-shop">
       <div class="shop-avatar">RB</div>
       <div class="flex-grow-1">
-        <strong>Royal Barbers</strong>
-        <small>Bahawalpur</small>
+        <strong>{{ settingsService.current.businessName }}</strong>
+        <small>{{ settingsService.current.city || 'Salon' }}</small>
       </div>
       <i class="bi bi-three-dots-vertical"></i>
     </div>
