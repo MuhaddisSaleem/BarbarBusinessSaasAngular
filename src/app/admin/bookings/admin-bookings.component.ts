@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus } from './admin-booking.service';
+import { AdminSettingsService } from '../settings/admin-settings.service';
 
 type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
 
@@ -42,16 +43,10 @@ export class AdminBookingsComponent implements OnInit {
     notes: ''
   };
 
-  readonly timeSlots = [
-    '08:00 AM','08:30 AM','09:00 AM','09:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM',
-    '12:00 PM','12:30 PM','01:00 PM','01:30 PM','02:00 PM','02:30 PM','03:00 PM','03:30 PM',
-    '04:00 PM','04:30 PM','05:00 PM','05:30 PM','06:00 PM','06:30 PM','07:00 PM','07:30 PM',
-    '08:00 PM','08:30 PM','09:00 PM'
-  ];
-
   constructor(
     public readonly bookingService: AdminBookingService,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly settingsService: AdminSettingsService
   ) {}
 
   ngOnInit(): void {
@@ -77,13 +72,19 @@ export class AdminBookingsComponent implements OnInit {
     return this.todayKey;
   }
 
+  get maxDate(): string {
+    const date = new Date();
+    date.setDate(date.getDate() + this.settingsService.maxAdvanceDays);
+    return this.toDateKey(date);
+  }
+
   get createTimeSlots(): string[] {
     const service = this.bookingService.services.find(item => item.name === this.newBooking.service);
-    return this.slotsForDuration(service?.duration ?? 30);
+    return this.slotsForDuration(service?.duration ?? 30, this.newBooking.date);
   }
 
   get editTimeSlots(): string[] {
-    return this.slotsForDuration(this.selectedBooking?.duration ?? 30);
+    return this.slotsForDuration(this.selectedBooking?.duration ?? 30, this.editDate);
   }
 
   get bookings(): AdminBooking[] {
@@ -256,8 +257,29 @@ export class AdminBookingsComponent implements OnInit {
     ].join('-');
   }
 
-  private slotsForDuration(duration: number): string[] {
-    return this.timeSlots.filter(slot => this.timeValue(slot) + duration <= 21 * 60);
+  private slotsForDuration(duration: number, dateKey: string): string[] {
+    if (!dateKey) return [];
+
+    const date = new Date(dateKey + 'T12:00:00');
+    const hours = this.settingsService.hoursForDate(date);
+    if (!hours) return [];
+
+    const slots: string[] = [];
+    const interval = this.settingsService.bookingInterval;
+
+    for (let minutes = hours.start; minutes + duration <= hours.end; minutes += interval) {
+      slots.push(this.minutesToTime(minutes));
+    }
+
+    return slots;
+  }
+
+  private minutesToTime(totalMinutes: number): string {
+    let hour = Math.floor(totalMinutes / 60);
+    const minute = totalMinutes % 60;
+    const period = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return hour + ':' + String(minute).padStart(2, '0') + ' ' + period;
   }
 
   private timeValue(time: string): number {
