@@ -5,7 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus } from './admin-booking.service';
 
-type BookingTab = 'today' | 'upcoming' | 'completed' | 'cancelled';
+type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
 
 @Component({
   selector: 'app-admin-bookings',
@@ -60,7 +60,7 @@ export class AdminBookingsComponent implements OnInit {
 
     if (customer) {
       this.searchTerm = customer;
-      this.activeTab = 'today';
+      this.activeTab = 'all';
     }
 
     if (bookingId) {
@@ -91,6 +91,7 @@ export class AdminBookingsComponent implements OnInit {
 
     return this.bookingService.all
       .filter(item => {
+        if (this.activeTab === 'all') return true;
         if (this.activeTab === 'today') return item.date === this.todayKey && item.status !== 'Cancelled';
         if (this.activeTab === 'upcoming') return item.date > this.todayKey && item.status !== 'Completed' && item.status !== 'Cancelled';
         if (this.activeTab === 'completed') return item.status === 'Completed';
