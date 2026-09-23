@@ -91,7 +91,15 @@
                   <div class="service-card-body">
                     <div class="service-title-row d-flex align-items-center justify-content-between"><h3>{{ service.name }}</h3><span class="radio-dot"></span></div>
                     <div class="duration-row"><span class="clock-mini"><i class="bi bi-clock"></i></span>{{ service.duration }} minutes</div>
-                    <strong class="service-price">Rs. {{ service.price | number }}</strong>
+                    <div class="service-price-wrap d-flex align-items-center flex-wrap">
+                      <span class="service-original-price" *ngIf="hasServiceDiscount(service)">
+                        Rs. {{ service.originalPrice | number }}
+                      </span>
+                      <strong class="service-price">Rs. {{ service.price | number }}</strong>
+                      <span class="service-discount-badge" *ngIf="hasServiceDiscount(service)">
+                        {{ getServiceDiscountPercent(service) }}% OFF
+                      </span>
+                    </div>
                   </div>
                 </button>
               </div>
@@ -221,7 +229,10 @@
               <div class="summary-service d-flex align-items-center" *ngFor="let service of person.selectedServices">
                 <img [src]="service.image" [alt]="service.name">
                 <div class="summary-copy flex-grow-1"><strong>{{ service.name }}</strong><span><i class="bi bi-clock"></i> {{ service.duration }} minutes</span></div>
-                <strong class="summary-price">Rs. {{ service.price | number }}</strong>
+                <div class="summary-price-wrap">
+                  <span class="summary-original-price" *ngIf="hasServiceDiscount(service)">Rs. {{ service.originalPrice | number }}</span>
+                  <strong class="summary-price">Rs. {{ service.price | number }}</strong>
+                </div>
               </div>
 
               <div class="summary-row barber-summary compact-barber-row d-flex align-items-center">
