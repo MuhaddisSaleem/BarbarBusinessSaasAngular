@@ -233,7 +233,7 @@
       <section class="detail-section">
         <h4>Reschedule</h4>
         <div class="schedule-grid">
-          <input type="date" [(ngModel)]="editDate" [min]="minDate">
+          <input type="date" [(ngModel)]="editDate" [min]="minDate" [max]="maxDate">
           <select [(ngModel)]="editTime">
             <option *ngFor="let slot of editTimeSlots">{{ slot }}</option>
           </select>
@@ -301,7 +301,7 @@
 
         <label>
           <span>Date *</span>
-          <input type="date" [(ngModel)]="newBooking.date" [min]="minDate">
+          <input type="date" [(ngModel)]="newBooking.date" [min]="minDate" [max]="maxDate">
         </label>
 
         <label class="full">
