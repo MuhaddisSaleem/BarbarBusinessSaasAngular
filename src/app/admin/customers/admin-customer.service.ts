@@ -104,7 +104,7 @@ export class AdminCustomerService {
       totalSpend: completed.reduce((sum, item) => sum + item.amount, 0),
       lastVisit: completedSorted[0]?.date || null,
       nextBooking: upcoming,
-      customerType: completed.length > 0 ? 'Returning' : 'New',
+      customerType: nonCancelled.length > 1 ? 'Returning' : 'New',
       firstBookingDate: first?.date || '',
       lastBookingDate: latest?.date || '',
       notes: note
