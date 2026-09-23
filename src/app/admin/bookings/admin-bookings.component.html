@@ -47,6 +47,9 @@
 
     <section class="bookings-card">
       <div class="booking-tabs d-flex overflow-auto">
+        <button type="button" [class.active]="activeTab === 'all'" (click)="setTab('all')">
+          All <span>{{ bookingService.all.length }}</span>
+        </button>
         <button type="button" [class.active]="activeTab === 'today'" (click)="setTab('today')">
           Today <span>{{ todayCount }}</span>
         </button>
