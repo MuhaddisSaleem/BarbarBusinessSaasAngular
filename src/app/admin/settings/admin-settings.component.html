@@ -1,0 +1,283 @@
+<app-admin-shell eyebrow="BUSINESS CONFIGURATION" title="Settings">
+  <div class="settings-page container-fluid">
+    <div class="feedback-toast" *ngIf="feedbackMessage" [class.error]="feedbackType === 'error'">
+      <i class="bi" [ngClass]="feedbackType === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'"></i>
+      {{ feedbackMessage }}
+    </div>
+
+    <section class="page-heading d-flex flex-wrap align-items-end justify-content-between gap-3">
+      <div>
+        <span class="eyebrow">SALON SETTINGS</span>
+        <h2>Settings</h2>
+        <p>Manage business details, working hours, booking rules and notification preferences.</p>
+      </div>
+
+      <div class="heading-actions d-flex flex-wrap gap-2">
+        <button type="button" class="reset-settings-btn" (click)="requestReset()">
+          <i class="bi bi-arrow-counterclockwise"></i>
+          Reset Defaults
+        </button>
+
+        <button type="button" class="save-settings-btn" (click)="saveSettings()">
+          <i class="bi bi-check2-circle"></i>
+          Save Settings
+        </button>
+      </div>
+    </section>
+
+    <div class="settings-grid">
+      <section class="settings-card">
+        <div class="card-head">
+          <span class="section-icon"><i class="bi bi-shop"></i></span>
+          <div>
+            <h3>Business Profile</h3>
+            <p>Information used by the salon administration.</p>
+          </div>
+        </div>
+
+        <div class="card-body form-grid">
+          <label class="full">
+            <span>Business Name *</span>
+            <input type="text" [(ngModel)]="settings.businessName" placeholder="Royal Barbers">
+          </label>
+
+          <label>
+            <span>Business Phone *</span>
+            <input
+              type="tel"
+              [ngModel]="settings.businessPhone"
+              (input)="onPhoneInput($event, 'businessPhone')"
+              inputmode="numeric"
+              placeholder="+92 300 1234567">
+          </label>
+
+          <label>
+            <span>WhatsApp Number *</span>
+            <input
+              type="tel"
+              [ngModel]="settings.whatsappNumber"
+              (input)="onPhoneInput($event, 'whatsappNumber')"
+              inputmode="numeric"
+              placeholder="+92 300 1234567">
+            <button type="button" class="inline-link" (click)="copyBusinessPhoneToWhatsapp()">
+              Use business phone
+            </button>
+          </label>
+
+          <label>
+            <span>Email</span>
+            <input type="email" [(ngModel)]="settings.email" placeholder="owner@royalbarbers.com">
+          </label>
+
+          <label>
+            <span>City</span>
+            <input type="text" [(ngModel)]="settings.city" placeholder="Bahawalpur">
+          </label>
+
+          <label class="full">
+            <span>Address</span>
+            <textarea [(ngModel)]="settings.address" placeholder="Enter salon address"></textarea>
+          </label>
+
+          <label>
+            <span>Currency</span>
+            <select [(ngModel)]="settings.currency">
+              <option value="PKR">PKR - Pakistani Rupee</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Timezone</span>
+            <select [(ngModel)]="settings.timezone">
+              <option value="Asia/Karachi">Asia/Karachi</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-card">
+        <div class="card-head">
+          <span class="section-icon"><i class="bi bi-calendar2-check"></i></span>
+          <div>
+            <h3>Booking Rules</h3>
+            <p>Set the main rules the salon will use for appointments.</p>
+          </div>
+        </div>
+
+        <div class="card-body form-grid">
+          <label>
+            <span>Booking Interval</span>
+            <select [(ngModel)]="settings.bookingInterval">
+              <option *ngFor="let minutes of bookingIntervals" [ngValue]="minutes">{{ minutes }} minutes</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Book Up To</span>
+            <div class="suffix-field">
+              <input type="number" min="1" [(ngModel)]="settings.maxAdvanceDays">
+              <b>days ahead</b>
+            </div>
+          </label>
+
+          <label>
+            <span>Cancellation Notice</span>
+            <div class="suffix-field">
+              <input type="number" min="0" [(ngModel)]="settings.cancellationHours">
+              <b>hours</b>
+            </div>
+          </label>
+
+          <label>
+            <span>Late Arrival Grace</span>
+            <div class="suffix-field">
+              <input type="number" min="0" [(ngModel)]="settings.lateArrivalMinutes">
+              <b>minutes</b>
+            </div>
+          </label>
+
+          <div class="full switch-row">
+            <div>
+              <strong>Allow same-day bookings</strong>
+              <span>Customers can book an available slot for today.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.allowSameDayBooking">
+              <span></span>
+            </label>
+          </div>
+
+          <div class="full switch-row">
+            <div>
+              <strong>Auto-confirm new bookings</strong>
+              <span>New bookings are confirmed immediately instead of remaining pending.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.autoConfirmBookings">
+              <span></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card full-width">
+        <div class="card-head">
+          <span class="section-icon"><i class="bi bi-clock-history"></i></span>
+          <div>
+            <h3>Business Hours</h3>
+            <p>Set when the salon is open. Disabled days are treated as closed.</p>
+          </div>
+        </div>
+
+        <div class="hours-table">
+          <div class="hours-row hours-head">
+            <span>Day</span>
+            <span>Status</span>
+            <span>Opening</span>
+            <span>Closing</span>
+          </div>
+
+          <div class="hours-row" *ngFor="let day of settings.businessHours">
+            <strong>{{ day.label }}</strong>
+
+            <label class="open-toggle">
+              <input type="checkbox" [(ngModel)]="day.enabled">
+              <span>{{ day.enabled ? 'Open' : 'Closed' }}</span>
+            </label>
+
+            <input type="time" [(ngModel)]="day.open" [disabled]="!day.enabled">
+            <input type="time" [(ngModel)]="day.close" [disabled]="!day.enabled">
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card full-width">
+        <div class="card-head">
+          <span class="section-icon"><i class="bi bi-bell"></i></span>
+          <div>
+            <h3>Notifications</h3>
+            <p>Choose which customer and owner alerts should be enabled when messaging integrations are connected.</p>
+          </div>
+        </div>
+
+        <div class="integration-note">
+          <i class="bi bi-info-circle"></i>
+          <span>WhatsApp and SMS sending are not connected yet. These settings are stored now and will be used when the messaging backend is integrated.</span>
+        </div>
+
+        <div class="notification-grid">
+          <div class="switch-row">
+            <div>
+              <strong>WhatsApp booking confirmation</strong>
+              <span>Send confirmation after a booking is successfully created.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.sendWhatsappConfirmation">
+              <span></span>
+            </label>
+          </div>
+
+          <div class="switch-row">
+            <div>
+              <strong>SMS fallback</strong>
+              <span>Use SMS if WhatsApp delivery is unavailable.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.sendSmsFallback">
+              <span></span>
+            </label>
+          </div>
+
+          <div class="switch-row">
+            <div>
+              <strong>Appointment reminder</strong>
+              <span>Remind customers before their scheduled appointment.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.sendAppointmentReminder">
+              <span></span>
+            </label>
+          </div>
+
+          <div class="switch-row">
+            <div>
+              <strong>Owner new-booking alert</strong>
+              <span>Notify the salon owner whenever a new booking arrives.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.notifyOwnerOnNewBooking">
+              <span></span>
+            </label>
+          </div>
+
+          <label class="reminder-field" *ngIf="settings.sendAppointmentReminder">
+            <span>Reminder Time</span>
+            <div class="suffix-field">
+              <input type="number" min="1" [(ngModel)]="settings.reminderHoursBefore">
+              <b>hours before</b>
+            </div>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <div class="mobile-save d-md-none">
+      <button type="button" class="save-settings-btn w-100" (click)="saveSettings()">
+        <i class="bi bi-check2-circle"></i>
+        Save Settings
+      </button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="resetConfirmOpen" (click)="closeReset()"></div>
+  <section class="reset-dialog" *ngIf="resetConfirmOpen">
+    <span class="warning-icon"><i class="bi bi-arrow-counterclockwise"></i></span>
+    <h3>Reset all settings?</h3>
+    <p>This will restore the default Royal Barbers admin configuration.</p>
+
+    <div class="d-flex gap-2">
+      <button type="button" class="cancel-btn flex-fill" (click)="closeReset()">Cancel</button>
+      <button type="button" class="confirm-reset-btn flex-fill" (click)="confirmReset()">Reset Settings</button>
+    </div>
+  </section>
+</app-admin-shell>
