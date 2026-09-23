@@ -33,6 +33,26 @@ export class AdminShellComponent {
     public readonly settingsService: AdminSettingsService
   ) {}
 
+  get businessName(): string {
+    return this.settingsService.current.businessName || 'Royal Barbers';
+  }
+
+  get businessCity(): string {
+    return this.settingsService.current.city || 'Salon';
+  }
+
+  get businessInitials(): string {
+    const words = this.businessName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (!words.length) return 'RB';
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+
   get currentPath(): string {
     return this.router.url.split('?')[0];
   }
