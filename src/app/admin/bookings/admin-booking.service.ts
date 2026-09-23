@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { AdminBarberService } from '../barbers/admin-barber.service';
 import { AdminServiceService } from '../services/admin-service.service';
+import { AdminSettingsService } from '../settings/admin-settings.service';
 
 export type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
 
@@ -30,7 +31,8 @@ export interface BookingMutationResult {
 export class AdminBookingService {
   constructor(
     private readonly barberService: AdminBarberService,
-    private readonly serviceService: AdminServiceService
+    private readonly serviceService: AdminServiceService,
+    private readonly settingsService: AdminSettingsService
   ) {}
 
   get barbers(): string[] {
@@ -102,6 +104,14 @@ export class AdminBookingService {
   }
 
   addBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
+    const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration);
+    if (!scheduleValidation.success) return scheduleValidation;
+
+    const barberId = this.barberIdByName(input.barber);
+    if (!barberId || !this.barberService.isAvailableOnDate(barberId, input.date)) {
+      return { success: false, message: input.barber + ' is not available on this date.' };
+    }
+
     if (this.hasConflict(input.barber, input.date, input.time, input.duration)) {
       return { success: false, message: input.barber + ' already has an overlapping appointment at this time.' };
     }
@@ -118,6 +128,28 @@ export class AdminBookingService {
       ...this.bookings
     ];
     return { success: true, message: 'Booking created successfully.' };
+  }
+
+  private validateSchedule(dateKey: string, time: string, duration: number): BookingMutationResult {
+    const date = new Date(dateKey + 'T12:00:00');
+    const hours = this.settingsService.hoursForDate(date);
+
+    if (!hours) {
+      return { success: false, message: 'The salon is closed on the selected date.' };
+    }
+
+    const start = this.timeToMinutes(time);
+    const end = start + duration;
+
+    if (start < hours.start || end > hours.end) {
+      return { success: false, message: 'This appointment falls outside the configured business hours.' };
+    }
+
+    return { success: true, message: '' };
+  }
+
+  private barberIdByName(name: string): number {
+    return this.barberService.active.find(barber => barber.name === name)?.id || 0;
   }
 
   private hasConflict(barber: string, date: string, time: string, duration: number, ignoreId?: number): boolean {
