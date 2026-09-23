@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { AdminBarberService } from '../barbers/admin-barber.service';
+import { AdminServiceService } from '../services/admin-service.service';
 
 export type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
 
@@ -27,21 +28,22 @@ export interface BookingMutationResult {
 
 @Injectable({ providedIn: 'root' })
 export class AdminBookingService {
-  constructor(private readonly barberService: AdminBarberService) {}
+  constructor(
+    private readonly barberService: AdminBarberService,
+    private readonly serviceService: AdminServiceService
+  ) {}
 
   get barbers(): string[] {
     return this.barberService.active.map(barber => barber.name);
   }
 
-  readonly services = [
-    { name: 'Haircut', duration: 30, amount: 700 },
-    { name: 'Beard Trim', duration: 20, amount: 400 },
-    { name: 'Hair + Beard + Free Hair Massage', duration: 45, amount: 1000 },
-    { name: 'Kids Haircut', duration: 30, amount: 600 },
-    { name: 'Hair Wash', duration: 15, amount: 300 },
-    { name: 'Hair Coloring', duration: 60, amount: 2000 },
-    { name: '6 Step Face Massage', duration: 60, amount: 5000 }
-  ];
+  get services() {
+    return this.serviceService.active.map(service => ({
+      name: service.name,
+      duration: service.duration,
+      amount: this.serviceService.effectivePrice(service)
+    }));
+  }
 
   private bookings: AdminBooking[] = [
     this.createSeed(1, 'RB-2601', 'Hamza Ali', '+92 300 1234567', 'Haircut', 30, 'Ahmed', 0, '09:00 AM', 700, 'Confirmed', 'Online'),
