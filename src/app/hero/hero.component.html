@@ -5,7 +5,7 @@
   <div class="hero-shell">
     <header class="site-header navbar navbar-expand-xl navbar-dark p-0">
       <div class="container-fluid p-0">
-        <a class="brand navbar-brand d-inline-flex align-items-center m-0" href="#home" aria-label="Royal Barbers home">
+        <a class="brand navbar-brand d-inline-flex align-items-center m-0" href="#home" [attr.aria-label]="businessName + ' home'">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 64 72" role="img">
               <path d="M15 17 22 8l10 9L42 8l7 9-4 9H19l-4-9Z" fill="currentColor"/>
@@ -16,7 +16,7 @@
             </svg>
           </span>
           <span class="brand-copy">
-            <strong>ROYAL BARBERS</strong>
+            <strong>{{ businessNameUpper }}</strong>
             <small>LOOK GOOD · FEEL GREAT</small>
           </span>
         </a>
@@ -45,11 +45,11 @@
     <div class="hero-content d-flex align-items-start">
       <div class="hero-copy">
         <span class="eyebrow">PREMIUM BARBERSHOP</span>
-        <h1>ROYAL BARBERS</h1>
+        <h1>{{ businessNameUpper }}</h1>
 
         <div class="location-row d-flex align-items-center">
           <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
-          <span>Bahawalpur, Pakistan</span>
+          <span>{{ locationLabel }}</span>
         </div>
 
         <p class="tagline">More Than a Haircut. It's a Lifestyle.</p>
@@ -57,17 +57,17 @@
         <div class="hero-features row g-0 d-flex align-items-stretch flex-wrap">
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon star-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-star-fill"></i></span>
-            <div><strong>4.9</strong><small>(120+ reviews)</small></div>
+            <div><strong>{{ averageRatingLabel }}</strong><small>barber rating</small></div>
           </div>
 
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-clock"></i></span>
-            <div><strong>Open until</strong><small>09:00 PM</small></div>
+            <div><strong>Open until</strong><small>{{ todayClosingLabel }}</small></div>
           </div>
 
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
-            <div><strong>Professional</strong><small>Barbers</small></div>
+            <div><strong>Professional</strong><small>{{ activeBarberCount }} barbers</small></div>
           </div>
 
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
