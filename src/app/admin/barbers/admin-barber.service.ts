@@ -27,6 +27,7 @@ export interface BarberMutationResult {
 @Injectable({ providedIn: 'root' })
 export class AdminBarberService {
   private readonly storageKey = 'royal-barbers.admin-barbers.v1';
+  private readonly demoCleanupKey = 'royal-barbers.admin-barbers.demo-cleaned.v1';
   private barbers: AdminBarber[] = this.loadBarbers();
 
   get all(): AdminBarber[] {
@@ -268,11 +269,15 @@ export class AdminBarberService {
 
     try {
       const saved = window.localStorage.getItem(this.storageKey);
-      if (!saved) return [];
+      if (!saved) {
+        window.localStorage.setItem(this.demoCleanupKey, '1');
+        return [];
+      }
 
       const parsed = JSON.parse(saved) as AdminBarber[];
       if (!Array.isArray(parsed)) return [];
 
+      const needsCleanup = window.localStorage.getItem(this.demoCleanupKey) !== '1';
       const demoPhones = new Set([
         '+923001122334',
         '+923214455667',
@@ -280,7 +285,10 @@ export class AdminBarberService {
       ]);
 
       const cleaned = parsed
-        .filter(item => !demoPhones.has(String(item.phone || '').replace(/\s/g, '')))
+        .filter(item =>
+          !needsCleanup
+          || !demoPhones.has(String(item.phone || '').replace(/\s/g, ''))
+        )
         .map(item => ({
           ...item,
           image: item.image || 'assets/images/barber-placeholder.svg',
@@ -289,8 +297,9 @@ export class AdminBarberService {
           specialties: Array.isArray(item.specialties) ? item.specialties : []
         }));
 
-      if (cleaned.length !== parsed.length) {
+      if (needsCleanup) {
         window.localStorage.setItem(this.storageKey, JSON.stringify(cleaned));
+        window.localStorage.setItem(this.demoCleanupKey, '1');
       }
 
       return cleaned;
