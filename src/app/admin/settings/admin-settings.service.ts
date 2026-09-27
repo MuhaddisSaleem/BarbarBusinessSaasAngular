@@ -50,12 +50,12 @@ const DEFAULT_HOURS: BusinessHoursDay[] = [
 ];
 
 const DEFAULT_SETTINGS: AdminSettings = {
-  businessName: 'Royal Barbers',
-  businessPhone: '+92 300 1234567',
-  whatsappNumber: '+92 300 1234567',
+  businessName: '',
+  businessPhone: '',
+  whatsappNumber: '',
   email: '',
   address: '',
-  city: 'Bahawalpur',
+  city: '',
   currency: 'PKR',
   timezone: 'Asia/Karachi',
 
