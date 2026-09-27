@@ -142,9 +142,9 @@ export class AdminBarbersComponent {
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
       experience: this.newBarber.experience || 'New',
       specialties: this.newBarber.specialties,
-      workingHours: this.newBarber.workingHours || '8:00 AM – 9:00 PM',
+      workingHours: this.newBarber.workingHours.trim(),
       image: this.newBarber.image || 'assets/images/barber-placeholder.svg',
-      rating: 5,
+      rating: 0,
       availability: 'Available Today',
       accountStatus: 'Active',
       note: ''
@@ -436,7 +436,7 @@ export class AdminBarbersComponent {
       phone: '',
       experience: '',
       specialties: [] as string[],
-      workingHours: '8:00 AM – 9:00 PM',
+      workingHours: '',
       image: ''
     };
   }
