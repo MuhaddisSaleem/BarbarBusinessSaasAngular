@@ -22,8 +22,13 @@ export class AdminShellComponent {
 
   get currentUser(): { name: string; role: string; initials: string } {
     const stored = this.readStoredAdminUser();
-    const name = String(stored?.name || stored?.fullName || stored?.displayName || 'Administrator').trim();
-    const role = String(stored?.role || 'Administrator').trim();
+    const name = String(
+      stored?.['name']
+      || stored?.['fullName']
+      || stored?.['displayName']
+      || 'Administrator'
+    ).trim();
+    const role = String(stored?.['role'] || 'Administrator').trim();
 
     return {
       name,
