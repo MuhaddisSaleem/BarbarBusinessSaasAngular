@@ -275,13 +275,13 @@ export class AdminBookingService {
         'RB-2607','RB-2608','RB-2609','RB-2610','RB-2611','RB-2612'
       ]);
 
-      const cleaned = parsed
+      const cleaned: AdminBooking[] = parsed
         .filter(item =>
           item
           && Number.isFinite(Number(item.id))
           && (!needsCleanup || !demoCodes.has(String(item.code || '')))
         )
-        .map(item => ({
+        .map((item): AdminBooking => ({
           ...item,
           id: Number(item.id),
           duration: Number(item.duration) || 0,
