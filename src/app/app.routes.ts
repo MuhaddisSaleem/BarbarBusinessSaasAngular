@@ -5,61 +5,61 @@ export const routes: Routes = [
   {
     path: '',
     component: CustomerBookingComponent,
-    title: 'Royal Barbers | Book Appointment'
+    title: 'Book Appointment'
   },
   {
     path: 'admin',
     loadComponent: () =>
       import('./admin/admin-dashboard.component').then(m => m.AdminDashboardComponent),
-    title: 'Royal Barbers | Admin Dashboard'
+    title: 'Admin Dashboard'
   },
   {
     path: 'admin/bookings',
     loadComponent: () =>
       import('./admin/bookings/admin-bookings.component').then(m => m.AdminBookingsComponent),
-    title: 'Royal Barbers | Bookings'
+    title: 'Bookings'
   },
   {
     path: 'admin/calendar',
     loadComponent: () =>
       import('./admin/calendar/admin-calendar.component').then(m => m.AdminCalendarComponent),
-    title: 'Royal Barbers | Schedule'
+    title: 'Schedule'
   },
   {
     path: 'admin/barbers',
     loadComponent: () =>
       import('./admin/barbers/admin-barbers.component').then(m => m.AdminBarbersComponent),
-    title: 'Royal Barbers | Barbers'
+    title: 'Barbers'
   },
   {
     path: 'admin/services',
     loadComponent: () =>
       import('./admin/services/admin-services.component').then(m => m.AdminServicesComponent),
-    title: 'Royal Barbers | Services'
+    title: 'Services'
   },
   {
     path: 'admin/customers',
     loadComponent: () =>
       import('./admin/customers/admin-customers.component').then(m => m.AdminCustomersComponent),
-    title: 'Royal Barbers | Customers'
+    title: 'Customers'
   },
   {
     path: 'admin/reports',
     loadComponent: () =>
       import('./admin/reports/admin-reports.component').then(m => m.AdminReportsComponent),
-    title: 'Royal Barbers | Revenue & Reports'
+    title: 'Revenue & Reports'
   },
   {
     path: 'admin/settings',
     loadComponent: () =>
       import('./admin/settings/admin-settings.component').then(m => m.AdminSettingsComponent),
-    title: 'Royal Barbers | Settings'
+    title: 'Settings'
   },
   {
     path: 'admin/notifications',
     loadComponent: () =>
       import('./admin/notifications/admin-notifications.component').then(m => m.AdminNotificationsComponent),
-    title: 'Royal Barbers | Notifications'
+    title: 'Notifications'
   },
   {
     path: '**',
