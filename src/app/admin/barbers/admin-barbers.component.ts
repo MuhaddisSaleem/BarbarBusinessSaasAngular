@@ -53,19 +53,14 @@ export class AdminBarbersComponent {
     'Vacation'
   ];
 
-  readonly specialtyOptions = [
-    'Haircut',
-    'Beard Trim',
-    'Hair + Beard',
-    'Hair Coloring',
-    'Hair Wash',
-    'Face Massage',
-    'Kids Haircut',
-    'Fade',
-    'Styling'
-  ];
+  get specialtyOptions(): string[] {
+    return this.serviceService.active.map(service => service.name);
+  }
 
-  constructor(public readonly barberService: AdminBarberService) {}
+  constructor(
+    public readonly barberService: AdminBarberService,
+    public readonly serviceService: AdminServiceService
+  ) {}
 
   get filteredBarbers(): AdminBarber[] {
     const term = this.searchTerm.trim().toLowerCase();
