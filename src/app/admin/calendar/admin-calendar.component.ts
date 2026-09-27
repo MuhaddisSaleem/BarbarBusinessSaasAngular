@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus } from '../bookings/admin-booking.service';
+import { AdminSettingsService } from '../settings/admin-settings.service';
 
 type ScheduleView = 'daily' | 'week';
 
@@ -28,14 +29,25 @@ export class AdminCalendarComponent {
   selectedStatus: 'All' | BookingStatus = 'All';
   selectedBooking: AdminBooking | null = null;
 
-  readonly workingStart = 8 * 60;
-  readonly workingEnd = 21 * 60;
-  readonly workingHoursLabel = '8:00 AM – 9:00 PM';
-
   constructor(
     public readonly bookingService: AdminBookingService,
+    public readonly settingsService: AdminSettingsService,
     private readonly router: Router
   ) {}
+
+  get workingStart(): number {
+    return this.settingsService.hoursForDate(this.selectedDate)?.start ?? 0;
+  }
+
+  get workingEnd(): number {
+    return this.settingsService.hoursForDate(this.selectedDate)?.end ?? 0;
+  }
+
+  get workingHoursLabel(): string {
+    const hours = this.settingsService.hoursForDate(this.selectedDate);
+    if (!hours) return 'Closed';
+    return this.minutesToLabel(hours.start) + ' – ' + this.minutesToLabel(hours.end);
+  }
 
   get selectedDate(): Date {
     return this.parseDateKey(this.selectedDateKey);
@@ -200,16 +212,20 @@ export class AdminCalendarComponent {
   }
 
   private findNextAvailable(bookings: AdminBooking[]): string {
-    let candidate = this.workingStart;
+    const hours = this.settingsService.hoursForDate(this.selectedDate);
+    if (!hours) return 'Closed';
+
+    const interval = this.settingsService.bookingInterval;
+    let candidate = hours.start;
 
     if (this.selectedDateKey === this.toDateKey(new Date())) {
       const now = new Date();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      candidate = Math.max(candidate, Math.ceil(nowMinutes / 30) * 30);
+      candidate = Math.max(candidate, Math.ceil(nowMinutes / interval) * interval);
     }
 
-    while (candidate + 30 <= this.workingEnd) {
-      const candidateEnd = candidate + 30;
+    while (candidate + interval <= hours.end) {
+      const candidateEnd = candidate + interval;
       const conflict = bookings.some(booking => {
         const start = this.timeToMinutes(booking.time);
         const end = start + booking.duration;
@@ -217,7 +233,7 @@ export class AdminCalendarComponent {
       });
 
       if (!conflict) return this.minutesToLabel(candidate);
-      candidate += 30;
+      candidate += interval;
     }
 
     return 'Fully booked';
