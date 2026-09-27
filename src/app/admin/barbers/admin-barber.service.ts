@@ -72,7 +72,7 @@ export class AdminBarberService {
         phone: input.phone.trim(),
         experience: this.normalizeExperience(input.experience),
         image: input.image || 'assets/images/barber-placeholder.svg',
-        rating: input.rating || 5,
+        rating: input.rating || 0,
         specialties: input.specialties.filter(Boolean)
       }
     ];
@@ -284,7 +284,7 @@ export class AdminBarberService {
         .map(item => ({
           ...item,
           image: item.image || 'assets/images/barber-placeholder.svg',
-          rating: Number(item.rating || 5),
+          rating: Number(item.rating || 0),
           experience: this.normalizeExperience(item.experience),
           specialties: Array.isArray(item.specialties) ? item.specialties : []
         }));
