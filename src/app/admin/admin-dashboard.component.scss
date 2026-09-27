@@ -1325,3 +1325,57 @@ a {
     max-height: calc(100vh - 190px);
   }
 }
+
+
+/* Dynamic dashboard states */
+.trend.down {
+  background: rgba(255, 105, 105, .1);
+  color: #ff8585;
+}
+
+.status-pill.cancelled {
+  background: rgba(255, 105, 105, .1);
+  color: #ff8585;
+}
+
+.subtle-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.barber-unavailable {
+  color: #ff8585 !important;
+}
+
+.dashboard-empty {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #6f7c82;
+  text-align: center;
+
+  i {
+    font-size: 26px;
+    color: #536067;
+  }
+
+  strong {
+    margin-top: 8px;
+    color: #c7ced1;
+    font-size: 10px;
+  }
+
+  span {
+    margin-top: 4px;
+    font-size: 8px;
+  }
+
+  &.compact {
+    min-height: 110px;
+  }
+}
