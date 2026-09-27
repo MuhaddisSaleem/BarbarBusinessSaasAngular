@@ -8,6 +8,7 @@ import {
   BarberAccountStatus,
   BarberAvailability
 } from './admin-barber.service';
+import { AdminServiceService } from '../services/admin-service.service';
 
 @Component({
   selector: 'app-admin-barbers',
