@@ -179,11 +179,6 @@ export class BookingComponent implements OnInit {
 
     if (this.isServiceSelected(service.id)) {
       person.selectedServices = person.selectedServices.filter(item => item.id !== service.id);
-    } else if (service.id === 3) {
-      person.selectedServices = person.selectedServices.filter(item => item.id !== 1 && item.id !== 2);
-      person.selectedServices.push(service);
-    } else if ((service.id === 1 || service.id === 2) && this.isServiceSelected(3)) {
-      return;
     } else {
       person.selectedServices.push(service);
     }
@@ -196,8 +191,8 @@ export class BookingComponent implements OnInit {
     return this.activeParticipant.selectedServices.some(service => service.id === serviceId);
   }
 
-  isServiceDisabled(service: Service): boolean {
-    return this.isServiceSelected(3) && (service.id === 1 || service.id === 2);
+  isServiceDisabled(_service: Service): boolean {
+    return false;
   }
 
   selectBarber(barber: Barber | 'any'): void {
