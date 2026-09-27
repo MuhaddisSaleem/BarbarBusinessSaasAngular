@@ -20,6 +20,7 @@ export interface ServiceMutationResult {
 @Injectable({ providedIn: 'root' })
 export class AdminServiceService {
   private readonly storageKey = 'royal-barbers.admin-services.v1';
+  private readonly demoCleanupKey = 'royal-barbers.admin-services.demo-cleaned.v1';
   private services: AdminService[] = this.loadServices();
 
   get all(): AdminService[] {
@@ -176,11 +177,15 @@ export class AdminServiceService {
 
     try {
       const saved = window.localStorage.getItem(this.storageKey);
-      if (!saved) return [];
+      if (!saved) {
+        window.localStorage.setItem(this.demoCleanupKey, '1');
+        return [];
+      }
 
       const parsed = JSON.parse(saved) as AdminService[];
       if (!Array.isArray(parsed)) return [];
 
+      const needsCleanup = window.localStorage.getItem(this.demoCleanupKey) !== '1';
       const demoServices = new Set([
         '1|Haircut',
         '2|Beard Trim',
@@ -192,7 +197,10 @@ export class AdminServiceService {
       ]);
 
       const cleaned = parsed
-        .filter(item => !demoServices.has(String(item.id) + '|' + String(item.name || '')))
+        .filter(item =>
+          !needsCleanup
+          || !demoServices.has(String(item.id) + '|' + String(item.name || ''))
+        )
         .map(item => ({
           ...item,
           duration: Number(item.duration),
@@ -202,8 +210,9 @@ export class AdminServiceService {
           status: item.status || 'Active'
         }));
 
-      if (cleaned.length !== parsed.length) {
+      if (needsCleanup) {
         window.localStorage.setItem(this.storageKey, JSON.stringify(cleaned));
+        window.localStorage.setItem(this.demoCleanupKey, '1');
       }
 
       return cleaned;
