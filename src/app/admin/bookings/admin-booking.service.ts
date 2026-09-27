@@ -48,6 +48,7 @@ export class AdminBookingService {
   }
 
   private readonly storageKey = 'royal-barbers.admin-bookings.v1';
+  private readonly demoCleanupKey = 'royal-barbers.admin-bookings.demo-cleaned.v1';
   private bookings: AdminBooking[] = this.loadBookings();
 
   get all(): AdminBooking[] {
@@ -260,11 +261,15 @@ export class AdminBookingService {
 
     try {
       const raw = window.localStorage.getItem(this.storageKey);
-      if (!raw) return [];
+      if (!raw) {
+        window.localStorage.setItem(this.demoCleanupKey, '1');
+        return [];
+      }
 
       const parsed = JSON.parse(raw) as AdminBooking[];
       if (!Array.isArray(parsed)) return [];
 
+      const needsCleanup = window.localStorage.getItem(this.demoCleanupKey) !== '1';
       const demoCodes = new Set([
         'RB-2601','RB-2602','RB-2603','RB-2604','RB-2605','RB-2606',
         'RB-2607','RB-2608','RB-2609','RB-2610','RB-2611','RB-2612'
@@ -274,7 +279,7 @@ export class AdminBookingService {
         .filter(item =>
           item
           && Number.isFinite(Number(item.id))
-          && !demoCodes.has(String(item.code || ''))
+          && (!needsCleanup || !demoCodes.has(String(item.code || '')))
         )
         .map(item => ({
           ...item,
@@ -287,8 +292,9 @@ export class AdminBookingService {
           notes: item.notes || ''
         }));
 
-      if (cleaned.length !== parsed.length) {
+      if (needsCleanup) {
         window.localStorage.setItem(this.storageKey, JSON.stringify(cleaned));
+        window.localStorage.setItem(this.demoCleanupKey, '1');
       }
 
       return cleaned;
