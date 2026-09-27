@@ -38,7 +38,7 @@
         <div class="card-body form-grid">
           <label class="full">
             <span>Business Name *</span>
-            <input type="text" [(ngModel)]="settings.businessName" placeholder="Royal Barbers">
+            <input type="text" [(ngModel)]="settings.businessName" placeholder="Enter business name">
           </label>
 
           <label>
@@ -66,12 +66,12 @@
 
           <label>
             <span>Email</span>
-            <input type="email" [(ngModel)]="settings.email" placeholder="owner@royalbarbers.com">
+            <input type="email" [(ngModel)]="settings.email" placeholder="owner@example.com">
           </label>
 
           <label>
             <span>City</span>
-            <input type="text" [(ngModel)]="settings.city" placeholder="Bahawalpur">
+            <input type="text" [(ngModel)]="settings.city" placeholder="Enter city">
           </label>
 
           <label class="full">
@@ -280,7 +280,7 @@
   <section class="reset-dialog" *ngIf="resetConfirmOpen">
     <span class="warning-icon"><i class="bi bi-arrow-counterclockwise"></i></span>
     <h3>Reset all settings?</h3>
-    <p>This will restore the default Royal Barbers admin configuration.</p>
+    <p>This will restore the default admin configuration.</p>
 
     <div class="d-flex gap-2">
       <button type="button" class="cancel-btn flex-fill" (click)="closeReset()">Cancel</button>
