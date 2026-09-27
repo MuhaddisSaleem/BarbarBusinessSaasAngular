@@ -152,7 +152,7 @@ export class AdminBookingService {
       return {
         ...input,
         id,
-        code: 'RB-' + String(2600 + id),
+        code: this.bookingCode(id),
         status: 'Confirmed',
         source: 'Online'
       };
@@ -187,13 +187,13 @@ export class AdminBookingService {
       return { success: false, message: input.barber + ' already has an overlapping appointment at this time.' };
     }
 
-    const nextId = Math.max(...this.bookings.map(item => item.id)) + 1;
+    const nextId = Math.max(0, ...this.bookings.map(item => item.id)) + 1;
     const previousBookings = this.bookings;
     this.bookings = [
       {
         ...input,
         id: nextId,
-        code: 'RB-' + String(2600 + nextId),
+        code: this.bookingCode(nextId),
         status: 'Confirmed',
         source: 'Admin'
       },
@@ -256,17 +256,26 @@ export class AdminBookingService {
   }
 
   private loadBookings(): AdminBooking[] {
-    if (typeof window === 'undefined') return this.seedBookings();
+    if (typeof window === 'undefined') return [];
 
     try {
       const raw = window.localStorage.getItem(this.storageKey);
-      if (!raw) return this.seedBookings();
+      if (!raw) return [];
 
       const parsed = JSON.parse(raw) as AdminBooking[];
-      if (!Array.isArray(parsed)) return this.seedBookings();
+      if (!Array.isArray(parsed)) return [];
 
-      return parsed
-        .filter(item => item && Number.isFinite(Number(item.id)))
+      const demoCodes = new Set([
+        'RB-2601','RB-2602','RB-2603','RB-2604','RB-2605','RB-2606',
+        'RB-2607','RB-2608','RB-2609','RB-2610','RB-2611','RB-2612'
+      ]);
+
+      const cleaned = parsed
+        .filter(item =>
+          item
+          && Number.isFinite(Number(item.id))
+          && !demoCodes.has(String(item.code || ''))
+        )
         .map(item => ({
           ...item,
           id: Number(item.id),
@@ -277,8 +286,14 @@ export class AdminBookingService {
           source: item.source === 'Admin' ? 'Admin' : 'Online',
           notes: item.notes || ''
         }));
+
+      if (cleaned.length !== parsed.length) {
+        window.localStorage.setItem(this.storageKey, JSON.stringify(cleaned));
+      }
+
+      return cleaned;
     } catch {
-      return this.seedBookings();
+      return [];
     }
   }
 
@@ -300,43 +315,17 @@ export class AdminBookingService {
       || value === 'Cancelled';
   }
 
-  private seedBookings(): AdminBooking[] {
-    return [
-      this.createSeed(1, 'RB-2601', 'Hamza Ali', '+92 300 1234567', 'Haircut', 30, 'Ahmed', 0, '09:00 AM', 700, 'Confirmed', 'Online'),
-      this.createSeed(2, 'RB-2602', 'Usman Tariq', '+92 321 4567890', 'Hair + Beard + Free Hair Massage', 45, 'Ali', 0, '10:00 AM', 1000, 'Confirmed', 'Online'),
-      this.createSeed(3, 'RB-2603', 'Adeel Khan', '+92 333 9876543', '6 Step Face Massage', 60, 'Usman', 0, '11:30 AM', 5000, 'Pending', 'Online'),
-      this.createSeed(4, 'RB-2604', 'Saad Ahmed', '+92 305 7788990', 'Beard Trim', 20, 'Ahmed', 0, '02:30 PM', 400, 'Confirmed', 'Admin'),
-      this.createSeed(5, 'RB-2605', 'Fahad Raza', '+92 302 4455667', 'Hair Coloring', 60, 'Ali', -1, '03:30 PM', 2000, 'Completed', 'Online'),
-      this.createSeed(6, 'RB-2606', 'Bilal Aslam', '+92 309 1122334', 'Hair Wash', 15, 'Usman', 0, '05:00 PM', 300, 'Cancelled', 'Online'),
-      this.createSeed(7, 'RB-2607', 'Danish Iqbal', '+92 312 9080706', 'Haircut', 30, 'Ahmed', 1, '09:30 AM', 700, 'Confirmed', 'Online'),
-      this.createSeed(8, 'RB-2608', 'Talha Javed', '+92 334 2109876', 'Beard Trim', 20, 'Ali', 1, '11:00 AM', 400, 'Pending', 'Online'),
-      this.createSeed(9, 'RB-2609', 'Hassan Rauf', '+92 301 7772311', 'Kids Haircut', 30, 'Usman', 2, '12:00 PM', 600, 'Confirmed', 'Admin'),
-      this.createSeed(10, 'RB-2610', 'Owais Shah', '+92 315 6622110', 'Hair + Beard + Free Hair Massage', 45, 'Ahmed', 3, '04:00 PM', 1000, 'Confirmed', 'Online', 'Customer requested a low fade.'),
-      this.createSeed(11, 'RB-2611', 'Muneeb Akram', '+92 300 8844211', 'Haircut', 30, 'Ali', -2, '01:00 PM', 700, 'Completed', 'Online'),
-      this.createSeed(12, 'RB-2612', 'Zain Malik', '+92 321 5522440', '6 Step Face Massage', 60, 'Usman', 4, '06:00 PM', 5000, 'Pending', 'Online', '', 2)
-    ];
-  }
+  private bookingCode(id: number): string {
+    const words = this.settingsService.current.businessName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
 
-  private createSeed(
-    id: number, code: string, customerName: string, phone: string, service: string, duration: number,
-    barber: string, dayOffset: number, time: string, amount: number, status: BookingStatus,
-    source: 'Online' | 'Admin', notes = '', groupSize = 1
-  ): AdminBooking {
-    return {
-      id, code, customerName, phone, service, duration, barber,
-      date: this.dateKey(dayOffset), time, amount, status, source, notes, groupSize
-    };
-  }
+    const prefix = words.length > 1
+      ? (words[0][0] + words[words.length - 1][0]).toUpperCase()
+      : (words[0]?.slice(0, 2).toUpperCase() || 'BK');
 
-  private dateKey(offset: number): string {
-    const date = new Date();
-    date.setHours(12, 0, 0, 0);
-    date.setDate(date.getDate() + offset);
-    return [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, '0'),
-      String(date.getDate()).padStart(2, '0')
-    ].join('-');
+    return prefix + '-' + String(2600 + id);
   }
 
   private timeToMinutes(time: string): number {
