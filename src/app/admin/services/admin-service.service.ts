@@ -17,16 +17,6 @@ export interface ServiceMutationResult {
   message: string;
 }
 
-const DEFAULT_SERVICES: AdminService[] = [
-  { id: 1, name: 'Haircut', duration: 30, originalPrice: 700, discountPrice: null, image: 'assets/images/services/haircut.webp', status: 'Active' },
-  { id: 2, name: 'Beard Trim', duration: 20, originalPrice: 400, discountPrice: null, image: 'assets/images/services/beard-trim.webp', status: 'Active' },
-  { id: 3, name: 'Hair + Beard + Free Hair Massage', duration: 45, originalPrice: 1000, discountPrice: null, image: 'assets/images/services/hair-beard-massage.webp', status: 'Active' },
-  { id: 4, name: 'Kids Haircut', duration: 30, originalPrice: 600, discountPrice: null, image: 'assets/images/services/kids-haircut.webp', status: 'Active' },
-  { id: 5, name: 'Hair Wash', duration: 15, originalPrice: 300, discountPrice: null, image: 'assets/images/services/hair-wash.webp', status: 'Active' },
-  { id: 6, name: 'Hair Coloring', duration: 60, originalPrice: 2000, discountPrice: null, image: 'assets/images/services/hair-color.webp', status: 'Active' },
-  { id: 7, name: '6 Step Face Massage', duration: 60, originalPrice: 5000, discountPrice: null, image: 'assets/images/services/face-massage.webp', status: 'Active' }
-];
-
 @Injectable({ providedIn: 'root' })
 export class AdminServiceService {
   private readonly storageKey = 'royal-barbers.admin-services.v1';
@@ -182,27 +172,43 @@ export class AdminServiceService {
   }
 
   private loadServices(): AdminService[] {
-    if (typeof window === 'undefined') {
-      return DEFAULT_SERVICES.map(item => ({ ...item }));
-    }
+    if (typeof window === 'undefined') return [];
 
     try {
       const saved = window.localStorage.getItem(this.storageKey);
-      if (!saved) return DEFAULT_SERVICES.map(item => ({ ...item }));
+      if (!saved) return [];
 
       const parsed = JSON.parse(saved) as AdminService[];
-      if (!Array.isArray(parsed)) return DEFAULT_SERVICES.map(item => ({ ...item }));
+      if (!Array.isArray(parsed)) return [];
 
-      return parsed.map(item => ({
-        ...item,
-        duration: Number(item.duration),
-        originalPrice: Number(item.originalPrice),
-        discountPrice: item.discountPrice === null ? null : Number(item.discountPrice),
-        image: item.image || 'assets/images/service-placeholder.svg',
-        status: item.status || 'Active'
-      }));
+      const demoServices = new Set([
+        '1|Haircut',
+        '2|Beard Trim',
+        '3|Hair + Beard + Free Hair Massage',
+        '4|Kids Haircut',
+        '5|Hair Wash',
+        '6|Hair Coloring',
+        '7|6 Step Face Massage'
+      ]);
+
+      const cleaned = parsed
+        .filter(item => !demoServices.has(String(item.id) + '|' + String(item.name || '')))
+        .map(item => ({
+          ...item,
+          duration: Number(item.duration),
+          originalPrice: Number(item.originalPrice),
+          discountPrice: item.discountPrice === null ? null : Number(item.discountPrice),
+          image: item.image || 'assets/images/service-placeholder.svg',
+          status: item.status || 'Active'
+        }));
+
+      if (cleaned.length !== parsed.length) {
+        window.localStorage.setItem(this.storageKey, JSON.stringify(cleaned));
+      }
+
+      return cleaned;
     } catch {
-      return DEFAULT_SERVICES.map(item => ({ ...item }));
+      return [];
     }
   }
 
