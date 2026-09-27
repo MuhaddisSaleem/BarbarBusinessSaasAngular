@@ -24,45 +24,6 @@ export interface BarberMutationResult {
   message: string;
 }
 
-const DEFAULT_BARBERS: AdminBarber[] = [
-  {
-    id: 1,
-    name: 'Ahmed',
-    phone: '+92 300 1122334',
-    experience: '5+ years',
-    specialties: ['Haircut', 'Beard Trim', 'Fade'],
-    workingHours: '8:00 AM – 9:00 PM',
-    image: 'https://images.pexels.com/photos/4997508/pexels-photo-4997508.jpeg?auto=compress&cs=tinysrgb&w=700',
-    rating: 4.9,
-    availability: 'Available Today',
-    accountStatus: 'Active'
-  },
-  {
-    id: 2,
-    name: 'Ali',
-    phone: '+92 321 4455667',
-    experience: '4+ years',
-    specialties: ['Haircut', 'Hair Coloring', 'Styling'],
-    workingHours: '8:00 AM – 9:00 PM',
-    image: 'https://images.pexels.com/photos/26903605/pexels-photo-26903605.jpeg?auto=compress&cs=tinysrgb&w=700',
-    rating: 4.8,
-    availability: 'Available Today',
-    accountStatus: 'Active'
-  },
-  {
-    id: 3,
-    name: 'Usman',
-    phone: '+92 333 7788990',
-    experience: '3+ years',
-    specialties: ['Hair + Beard', 'Face Massage', 'Hair Wash'],
-    workingHours: '8:00 AM – 9:00 PM',
-    image: 'https://images.pexels.com/photos/18885730/pexels-photo-18885730.jpeg?auto=compress&cs=tinysrgb&w=700',
-    rating: 4.7,
-    availability: 'Available Today',
-    accountStatus: 'Active'
-  }
-];
-
 @Injectable({ providedIn: 'root' })
 export class AdminBarberService {
   private readonly storageKey = 'royal-barbers.admin-barbers.v1';
@@ -168,7 +129,7 @@ export class AdminBarberService {
     barber.phone = changes.phone.trim();
     barber.experience = this.normalizeExperience(changes.experience);
     barber.specialties = changes.specialties.filter(Boolean);
-    barber.workingHours = changes.workingHours.trim() || '8:00 AM – 9:00 PM';
+    barber.workingHours = changes.workingHours.trim();
 
     if (!this.persist()) {
       barber.name = previous.name;
@@ -303,30 +264,38 @@ export class AdminBarberService {
   }
 
   private loadBarbers(): AdminBarber[] {
-    if (typeof window === 'undefined') {
-      return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
-    }
+    if (typeof window === 'undefined') return [];
 
     try {
       const saved = window.localStorage.getItem(this.storageKey);
-      if (!saved) {
-        return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
-      }
+      if (!saved) return [];
 
       const parsed = JSON.parse(saved) as AdminBarber[];
-      if (!Array.isArray(parsed) || !parsed.length) {
-        return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
+      if (!Array.isArray(parsed)) return [];
+
+      const demoPhones = new Set([
+        '+923001122334',
+        '+923214455667',
+        '+923337788990'
+      ]);
+
+      const cleaned = parsed
+        .filter(item => !demoPhones.has(String(item.phone || '').replace(/\s/g, '')))
+        .map(item => ({
+          ...item,
+          image: item.image || 'assets/images/barber-placeholder.svg',
+          rating: Number(item.rating || 5),
+          experience: this.normalizeExperience(item.experience),
+          specialties: Array.isArray(item.specialties) ? item.specialties : []
+        }));
+
+      if (cleaned.length !== parsed.length) {
+        window.localStorage.setItem(this.storageKey, JSON.stringify(cleaned));
       }
 
-      return parsed.map(item => ({
-        ...item,
-        image: item.image || 'assets/images/barber-placeholder.svg',
-        rating: Number(item.rating || 5),
-        experience: this.normalizeExperience(item.experience),
-        specialties: Array.isArray(item.specialties) ? item.specialties : []
-      }));
+      return cleaned;
     } catch {
-      return DEFAULT_BARBERS.map(item => ({ ...item, specialties: [...item.specialties] }));
+      return [];
     }
   }
 
