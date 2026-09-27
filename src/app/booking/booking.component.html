@@ -283,7 +283,7 @@
       <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-calendar2-check"></i></div><div><strong>Easy Online Booking</strong><span>Book in seconds</span></div></div>
       <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-shield-check"></i></div><div><strong>100% Secure</strong><span>Your information is safe</span></div></div>
       <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-clock-history"></i></div><div><strong>Free Cancellation</strong><span>Up to 2 hours before</span></div></div>
-      <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-headset"></i></div><div><strong>Need Help?</strong><span>+92 300 1234567</span></div></div>
+      <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-headset"></i></div><div><strong>Need Help?</strong><span>{{ businessPhone }}</span></div></div>
       <div class="footer-signature col-12 col-lg-auto ms-lg-auto">Stay Sharp <span><i class="bi bi-gem"></i></span></div>
     </div>
   </footer>
@@ -293,7 +293,7 @@
       <div class="success-icon d-flex align-items-center justify-content-center"><i class="bi bi-check-lg"></i></div>
       <span class="success-label">{{ bookingMode === 'group' ? 'GROUP BOOKING CONFIRMED' : 'BOOKING CONFIRMED' }}</span>
       <h2>You're all set!</h2>
-      <p *ngIf="bookingMode === 'single'">Your appointment at Royal Barbers has been successfully booked.</p>
+      <p *ngIf="bookingMode === 'single'">Your appointment at {{ businessName }} has been successfully booked.</p>
       <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel'">All appointments are booked for the same time with separate barbers.</p>
       <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">All appointments are booked with the same barber using the available time slots shown below.</p>
 
