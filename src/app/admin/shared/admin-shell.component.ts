@@ -14,17 +14,23 @@ import { AdminSettingsService } from '../settings/admin-settings.service';
 })
 export class AdminShellComponent {
   @Input() eyebrow = 'ADMIN CENTER';
-  @Input() title = 'Royal Barbers';
+  @Input() title = 'Admin';
 
   sidebarOpen = false;
   profileMenuOpen = false;
   notificationMenuOpen = false;
 
-  readonly currentUser = {
-    name: 'Salon Owner',
-    role: 'Administrator',
-    initials: 'MS'
-  };
+  get currentUser(): { name: string; role: string; initials: string } {
+    const stored = this.readStoredAdminUser();
+    const name = String(stored?.name || stored?.fullName || stored?.displayName || 'Administrator').trim();
+    const role = String(stored?.role || 'Administrator').trim();
+
+    return {
+      name,
+      role,
+      initials: this.initials(name)
+    };
+  }
 
   constructor(
     public readonly router: Router,
@@ -34,7 +40,7 @@ export class AdminShellComponent {
   ) {}
 
   get businessName(): string {
-    return this.settingsService.current.businessName || 'Royal Barbers';
+    return this.settingsService.current.businessName || 'Salon';
   }
 
   get businessCity(): string {
@@ -47,9 +53,36 @@ export class AdminShellComponent {
       .split(/\s+/)
       .filter(Boolean);
 
-    if (!words.length) return 'RB';
+    if (!words.length) return 'S';
     if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
 
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+
+  private readStoredAdminUser(): Record<string, unknown> | null {
+    if (typeof window === 'undefined') return null;
+
+    for (const raw of [
+      window.localStorage.getItem('adminUser'),
+      window.sessionStorage.getItem('adminUser')
+    ]) {
+      if (!raw) continue;
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') return parsed as Record<string, unknown>;
+      } catch {
+        // Ignore malformed legacy user data.
+      }
+    }
+
+    return null;
+  }
+
+  private initials(name: string): string {
+    const words = name.split(/\s+/).filter(Boolean);
+    if (!words.length) return 'A';
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
   }
 
