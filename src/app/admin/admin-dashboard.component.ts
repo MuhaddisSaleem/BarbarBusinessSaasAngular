@@ -65,12 +65,6 @@ export class AdminDashboardComponent {
     'Cancelled'
   ];
 
-  readonly currentUser = {
-    name: 'Salon Owner',
-    role: 'Administrator',
-    initials: 'MS'
-  };
-
   constructor(
     private readonly router: Router,
     public readonly bookingService: AdminBookingService,
@@ -96,7 +90,7 @@ export class AdminDashboardComponent {
   }
 
   get businessName(): string {
-    return this.settingsService.current.businessName || 'Royal Barbers';
+    return this.settingsService.current.businessName || 'Salon';
   }
 
   get stats(): DashboardStat[] {
