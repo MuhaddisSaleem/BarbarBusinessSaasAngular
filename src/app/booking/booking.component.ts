@@ -76,6 +76,14 @@ export class BookingComponent implements OnInit {
     this.buildCalendar();
   }
 
+  get businessName(): string {
+    return this.settingsService.current.businessName || 'Salon';
+  }
+
+  get businessPhone(): string {
+    return this.settingsService.current.businessPhone || 'Not configured';
+  }
+
   get activeParticipant(): BookingPerson { return this.participants[this.activeParticipantIndex]; }
   get selectedServices(): Service[] { return this.activeParticipant.selectedServices; }
   get selectedBarber(): Barber | 'any' | null { return this.activeParticipant.selectedBarber; }
