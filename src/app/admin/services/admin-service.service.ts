@@ -9,6 +9,9 @@ export interface AdminService {
   duration: number;
   originalPrice: number;
   discountPrice: number | null;
+  homeServiceEnabled: boolean;
+  homeOriginalPrice: number | null;
+  homeDiscountPrice: number | null;
   image: string;
   status: ServiceStatus;
 }
@@ -35,7 +38,11 @@ export class AdminServiceService {
   }
 
   get discounted(): AdminService[] {
-    return this.services.filter(item => this.hasDiscount(item));
+    return this.services.filter(item => this.hasDiscount(item) || this.hasHomeDiscount(item));
+  }
+
+  get homeActive(): AdminService[] {
+    return this.active.filter(item => item.homeServiceEnabled && Number(item.homeOriginalPrice) > 0);
   }
 
   getById(id: number): AdminService | undefined {
@@ -44,6 +51,24 @@ export class AdminServiceService {
 
   effectivePrice(service: AdminService): number {
     return this.hasDiscount(service) ? Number(service.discountPrice) : service.originalPrice;
+  }
+
+  effectiveHomePrice(service: AdminService): number {
+    if (!service.homeServiceEnabled || !service.homeOriginalPrice) return 0;
+    return this.hasHomeDiscount(service) ? Number(service.homeDiscountPrice) : Number(service.homeOriginalPrice);
+  }
+
+  hasHomeDiscount(service: AdminService): boolean {
+    return service.homeServiceEnabled
+      && service.homeOriginalPrice !== null
+      && service.homeDiscountPrice !== null
+      && service.homeDiscountPrice > 0
+      && service.homeDiscountPrice < service.homeOriginalPrice;
+  }
+
+  homeDiscountPercent(service: AdminService): number {
+    if (!this.hasHomeDiscount(service) || !service.homeOriginalPrice) return 0;
+    return Math.round(((service.homeOriginalPrice - Number(service.homeDiscountPrice)) / service.homeOriginalPrice) * 100);
   }
 
   hasDiscount(service: AdminService): boolean {
@@ -72,6 +97,9 @@ export class AdminServiceService {
       name: input.name.trim(),
       originalPrice: Number(input.originalPrice),
       discountPrice: input.discountPrice ? Number(input.discountPrice) : null,
+      homeServiceEnabled: input.homeServiceEnabled !== false,
+      homeOriginalPrice: input.homeServiceEnabled ? Number(input.homeOriginalPrice) : null,
+      homeDiscountPrice: input.homeServiceEnabled && input.homeDiscountPrice ? Number(input.homeDiscountPrice) : null,
       duration: Number(input.duration)
     };
 
@@ -113,6 +141,9 @@ export class AdminServiceService {
     service.duration = Number(changes.duration);
     service.originalPrice = Number(changes.originalPrice);
     service.discountPrice = changes.discountPrice ? Number(changes.discountPrice) : null;
+    service.homeServiceEnabled = changes.homeServiceEnabled !== false;
+    service.homeOriginalPrice = service.homeServiceEnabled ? Number(changes.homeOriginalPrice) : null;
+    service.homeDiscountPrice = service.homeServiceEnabled && changes.homeDiscountPrice ? Number(changes.homeDiscountPrice) : null;
     service.image = changes.image;
     service.status = changes.status;
 
@@ -188,6 +219,8 @@ export class AdminServiceService {
     const duration = Number(input.duration);
     const originalPrice = Number(input.originalPrice);
     const discountPrice = input.discountPrice === null ? null : Number(input.discountPrice);
+    const homeOriginalPrice = input.homeOriginalPrice === null ? null : Number(input.homeOriginalPrice);
+    const homeDiscountPrice = input.homeDiscountPrice === null ? null : Number(input.homeDiscountPrice);
 
     if (!Number.isFinite(duration) || duration <= 0) {
       return { success: false, message: 'Enter a valid service duration.' };
@@ -202,6 +235,19 @@ export class AdminServiceService {
       && (!Number.isFinite(discountPrice) || discountPrice <= 0 || discountPrice >= originalPrice)
     ) {
       return { success: false, message: 'Discount amount must be greater than 0 and lower than the original amount.' };
+    }
+
+    if (input.homeServiceEnabled) {
+      if (!Number.isFinite(homeOriginalPrice) || Number(homeOriginalPrice) <= 0) {
+        return { success: false, message: 'Enter a valid home service amount.' };
+      }
+
+      if (
+        homeDiscountPrice !== null
+        && (!Number.isFinite(homeDiscountPrice) || homeDiscountPrice <= 0 || homeDiscountPrice >= Number(homeOriginalPrice))
+      ) {
+        return { success: false, message: 'Home discount amount must be greater than 0 and lower than the home service amount.' };
+      }
     }
 
     return { success: true, message: '' };
@@ -241,6 +287,13 @@ export class AdminServiceService {
           duration: Number(item.duration),
           originalPrice: Number(item.originalPrice),
           discountPrice: item.discountPrice === null ? null : Number(item.discountPrice),
+          homeServiceEnabled: item.homeServiceEnabled !== false,
+          homeOriginalPrice: item.homeOriginalPrice === undefined || item.homeOriginalPrice === null
+            ? Number(item.originalPrice)
+            : Number(item.homeOriginalPrice),
+          homeDiscountPrice: item.homeDiscountPrice === undefined || item.homeDiscountPrice === null
+            ? null
+            : Number(item.homeDiscountPrice),
           image: item.image || 'assets/images/service-placeholder.svg',
           status: item.status || 'Active'
         }));
