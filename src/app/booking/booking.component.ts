@@ -968,6 +968,7 @@ export class BookingComponent implements OnInit {
 
   private isBarberAvailable(barberId: number, requestedTime: string, date: string, duration: number): boolean {
     if (!this.barberService.isAvailableOnDate(barberId, date)) return false;
+    if (!this.barberService.isWorkingAt(barberId, requestedTime, duration)) return false;
 
     const requestedStart = this.timeToMinutes(requestedTime);
     const requestedEnd = requestedStart + duration;
