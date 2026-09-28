@@ -192,7 +192,13 @@ export class AdminBookingsComponent implements OnInit {
         return item.status === 'Cancelled';
       })
       .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
-      .filter(item => this.selectedService === 'All' || item.service === this.selectedService)
+      .filter(item =>
+        this.selectedService === 'All'
+        || item.service
+          .split(',')
+          .map(service => service.trim())
+          .includes(this.selectedService)
+      )
       .filter(item => !this.selectedDate || item.date === this.selectedDate)
       .filter(item => {
         if (!term) return true;
