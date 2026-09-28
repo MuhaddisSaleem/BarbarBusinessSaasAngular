@@ -276,7 +276,7 @@
       <section class="detail-section" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'">
         <h4>Assigned Barber</h4>
         <div class="edit-row">
-          <select [(ngModel)]="editBarber">
+          <select [(ngModel)]="editBarber" (ngModelChange)="onEditBarberChange()">
             <option value="">Select eligible barber</option>
             <option *ngFor="let barber of editBarbers">{{ barber }}</option>
           </select>
@@ -347,7 +347,7 @@
 
         <label>
           <span>Barber *</span>
-          <select [(ngModel)]="newBooking.barber">
+          <select [(ngModel)]="newBooking.barber" (ngModelChange)="onCreateBarberChange()">
             <option value="">Select eligible barber</option>
             <option *ngFor="let barber of createBarbers">{{ barber }}</option>
           </select>
