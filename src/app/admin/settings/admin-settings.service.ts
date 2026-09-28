@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { NotificationService } from '../notifications/notification.service';
 
 export interface BusinessHoursDay {
   key: string;
@@ -77,6 +78,8 @@ const DEFAULT_SETTINGS: AdminSettings = {
 
 @Injectable({ providedIn: 'root' })
 export class AdminSettingsService {
+  constructor(private readonly notificationService: NotificationService) {}
+
   private readonly storageKey = 'royal-barbers.admin-settings.v1';
   private settings = this.loadSettings();
 
@@ -151,6 +154,7 @@ export class AdminSettingsService {
       }))
     };
 
+    const changed = JSON.stringify(this.settings) !== JSON.stringify(normalized);
     this.settings = normalized;
 
     if (typeof window !== 'undefined') {
@@ -159,6 +163,16 @@ export class AdminSettingsService {
       } catch {
         return { success: false, message: 'Could not save settings in this browser.' };
       }
+    }
+
+    if (changed) {
+      this.notificationService.add({
+        type: 'system',
+        title: 'Settings updated',
+        message: 'Business, booking, hours or notification settings were updated.',
+        icon: 'bi-gear',
+        url: '/admin/settings'
+      });
     }
 
     return { success: true, message: 'Settings saved successfully.' };
@@ -170,6 +184,14 @@ export class AdminSettingsService {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
     }
+
+    this.notificationService.add({
+      type: 'system',
+      title: 'Settings reset',
+      message: 'Admin settings were restored to their default configuration.',
+      icon: 'bi-arrow-counterclockwise',
+      url: '/admin/settings'
+    });
 
     return this.current;
   }
