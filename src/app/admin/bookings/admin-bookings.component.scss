@@ -219,3 +219,20 @@ button,input,select,textarea { font:inherit; }
   .form-grid { grid-template-columns:1fr; }
   .form-grid label.full { grid-column:auto; }
 }
+
+
+.home-booking-label {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-top:4px;
+  color:#67d49a;
+  font-size:7px;
+  font-weight:700;
+}
+
+.booking-notes p {
+  margin:5px 0 0;
+  color:#aab3b7;
+  line-height:1.45;
+}
