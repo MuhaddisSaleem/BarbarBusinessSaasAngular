@@ -7,9 +7,9 @@
 
     <section class="page-heading d-flex flex-wrap align-items-end justify-content-between gap-3">
       <div>
-        <span class="eyebrow">SALON SERVICES</span>
+        <span class="eyebrow">SERVICE CATALOG</span>
         <h2>Services</h2>
-        <p>Add, price, discount, hide or remove services. Changes feed into booking options automatically.</p>
+        <p>Manage salon and home-service pricing, discounts, visibility and service images.</p>
       </div>
 
       <button type="button" class="add-service-btn" (click)="openAddModal()">
@@ -81,7 +81,8 @@
               <th>Duration</th>
               <th>Original Amount</th>
               <th>Discount Amount</th>
-              <th>Customer Pays</th>
+              <th>Salon Pays</th>
+              <th>Home Pays</th>
               <th>Status</th>
               <th class="text-end">Actions</th>
             </tr>
@@ -113,6 +114,18 @@
 
               <td>
                 <strong class="pay-price">Rs. {{ priceAfterDiscount(service) | number }}</strong>
+              </td>
+
+              <td>
+                <ng-container *ngIf="service.homeServiceEnabled; else noHomeService">
+                  <strong class="pay-price">Rs. {{ homePriceAfterDiscount(service) | number }}</strong>
+                  <small class="home-price-discount" *ngIf="serviceService.hasHomeDiscount(service)">
+                    {{ homeDiscountPercent(service) }}% home discount
+                  </small>
+                </ng-container>
+                <ng-template #noHomeService>
+                  <span class="no-discount">Not offered</span>
+                </ng-template>
               </td>
 
               <td>
@@ -165,12 +178,23 @@
               </div>
 
               <div class="mobile-price-row">
+                <span class="price-label">Salon</span>
                 <span *ngIf="serviceService.hasDiscount(service)" class="old-price">
                   Rs. {{ service.originalPrice | number }}
                 </span>
                 <strong>Rs. {{ priceAfterDiscount(service) | number }}</strong>
                 <span class="discount-badge" *ngIf="serviceService.hasDiscount(service)">
                   {{ discountPercent(service) }}% OFF
+                </span>
+              </div>
+              <div class="mobile-price-row home-mobile-price" *ngIf="service.homeServiceEnabled">
+                <span class="price-label">Home</span>
+                <span *ngIf="serviceService.hasHomeDiscount(service)" class="old-price">
+                  Rs. {{ service.homeOriginalPrice | number }}
+                </span>
+                <strong>Rs. {{ homePriceAfterDiscount(service) | number }}</strong>
+                <span class="discount-badge" *ngIf="serviceService.hasHomeDiscount(service)">
+                  {{ homeDiscountPercent(service) }}% OFF
                 </span>
               </div>
             </div>
@@ -288,6 +312,38 @@
         <span>Discount Amount (Rs.) *</span>
         <input type="number" min="1" [(ngModel)]="form.discountPrice" placeholder="e.g. 550">
         <small class="field-note">This must be lower than the original amount.</small>
+      </label>
+
+      <div class="full pricing-divider">
+        <span>HOME SERVICE PRICING</span>
+        <small>Set a separate customer price for providing this service at home.</small>
+      </div>
+
+      <label class="full discount-toggle">
+        <input type="checkbox" [(ngModel)]="form.homeServiceEnabled">
+        <span>
+          <strong>Offer this service at home</strong>
+          <small>When enabled, this service appears in the Home Services section.</small>
+        </span>
+      </label>
+
+      <label *ngIf="form.homeServiceEnabled">
+        <span>Home Service Amount (Rs.) *</span>
+        <input type="number" min="1" [(ngModel)]="form.homeOriginalPrice" placeholder="e.g. 1000">
+      </label>
+
+      <label class="discount-toggle" *ngIf="form.homeServiceEnabled">
+        <input type="checkbox" [(ngModel)]="form.hasHomeDiscount">
+        <span>
+          <strong>Add home-service discount</strong>
+          <small>Optional discount only for home bookings.</small>
+        </span>
+      </label>
+
+      <label class="full" *ngIf="form.homeServiceEnabled && form.hasHomeDiscount">
+        <span>Home Discount Amount (Rs.) *</span>
+        <input type="number" min="1" [(ngModel)]="form.homeDiscountPrice" placeholder="e.g. 850">
+        <small class="field-note">This must be lower than the home service amount.</small>
       </label>
     </div>
   </ng-template>
