@@ -63,6 +63,7 @@ export class BookingComponent implements OnInit {
   phoneTouched = false;
   bookingValidationMessage = '';
   bookingConfirmed = false;
+  bookingSubmittedStatus: 'Confirmed' | 'Pending' = 'Confirmed';
   confirmedAssignments: ConfirmedAssignment[] = [];
 
   constructor(
@@ -82,6 +83,18 @@ export class BookingComponent implements OnInit {
 
   get businessPhone(): string {
     return this.settingsService.current.businessPhone || 'Not configured';
+  }
+
+  get cancellationHours(): number {
+    return this.settingsService.cancellationHours;
+  }
+
+  get lateArrivalMinutes(): number {
+    return this.settingsService.lateArrivalMinutes;
+  }
+
+  get autoConfirmBookings(): boolean {
+    return this.settingsService.current.autoConfirmBookings;
   }
 
   get activeParticipant(): BookingPerson { return this.participants[this.activeParticipantIndex]; }
@@ -191,6 +204,7 @@ export class BookingComponent implements OnInit {
       person.selectedServices.push(service);
     }
 
+    this.ensureCompatibleBarberSelection();
     this.clearSelectedTime();
     this.generateAvailableTimes();
   }
@@ -206,7 +220,13 @@ export class BookingComponent implements OnInit {
   selectBarber(barber: Barber | 'any'): void {
     this.clearValidationMessage();
 
-    if (barber !== 'any' && this.isBarberUnavailable(barber)) {
+    if (barber !== 'any' && this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
+      const unsupportedPerson = this.participants.find(person => !this.barberSupportsPerson(barber, person));
+      if (unsupportedPerson) {
+        this.bookingValidationMessage = barber.name + ' does not provide all services selected for ' + unsupportedPerson.label + '.';
+        return;
+      }
+    } else if (barber !== 'any' && this.isBarberUnavailable(barber)) {
       const label = this.getBarberAvailabilityLabel(barber) || 'Not available';
       this.bookingValidationMessage = barber.name + ' is ' + label.toLowerCase() + ' for this date.';
       return;
@@ -249,10 +269,15 @@ export class BookingComponent implements OnInit {
   }
 
   isBarberUnavailable(barber: Barber): boolean {
-    return !this.barberService.isAvailableOnDate(barber.id, this.barberStatusDate);
+    return !this.barberService.isAvailableOnDate(barber.id, this.barberStatusDate)
+      || !this.barberSupportsPerson(barber, this.activeParticipant);
   }
 
   getBarberAvailabilityLabel(barber: Barber): string {
+    if (!this.barberSupportsPerson(barber, this.activeParticipant)) {
+      return 'Service not offered';
+    }
+
     return this.barberService.availabilityLabelForDate(barber.id, this.barberStatusDate);
   }
 
@@ -425,6 +450,7 @@ export class BookingComponent implements OnInit {
       return;
     }
 
+    this.bookingSubmittedStatus = this.autoConfirmBookings ? 'Confirmed' : 'Pending';
     this.confirmedAssignments = [];
 
     this.participants.forEach((person, index) => {
@@ -457,6 +483,21 @@ export class BookingComponent implements OnInit {
       this.activeParticipantIndex = missingBarberIndex;
       const person = this.participants[missingBarberIndex];
       return this.showValidationError(`Please choose a barber for ${person.label}.`, 'barber-section');
+    }
+
+    const incompatibleBarberIndex = this.participants.findIndex(person =>
+      person.selectedBarber
+      && person.selectedBarber !== 'any'
+      && !this.barberSupportsPerson(person.selectedBarber, person)
+    );
+
+    if (incompatibleBarberIndex !== -1) {
+      this.activeParticipantIndex = incompatibleBarberIndex;
+      const person = this.participants[incompatibleBarberIndex];
+      return this.showValidationError(
+        'The selected barber does not provide all services for ' + person.label + '. Please choose another barber.',
+        'barber-section'
+      );
     }
 
     if (!this.selectedDate) {
@@ -595,6 +636,7 @@ export class BookingComponent implements OnInit {
     this.customer = { name: '', phone: '', notes: '' };
     this.phoneTouched = false;
     this.bookingValidationMessage = '';
+    this.bookingSubmittedStatus = 'Confirmed';
     this.confirmedAssignments = [];
     this.availableTimes = [];
     this.buildCalendar();
@@ -607,6 +649,28 @@ export class BookingComponent implements OnInit {
 
   private createPerson(id: number, label: string): BookingPerson {
     return { id, label, selectedServices: [], selectedBarber: null };
+  }
+
+  private barberSupportsPerson(barber: Barber, person: BookingPerson): boolean {
+    return this.barberService.supportsServices(
+      barber.id,
+      person.selectedServices.map(service => service.name)
+    );
+  }
+
+  private ensureCompatibleBarberSelection(): void {
+    if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
+      const selected = this.participants[0]?.selectedBarber;
+      if (selected && selected !== 'any' && this.participants.some(person => !this.barberSupportsPerson(selected, person))) {
+        this.participants.forEach(person => person.selectedBarber = null);
+      }
+      return;
+    }
+
+    const person = this.activeParticipant;
+    if (person.selectedBarber && person.selectedBarber !== 'any' && !this.barberSupportsPerson(person.selectedBarber, person)) {
+      person.selectedBarber = null;
+    }
   }
 
   private get businessWindows(): { start: number; end: number }[] {
@@ -636,7 +700,8 @@ export class BookingComponent implements OnInit {
 
     const firstChoice = this.participants[0].selectedBarber;
     if (!firstChoice) return null;
-    const candidateBarbers = firstChoice === 'any' ? this.barbers : [firstChoice];
+    const candidateBarbers = (firstChoice === 'any' ? this.barbers : [firstChoice])
+      .filter(barber => this.participants.every(person => this.barberSupportsPerson(barber, person)));
 
     for (const barber of candidateBarbers) {
       const schedule: PersonSchedule[] = [];
@@ -701,6 +766,7 @@ export class BookingComponent implements OnInit {
       if (!selected || selected === 'any') continue;
 
       if (usedBarberIds.has(selected.id)) return null;
+      if (!this.barberSupportsPerson(selected, person)) return null;
       if (!this.isBarberAvailable(selected.id, time, this.selectedDate.fullDate, this.getPersonDuration(person))) return null;
 
       assignments.set(person.id, selected);
@@ -712,6 +778,7 @@ export class BookingComponent implements OnInit {
 
       const availableBarber = this.barbers.find(barber =>
         !usedBarberIds.has(barber.id)
+        && this.barberSupportsPerson(barber, person)
         && this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.getPersonDuration(person))
       );
 
