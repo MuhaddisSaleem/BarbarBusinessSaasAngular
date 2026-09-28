@@ -269,7 +269,7 @@
                 </small>
               </div>
               <div class="form-group"><label>Notes <small>(optional)</small></label><textarea [(ngModel)]="customer.notes" placeholder="Any special requests?"></textarea></div>
-              <button type="button" class="confirm-btn d-flex align-items-center justify-content-center" (click)="confirmBooking()"><span>{{ bookingMode === 'group' ? 'Confirm Group Booking' : 'Confirm Booking' }}</span><b><i class="bi bi-arrow-right"></i></b></button>
+              <button type="button" class="confirm-btn d-flex align-items-center justify-content-center" (click)="confirmBooking()"><span>{{ autoConfirmBookings ? (bookingMode === 'group' ? 'Confirm Group Booking' : 'Confirm Booking') : (bookingMode === 'group' ? 'Request Group Booking' : 'Request Booking') }}</span><b><i class="bi bi-arrow-right"></i></b></button>
               <div class="whatsapp-note d-flex align-items-center justify-content-center"><span class="wa-icon d-flex align-items-center justify-content-center"><i class="bi bi-whatsapp"></i></span>You'll receive a confirmation on WhatsApp</div>
             </div>
           </div>
