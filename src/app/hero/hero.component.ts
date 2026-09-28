@@ -62,9 +62,25 @@ export class HeroComponent {
     return average.toFixed(1);
   }
 
-  get todayClosingLabel(): string {
-    const hours = this.settingsService.hoursForDate(new Date());
-    return hours ? this.minutesToTime(hours.end) : 'Closed today';
+  get businessHoursStatus(): { label: string; value: string } {
+    const now = new Date();
+    const hours = this.settingsService.hoursForDate(now);
+
+    if (!hours) {
+      return { label: 'Status', value: 'Closed today' };
+    }
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    if (nowMinutes < hours.start) {
+      return { label: 'Opens at', value: this.minutesToTime(hours.start) };
+    }
+
+    if (nowMinutes >= hours.end) {
+      return { label: 'Status', value: 'Closed' };
+    }
+
+    return { label: 'Open until', value: this.minutesToTime(hours.end) };
   }
 
   private minutesToTime(totalMinutes: number): string {
