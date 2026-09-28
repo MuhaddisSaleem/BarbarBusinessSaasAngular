@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { NotificationService } from '../notifications/notification.service';
 
 export type BarberAvailability = 'Available Today' | 'Not Available Today' | 'On Leave' | 'Vacation';
 export type BarberAccountStatus = 'Active' | 'Inactive';
@@ -26,6 +27,8 @@ export interface BarberMutationResult {
 
 @Injectable({ providedIn: 'root' })
 export class AdminBarberService {
+  constructor(private readonly notificationService: NotificationService) {}
+
   private readonly storageKey = 'royal-barbers.admin-barbers.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-barbers.demo-cleaned.v1';
   private barbers: AdminBarber[] = this.loadBarbers();
@@ -86,6 +89,15 @@ export class AdminBarberService {
       };
     }
 
+    const added = this.getById(nextId);
+    this.notificationService.add({
+      type: 'system',
+      title: 'Barber added',
+      message: (added?.name || input.name.trim()) + ' was added to the barber team.',
+      icon: 'bi-person-plus',
+      url: '/admin/barbers'
+    });
+
     return { success: true, message: input.name.trim() + ' added successfully.' };
   }
 
@@ -141,6 +153,14 @@ export class AdminBarberService {
       return { success: false, message: 'Could not save the barber changes.' };
     }
 
+    this.notificationService.add({
+      type: 'system',
+      title: 'Barber profile updated',
+      message: barber.name + ' profile details were updated.',
+      icon: 'bi-person-gear',
+      url: '/admin/barbers'
+    });
+
     return { success: true, message: barber.name + ' updated successfully.' };
   }
 
@@ -155,6 +175,14 @@ export class AdminBarberService {
       this.barbers = previous;
       return { success: false, message: 'Could not save the barber change.' };
     }
+
+    this.notificationService.add({
+      type: 'system',
+      title: 'Barber removed',
+      message: barber.name + ' was removed from the barber team.',
+      icon: 'bi-person-dash',
+      url: '/admin/barbers'
+    });
 
     return { success: true, message: barber.name + ' removed from the barber list.' };
   }
@@ -175,6 +203,16 @@ export class AdminBarberService {
     if (!this.persist()) {
       Object.assign(barber, previous);
       return { success: false, message: 'Could not save the barber availability.' };
+    }
+
+    if (previous.availability !== availability) {
+      this.notificationService.add({
+        type: 'system',
+        title: 'Barber availability changed',
+        message: barber.name + ' is now marked "' + availability + '".',
+        icon: availability === 'Available Today' ? 'bi-person-check' : 'bi-person-x',
+        url: '/admin/barbers'
+      });
     }
 
     return { success: true, message: barber.name + ' availability updated.' };
@@ -209,6 +247,14 @@ export class AdminBarberService {
       return { success: false, message: 'Could not save the leave information.' };
     }
 
+    this.notificationService.add({
+      type: 'system',
+      title: availability === 'Vacation' ? 'Barber vacation scheduled' : 'Barber leave scheduled',
+      message: barber.name + ' is ' + availability.toLowerCase() + ' from ' + leaveFrom + ' to ' + leaveTo + '.',
+      icon: 'bi-calendar2-x',
+      url: '/admin/barbers'
+    });
+
     return { success: true, message: barber.name + ' marked ' + availability.toLowerCase() + '.' };
   }
 
@@ -229,6 +275,14 @@ export class AdminBarberService {
       Object.assign(barber, previous);
       return { success: false, message: 'Could not save the barber status.' };
     }
+
+    this.notificationService.add({
+      type: 'system',
+      title: 'Barber account ' + (barber.accountStatus === 'Active' ? 'activated' : 'deactivated'),
+      message: barber.name + ' is now ' + barber.accountStatus.toLowerCase() + '.',
+      icon: barber.accountStatus === 'Active' ? 'bi-person-check' : 'bi-person-slash',
+      url: '/admin/barbers'
+    });
 
     return {
       success: true,
