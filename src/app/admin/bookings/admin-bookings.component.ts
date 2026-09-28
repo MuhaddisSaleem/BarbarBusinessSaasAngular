@@ -87,6 +87,30 @@ export class AdminBookingsComponent implements OnInit {
     return this.slotsForDuration(this.selectedBooking?.duration ?? 30, this.editDate);
   }
 
+  get createBarbers(): string[] {
+    if (!this.newBooking.service) return [];
+    return this.bookingService.availableBarbersForService(this.newBooking.service, this.newBooking.date);
+  }
+
+  get editBarbers(): string[] {
+    if (!this.selectedBooking) return [];
+    return this.bookingService.availableBarbersForService(this.selectedBooking.service, this.editDate);
+  }
+
+  onCreateServiceOrDateChange(): void {
+    if (!this.createBarbers.includes(this.newBooking.barber)) {
+      this.newBooking.barber = '';
+    }
+    this.newBooking.time = '';
+  }
+
+  onEditDateChange(): void {
+    if (!this.editBarbers.includes(this.editBarber)) {
+      this.editBarber = '';
+    }
+    this.editTime = '';
+  }
+
   get bookings(): AdminBooking[] {
     const term = this.searchTerm.trim().toLowerCase();
 
