@@ -21,6 +21,9 @@ export interface AdminBooking {
   source: 'Online' | 'Admin';
   notes?: string;
   groupSize?: number;
+  serviceLocation?: 'Salon' | 'Home';
+  serviceAddress?: string;
+  specialService?: string;
 }
 
 export interface BookingMutationResult {
@@ -107,7 +110,7 @@ export class AdminBookingService {
       return { success: false, message: barber + ' is not available on this booking date.' };
     }
 
-    if (!this.barberService.supportsServices(barberId, this.serviceNames(booking.service))) {
+    if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(booking))) {
       return { success: false, message: barber + ' does not provide all services in this booking.' };
     }
 
@@ -148,7 +151,7 @@ export class AdminBookingService {
       return { success: false, message: booking.barber + ' is not available on the selected date.' };
     }
 
-    if (!this.barberService.supportsServices(barberId, this.serviceNames(booking.service))) {
+    if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(booking))) {
       return { success: false, message: booking.barber + ' no longer provides all services in this booking.' };
     }
 
@@ -224,7 +227,7 @@ export class AdminBookingService {
         return { success: false, message: input.barber + ' is not available on this date.' };
       }
 
-      if (!this.barberService.supportsServices(barberId, this.serviceNames(input.service))) {
+      if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(input))) {
         return { success: false, message: input.barber + ' does not provide all selected services.' };
       }
 
@@ -248,7 +251,9 @@ export class AdminBookingService {
         ...input,
         id,
         code: this.bookingCode(id),
-        status: this.settingsService.current.autoConfirmBookings ? 'Confirmed' : 'Pending',
+        status: input.serviceLocation === 'Home' && !!input.specialService?.trim()
+          ? 'Pending'
+          : (this.settingsService.current.autoConfirmBookings ? 'Confirmed' : 'Pending'),
         source: 'Online'
       };
     });
@@ -268,7 +273,9 @@ export class AdminBookingService {
         title: created.length > 1 ? 'New group booking' : 'New online booking',
         message: created.length > 1
           ? first.customerName + ' booked ' + created.length + ' appointments for ' + first.date + '.'
-          : first.customerName + ' booked ' + first.service + ' with ' + first.barber + ' for ' + first.date + ' at ' + first.time + '.',
+          : first.customerName + ' booked ' + first.service
+            + (first.serviceLocation === 'Home' ? ' as a home service' : '')
+            + ' with ' + first.barber + ' for ' + first.date + ' at ' + first.time + '.',
         icon: 'bi-calendar2-plus',
         url: '/admin/bookings?booking=' + first.id
       });
@@ -291,7 +298,7 @@ export class AdminBookingService {
       return { success: false, message: input.barber + ' is not available on this date.' };
     }
 
-    if (!this.barberService.supportsServices(barberId, this.serviceNames(input.service))) {
+    if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(input))) {
       return { success: false, message: input.barber + ' does not provide this service.' };
     }
 
@@ -409,7 +416,10 @@ export class AdminBookingService {
           groupSize: Number(item.groupSize) || 1,
           status: this.isBookingStatus(item.status) ? item.status : 'Pending',
           source: item.source === 'Admin' ? 'Admin' : 'Online',
-          notes: item.notes || ''
+          notes: item.notes || '',
+          serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
+          serviceAddress: item.serviceAddress || '',
+          specialService: item.specialService || ''
         }));
 
       if (needsCleanup) {
@@ -452,6 +462,20 @@ export class AdminBookingService {
       : (words[0]?.slice(0, 2).toUpperCase() || 'BK');
 
     return prefix + '-' + String(2600 + id);
+  }
+
+  private bookingServiceNames(
+    booking: Pick<AdminBooking, 'service' | 'serviceLocation' | 'specialService'>
+  ): string[] {
+    if (
+      booking.serviceLocation === 'Home'
+      && booking.specialService?.trim()
+      && booking.service === 'Custom Home Service'
+    ) {
+      return [];
+    }
+
+    return this.serviceNames(booking.service);
   }
 
   private serviceNames(service: string): string[] {
