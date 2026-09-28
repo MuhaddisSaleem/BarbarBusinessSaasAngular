@@ -79,12 +79,16 @@ export class AdminCustomersComponent {
   saveNote(): void {
     if (!this.selectedCustomer) return;
 
-    this.customerService.saveNote(this.selectedCustomer.id, this.noteDraft);
-    this.selectedCustomer = this.customerService.getById(this.selectedCustomer.id) || this.selectedCustomer;
-    this.feedbackMessage = 'Customer note saved.';
+    const result = this.customerService.saveNote(this.selectedCustomer.id, this.noteDraft);
+
+    if (result.success) {
+      this.selectedCustomer = this.customerService.getById(this.selectedCustomer.id) || this.selectedCustomer;
+    }
+
+    this.feedbackMessage = result.message;
 
     window.setTimeout(() => {
-      if (this.feedbackMessage === 'Customer note saved.') this.feedbackMessage = '';
+      if (this.feedbackMessage === result.message) this.feedbackMessage = '';
     }, 2500);
   }
 
