@@ -91,9 +91,16 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   get filterServices(): string[] {
+    const historicalServices = this.bookingService.all.flatMap(item =>
+      item.service
+        .split(',')
+        .map(service => service.trim())
+        .filter(Boolean)
+    );
+
     return Array.from(new Set([
       ...this.bookingService.services.map(item => item.name),
-      ...this.bookingService.all.map(item => item.service).filter(Boolean)
+      ...historicalServices
     ])).sort((a, b) => a.localeCompare(b));
   }
 
