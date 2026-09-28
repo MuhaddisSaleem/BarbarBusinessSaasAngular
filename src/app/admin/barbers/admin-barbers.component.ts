@@ -350,7 +350,6 @@ export class AdminBarbersComponent {
     this.editImageValidationMessage = 'Checking the new photo for one clear barber face...';
 
     try {
-      const dataUrl = await this.readFileAsDataUrl(file);
       const faceCheck = await this.detectFaces(file);
 
       if (faceCheck.supported && faceCheck.count === 0) {
