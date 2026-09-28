@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminNotification, NotificationService } from './notification.service';
 
@@ -13,7 +14,10 @@ import { AdminNotification, NotificationService } from './notification.service';
 export class AdminNotificationsComponent {
   activeFilter: 'all' | 'unread' = 'all';
 
-  constructor(public readonly notificationService: NotificationService) {}
+  constructor(
+    public readonly notificationService: NotificationService,
+    private readonly router: Router
+  ) {}
 
   get notifications(): AdminNotification[] {
     return this.activeFilter === 'unread'
@@ -36,6 +40,10 @@ export class AdminNotificationsComponent {
 
   openNotification(notification: AdminNotification): void {
     this.notificationService.markAsRead(notification.id);
+
+    if (notification.url) {
+      void this.router.navigateByUrl(notification.url);
+    }
   }
 
   markAllAsRead(): void {
