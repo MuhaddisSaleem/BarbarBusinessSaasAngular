@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
-import { AdminBooking, AdminBookingService, BOOKING_STATUSES, BookingStatus, normalizePakistanMobile } from './admin-booking.service';
+import { AdminBooking, AdminBookingService, BookingStatus } from './admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 
 type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
@@ -11,7 +11,7 @@ type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
 @Component({
   selector: 'app-admin-bookings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AdminShellComponent],
+  imports: [CommonModule, FormsModule, AdminShellComponent],
   templateUrl: './admin-bookings.component.html',
   styleUrl: './admin-bookings.component.scss'
 })
@@ -21,12 +21,6 @@ export class AdminBookingsComponent implements OnInit {
   selectedBarber = 'All';
   selectedService = 'All';
   selectedDate = '';
-  selectedStatus: 'All' | BookingStatus = 'All';
-  readonly statuses = BOOKING_STATUSES;
-  page = 1;
-  readonly pageSize = 10;
-  walkInMode = false;
-  phoneTouched = false;
 
   selectedBooking: AdminBooking | null = null;
   drawerOpen = false;
@@ -113,7 +107,7 @@ export class AdminBookingsComponent implements OnInit {
   get createTimeSlots(): string[] {
     const service = this.bookingService.services.find(item => item.name === this.newBooking.service);
     const duration = service?.duration ?? 30;
-    const slots = this.slotsForDuration(duration, this.newBooking.date, this.walkInMode);
+    const slots = this.slotsForDuration(duration, this.newBooking.date);
 
     if (!this.newBooking.barber) return slots;
 
@@ -129,8 +123,7 @@ export class AdminBookingsComponent implements OnInit {
 
   get editTimeSlots(): string[] {
     const duration = this.selectedBooking?.duration ?? 30;
-    const slots = this.slotsForDuration(duration, this.editDate,
-      this.selectedBooking?.source === 'Walk-in' && this.editDate === this.todayKey);
+    const slots = this.slotsForDuration(duration, this.editDate);
 
     if (!this.selectedBooking || !this.editBarber) return slots;
 
@@ -200,12 +193,11 @@ export class AdminBookingsComponent implements OnInit {
     return this.bookingService.all
       .filter(item => {
         if (this.activeTab === 'all') return true;
-        if (this.activeTab === 'today') return item.date === this.todayKey;
-        if (this.activeTab === 'upcoming') return item.date > this.todayKey && this.bookingService.isOpen(item);
+        if (this.activeTab === 'today') return item.date === this.todayKey && item.status !== 'Cancelled';
+        if (this.activeTab === 'upcoming') return item.date > this.todayKey && item.status !== 'Completed' && item.status !== 'Cancelled';
         if (this.activeTab === 'completed') return item.status === 'Completed';
         return item.status === 'Cancelled';
       })
-      .filter(item => this.selectedStatus === 'All' || item.status === this.selectedStatus)
       .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
       .filter(item =>
         this.selectedService === 'All'
@@ -224,7 +216,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   get todayCount(): number {
-    return this.bookingService.all.filter(item => item.date === this.todayKey).length;
+    return this.bookingService.all.filter(item => item.date === this.todayKey && item.status !== 'Cancelled').length;
   }
 
   get pendingCount(): number {
@@ -232,7 +224,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   get upcomingCount(): number {
-    return this.bookingService.all.filter(item => item.date > this.todayKey && this.bookingService.isOpen(item)).length;
+    return this.bookingService.all.filter(item => item.date > this.todayKey && item.status !== 'Cancelled' && item.status !== 'Completed').length;
   }
 
   get cancelledCount(): number {
@@ -241,34 +233,13 @@ export class AdminBookingsComponent implements OnInit {
 
   setTab(tab: BookingTab): void {
     this.activeTab = tab;
-    this.page = 1;
-    this.selectedStatus = 'All';
-    this.selectedDate = '';
   }
 
   resetFilters(): void {
-    this.page = 1;
-    this.selectedStatus = 'All';
     this.searchTerm = '';
     this.selectedBarber = 'All';
     this.selectedService = 'All';
     this.selectedDate = '';
-  }
-
-  get pageCount(): number { return Math.max(1, Math.ceil(this.bookings.length / this.pageSize)); }
-  get currentPage(): number { return Math.min(this.page, this.pageCount); }
-  get pagedBookings(): AdminBooking[] {
-    return this.bookings.slice((this.currentPage - 1) * this.pageSize, this.currentPage * this.pageSize);
-  }
-  changePage(delta: number): void { this.page = Math.max(1, Math.min(this.pageCount, this.currentPage + delta)); }
-  get statusActions(): BookingStatus[] {
-    return this.selectedBooking ? this.bookingService.allowedStatuses(this.selectedBooking).filter(status => status !== 'Cancelled') : [];
-  }
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    if (this.cancelDialogOpen) this.cancelDialogOpen = false;
-    else if (this.createModalOpen) this.closeCreateModal();
-    else this.closeDrawer();
   }
 
   openBooking(booking: AdminBooking): void {
@@ -285,7 +256,6 @@ export class AdminBookingsComponent implements OnInit {
 
   closeDrawer(): void {
     this.drawerOpen = false;
-    this.cancelDialogOpen = false;
     this.selectedBooking = null;
     this.feedbackMessage = '';
   }
@@ -296,16 +266,18 @@ export class AdminBookingsComponent implements OnInit {
     this.showFeedback(result.success, result.message);
   }
 
+  saveBarber(): void {
+    if (!this.selectedBooking || !this.editBarber) return;
+    const result = this.bookingService.assignBarber(this.selectedBooking.id, this.editBarber);
+    this.showFeedback(result.success, result.message);
+    if (!result.success) this.editBarber = this.selectedBooking.barber;
+  }
+
   saveSchedule(): void {
     if (!this.selectedBooking) return;
-    if (!this.editBarber || !this.editDate || !this.editTime) {
-      this.showFeedback(false, 'Choose a barber, date and available time.');
-      return;
-    }
-    const result = this.bookingService.reschedule(this.selectedBooking.id, this.editDate, this.editTime, this.editBarber);
+    const result = this.bookingService.reschedule(this.selectedBooking.id, this.editDate, this.editTime);
     this.showFeedback(result.success, result.message);
     if (!result.success) {
-      this.editBarber = this.selectedBooking.barber;
       this.editDate = this.selectedBooking.date;
       this.editTime = this.selectedBooking.time;
     }
@@ -339,10 +311,7 @@ export class AdminBookingsComponent implements OnInit {
     this.showFeedback(result.success, result.message);
   }
 
-  openCreateModal(walkIn = false): void {
-    this.closeDrawer();
-    this.walkInMode = walkIn;
-    this.phoneTouched = false;
+  openCreateModal(): void {
     this.createModalOpen = true;
     this.feedbackMessage = '';
     this.newBooking = {
@@ -350,7 +319,7 @@ export class AdminBookingsComponent implements OnInit {
       phone: '',
       service: '',
       barber: '',
-      date: walkIn ? this.todayKey : this.minDate,
+      date: this.todayKey,
       time: '',
       notes: ''
     };
@@ -362,16 +331,11 @@ export class AdminBookingsComponent implements OnInit {
 
   createBooking(): void {
     const form = this.newBooking;
-    this.phoneTouched = true;
-    const digits = normalizePakistanMobile(form.phone);
+    const digits = form.phone.replace(/\D/g, '');
     const service = this.bookingService.services.find(item => item.name === form.service);
 
-    if (!digits) {
-      this.showFeedback(false, this.phoneError);
-      return;
-    }
-    if (!form.customerName.trim() || !service || !form.barber || !form.date || !form.time) {
-      this.showFeedback(false, 'Complete the customer, service, barber, date and time fields.');
+    if (!form.customerName.trim() || !/^3\d{9}$/.test(digits) || !service || !form.barber || !form.date || !form.time) {
+      this.showFeedback(false, 'Complete all required fields and enter a valid Pakistan mobile number.');
       return;
     }
 
@@ -386,38 +350,17 @@ export class AdminBookingsComponent implements OnInit {
       amount: service.amount,
       notes: form.notes.trim(),
       groupSize: 1
-    }, this.walkInMode);
+    });
 
     this.showFeedback(result.success, result.message);
-    if (result.success) {
-      this.createModalOpen = false;
-      this.resetFilters();
-      this.activeTab = 'all';
-      this.selectedDate = form.date;
-    }
+    if (result.success) this.createModalOpen = false;
   }
 
   onPhoneInput(value: string): void {
-    // Preserve input while typing/pasting; validation must never silently drop digits.
-    this.newBooking.phone = value;
-  }
-
-  get phoneError(): string {
-    if (!this.phoneTouched || normalizePakistanMobile(this.newBooking.phone)) return '';
-    return this.newBooking.phone.trim()
-      ? 'Enter a valid mobile number, e.g. 03001234567 or +923001234567.'
-      : 'Enter the customer’s mobile number.';
-  }
-
-  onPhoneBlur(): void {
-    this.phoneTouched = true;
-    const normalized = normalizePakistanMobile(this.newBooking.phone);
-    if (normalized) this.newBooking.phone = normalized;
+    this.newBooking.phone = value.replace(/\D/g, '').slice(0, 10);
   }
 
   statusIcon(status: BookingStatus): string {
-    if (status === 'In Progress') return 'bi-scissors';
-    if (status === 'No Show') return 'bi-person-x';
     if (status === 'Confirmed') return 'bi-check-circle';
     if (status === 'Pending') return 'bi-clock-history';
     if (status === 'Completed') return 'bi-check2-all';
@@ -440,11 +383,11 @@ export class AdminBookingsComponent implements OnInit {
     ].join('-');
   }
 
-  private slotsForDuration(duration: number, dateKey: string, walkIn = false): string[] {
+  private slotsForDuration(duration: number, dateKey: string): string[] {
     if (!dateKey) return [];
 
     const date = new Date(dateKey + 'T12:00:00');
-    if (walkIn ? dateKey !== this.todayKey : !this.settingsService.isBookingDateAllowed(date)) return [];
+    if (!this.settingsService.isBookingDateAllowed(date)) return [];
 
     const hours = this.settingsService.hoursForDate(date);
     if (!hours) return [];
@@ -456,10 +399,6 @@ export class AdminBookingsComponent implements OnInit {
     const isToday = dateKey === this.todayKey;
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-    // A walk-in may start this minute, even when online same-day bookings are disabled.
-    if (walkIn && nowMinutes >= hours.start && nowMinutes + duration <= hours.end) {
-      slots.push(this.minutesToTime(nowMinutes));
-    }
     for (let minutes = hours.start; minutes + duration <= hours.end; minutes += interval) {
       if (isToday && minutes <= nowMinutes) continue;
       slots.push(this.minutesToTime(minutes));

@@ -5,8 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test:appointments": "node --test tests/appointments.test.cjs"
+    "watch": "ng build --watch --configuration development"
   },
   "private": true,
   "dependencies": {

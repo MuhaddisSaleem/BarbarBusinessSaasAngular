@@ -202,7 +202,7 @@ export class AdminServicesComponent {
 
     return this.bookingService.all.filter(booking =>
       booking.date >= today
-      && this.bookingService.isOpen(booking)
+      && (booking.status === 'Pending' || booking.status === 'Confirmed')
       && booking.service
         .split(',')
         .map(name => name.trim().toLowerCase())

@@ -631,7 +631,7 @@ export class AdminBarbersComponent {
     return this.bookingService.all.filter(booking =>
       booking.barber === barberName
       && booking.date >= this.todayKey
-      && this.bookingService.isOpen(booking)
+      && (booking.status === 'Pending' || booking.status === 'Confirmed')
     );
   }
 

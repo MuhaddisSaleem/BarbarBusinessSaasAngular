@@ -956,10 +956,10 @@ export class BookingComponent implements OnInit {
     if (b.rating !== a.rating) return b.rating - a.rating;
 
     const aLoad = this.bookingService.all.filter(booking =>
-      this.bookingService.blocksSlot(booking) && booking.barber === a.name && booking.date === date
+      booking.status !== 'Cancelled' && booking.barber === a.name && booking.date === date
     ).length;
     const bLoad = this.bookingService.all.filter(booking =>
-      this.bookingService.blocksSlot(booking) && booking.barber === b.name && booking.date === date
+      booking.status !== 'Cancelled' && booking.barber === b.name && booking.date === date
     ).length;
 
     if (aLoad !== bLoad) return aLoad - bLoad;
@@ -986,7 +986,7 @@ export class BookingComponent implements OnInit {
     const barberName = this.barbers.find(barber => barber.id === barberId)?.name;
     const adminBookings = barberName
       ? this.bookingService.all.filter(booking =>
-          this.bookingService.blocksSlot(booking)
+          booking.status !== 'Cancelled'
           && booking.barber === barberName
           && booking.date === date
         )

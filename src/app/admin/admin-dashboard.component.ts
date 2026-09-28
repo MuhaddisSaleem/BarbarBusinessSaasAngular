@@ -62,9 +62,7 @@ export class AdminDashboardComponent {
     'Confirmed',
     'Pending',
     'Completed',
-    'Cancelled',
-    'In Progress',
-    'No Show'
+    'Cancelled'
   ];
 
   constructor(
@@ -96,8 +94,8 @@ export class AdminDashboardComponent {
   }
 
   get stats(): DashboardStat[] {
-    const todayBookings = this.todayBookings;
-    const yesterdayBookings = this.bookingsForDate(this.dateKey(-1));
+    const todayBookings = this.todayBookings.filter(item => item.status !== 'Cancelled');
+    const yesterdayBookings = this.bookingsForDate(this.dateKey(-1)).filter(item => item.status !== 'Cancelled');
     const customers = this.customerService.all;
     const activeBarbers = this.barberService.active;
     const availableBarbers = this.barberService.availableToday.length;
@@ -169,18 +167,18 @@ export class AdminDashboardComponent {
 
   get todayBookedValue(): number {
     return this.todayBookings
-      .filter(item => this.bookingService.blocksSlot(item))
+      .filter(item => item.status !== 'Cancelled')
       .reduce((sum, item) => sum + item.amount, 0);
   }
 
   get todayOpenValue(): number {
     return this.todayBookings
-      .filter(item => this.bookingService.isOpen(item))
+      .filter(item => item.status === 'Confirmed' || item.status === 'Pending')
       .reduce((sum, item) => sum + item.amount, 0);
   }
 
   get averageBookingToday(): number {
-    const activeBookings = this.todayBookings.filter(item => this.bookingService.blocksSlot(item));
+    const activeBookings = this.todayBookings.filter(item => item.status !== 'Cancelled');
     return activeBookings.length
       ? Math.round(this.todayBookedValue / activeBookings.length)
       : 0;
@@ -206,7 +204,7 @@ export class AdminDashboardComponent {
         ? Math.max(0, Math.min(hours.end, barberHours.end) - Math.max(hours.start, barberHours.start))
         : 0;
       const bookings = this.todayBookings.filter(item =>
-        this.bookingService.blocksSlot(item) && item.barber === barber.name
+        item.status !== 'Cancelled' && item.barber === barber.name
       );
       const bookedMinutes = bookings.reduce((sum, item) => sum + item.duration, 0);
 
@@ -237,7 +235,7 @@ export class AdminDashboardComponent {
 
     this.bookingService.all
       .filter(item =>
-        this.bookingService.blocksSlot(item)
+        item.status !== 'Cancelled'
         && item.date >= start
         && item.date <= end
       )

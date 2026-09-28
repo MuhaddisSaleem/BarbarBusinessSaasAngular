@@ -1,9 +1,7 @@
-name: Angular QA
+name: Phase 1 QA
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -21,9 +19,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Appointment regression tests
-        run: npm run test:appointments
 
       - name: Production build
         run: npm run build

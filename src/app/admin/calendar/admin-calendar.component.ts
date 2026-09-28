@@ -66,7 +66,7 @@ export class AdminCalendarComponent {
 
   get dailyBookings(): AdminBooking[] {
     return this.bookingService.all
-      .filter(item => item.date === this.selectedDateKey)
+      .filter(item => item.date === this.selectedDateKey && item.status !== 'Cancelled')
       .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
       .filter(item => this.selectedStatus === 'All' || item.status === this.selectedStatus)
       .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
@@ -74,7 +74,7 @@ export class AdminCalendarComponent {
 
   get allBookingsForSelectedDay(): AdminBooking[] {
     return this.bookingService.all
-      .filter(item => item.date === this.selectedDateKey && this.bookingService.blocksSlot(item))
+      .filter(item => item.date === this.selectedDateKey && item.status !== 'Cancelled')
       .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
   }
 
@@ -169,8 +169,7 @@ export class AdminCalendarComponent {
   bookingsForDate(date: Date): AdminBooking[] {
     const key = this.toDateKey(date);
     return this.bookingService.all
-      .filter(item => item.date === key)
-      .filter(item => this.selectedStatus === 'All' || item.status === this.selectedStatus)
+      .filter(item => item.date === key && item.status !== 'Cancelled')
       .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
       .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
   }
@@ -184,7 +183,7 @@ export class AdminCalendarComponent {
   }
 
   weekValue(date: Date): number {
-    return this.bookingsForDate(date).filter(item => this.bookingService.blocksSlot(item)).reduce((sum, item) => sum + item.amount, 0);
+    return this.bookingsForDate(date).reduce((sum, item) => sum + item.amount, 0);
   }
 
   isToday(date: Date): boolean {
@@ -208,8 +207,6 @@ export class AdminCalendarComponent {
   }
 
   statusIcon(status: BookingStatus): string {
-    if (status === 'In Progress') return 'bi-scissors';
-    if (status === 'No Show') return 'bi-person-x';
     if (status === 'Pending') return 'bi-clock-history';
     if (status === 'Completed') return 'bi-check2-all';
     if (status === 'Cancelled') return 'bi-x-circle';
