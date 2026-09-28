@@ -23,7 +23,7 @@ interface PersonSchedule { personId: number; time: string; barber: Barber; sugge
   styleUrls: ['./booking.component.scss', './group-booking.component.scss']
 })
 export class BookingComponent implements OnInit {
-  get services(): Service[] {
+  get salonServices(): Service[] {
     return this.serviceService.active.map(service => ({
       id: service.id,
       name: service.name,
@@ -33,6 +33,22 @@ export class BookingComponent implements OnInit {
       discountPrice: service.discountPrice,
       image: service.image
     }));
+  }
+
+  get homeServices(): Service[] {
+    return this.serviceService.homeActive.map(service => ({
+      id: service.id,
+      name: service.name,
+      duration: service.duration,
+      price: this.serviceService.effectiveHomePrice(service),
+      originalPrice: Number(service.homeOriginalPrice),
+      discountPrice: service.homeDiscountPrice,
+      image: service.image
+    }));
+  }
+
+  get services(): Service[] {
+    return this.serviceLocation === 'home' ? this.homeServices : this.salonServices;
   }
 
   get barbers(): Barber[] {
@@ -253,6 +269,30 @@ export class BookingComponent implements OnInit {
     this.activeParticipantIndex = index;
   }
 
+  toggleServiceForLocation(service: Service, location: 'salon' | 'home'): void {
+    const locationChanged = this.serviceLocation !== location;
+
+    if (locationChanged) {
+      this.setServiceLocation(location);
+      const person = this.activeParticipant;
+      const existingIndex = person.selectedServices.findIndex(item => item.id === service.id);
+
+      if (existingIndex === -1) {
+        person.selectedServices.push(service);
+      } else {
+        person.selectedServices[existingIndex] = service;
+      }
+
+      this.ensureCompatibleBarberSelection();
+      if (location === 'home') person.selectedBarber = 'any';
+      this.clearSelectedTime();
+      this.generateAvailableTimes();
+      return;
+    }
+
+    this.toggleService(service);
+  }
+
   toggleService(service: Service): void {
     this.clearValidationMessage();
     const person = this.activeParticipant;
@@ -271,6 +311,10 @@ export class BookingComponent implements OnInit {
 
   isServiceSelected(serviceId: number): boolean {
     return this.activeParticipant.selectedServices.some(service => service.id === serviceId);
+  }
+
+  isServiceSelectedForLocation(serviceId: number, location: 'salon' | 'home'): boolean {
+    return this.serviceLocation === location && this.isServiceSelected(serviceId);
   }
 
   isServiceDisabled(_service: Service): boolean {
