@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus } from '../bookings/admin-booking.service';
+import { AdminSettingsService } from '../settings/admin-settings.service';
 
 interface ServiceReportRow {
   name: string;
@@ -43,7 +44,10 @@ export class AdminReportsComponent {
   selectedBarber = 'All';
   selectedStatus: 'All' | BookingStatus = 'All';
 
-  constructor(public readonly bookingService: AdminBookingService) {}
+  constructor(
+    public readonly bookingService: AdminBookingService,
+    private readonly settingsService: AdminSettingsService
+  ) {}
 
   get filteredBookings(): AdminBooking[] {
     return this.bookingService.all
@@ -203,7 +207,12 @@ export class AdminReportsComponent {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'royal-barbers-report-' + this.dateFrom + '-to-' + this.dateTo + '.csv';
+    const businessSlug = (this.settingsService.current.businessName || 'salon')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'salon';
+    anchor.download = businessSlug + '-report-' + this.dateFrom + '-to-' + this.dateTo + '.csv';
     anchor.click();
     URL.revokeObjectURL(url);
   }
