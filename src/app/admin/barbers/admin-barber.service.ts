@@ -579,7 +579,7 @@ export class AdminBarberService {
   private workingWindow(value: string): { start: number; end: number } | null {
     const normalized = String(value || '')
       .replace(/[–—]/g, '-')
-      .replace(/\./g, '')
+      .replace(/\b([ap])\s*\.\s*m\.?/gi, '$1m')
       .replace(/\s+to\s+/i, ' - ')
       .trim();
 

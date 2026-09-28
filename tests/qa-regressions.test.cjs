@@ -10,7 +10,7 @@ for (const hours of ['9:00 AM - 9:00 PM','9 AM - 9 PM','09:00 - 21:00','9am to 9
     equal(f.customer.availableTimes,f.admin.createTimeSlots);
   });
 }
-for (const hours of ['nonsense','25:00 - 26:00','9:75 AM - 9:00 PM','9 PM - 9 AM','9:00 AM - 9:00 AM']) {
+for (const hours of ['nonsense','...','9..AM - 9..PM','25:00 - 26:00','9:75 AM - 9:00 PM','9 PM - 9 AM','9:00 AM - 9:00 AM']) {
   test('invalid or reversed hours never enable appointments: ' + hours, () => {
     const f=fixture(), b=f.barber({workingHours:hours}),s=f.service(); f.select(b,s);
     assert.equal(f.customer.availableTimes.length,0);

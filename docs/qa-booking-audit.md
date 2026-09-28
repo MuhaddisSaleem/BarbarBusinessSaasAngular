@@ -15,7 +15,7 @@ Related defects found during scenario testing: greedy parallel Any Barber assign
 
 ## Validation
 
-- `npm run test:qa`: 52 deterministic scenarios against actual application classes with a fixed clock and isolated localStorage. On unchanged main, the initial suite had 15 failing cases out of 33; a later cancellation test reproduced an additional failure.
+- `npm run test:qa`: 54 deterministic scenarios against actual application classes with a fixed clock and isolated localStorage. On unchanged main, the initial suite had 15 failing cases out of 33; a later cancellation test reproduced an additional failure.
 - `npm run build`: Angular production compilation and template/type checking.
 - `npm run test:ui`: Playwright on the production build, 1440px and 390px viewports. Customer confirmation, admin creation/conflict filtering, parallel specialist matching, custom home request, and all nine admin routes; checks runtime errors and page overflow. Screenshots are retained by the PR workflow.
 - PR workflow validation is authoritative for the final commit. See its result before merging.
