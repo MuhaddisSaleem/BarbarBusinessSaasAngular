@@ -18,14 +18,14 @@ const seed={
   'royal-barbers.admin-services.v1':[service(1,'Haircut'),service(2,'Beard')],
   'royal-barbers.admin-bookings.v1':[]
 };
-let browser;
+let browser, activePage;
 (async()=>{
   await new Promise(resolve=>server.listen(4173,'127.0.0.1',resolve));
   browser=await chromium.launch({headless:true});fs.mkdirSync('test-results',{recursive:true});
   let scenarios=0;
   for(const width of [1440,390]){
     const context=await browser.newContext({viewport:{width,height:1000},timezoneId:'UTC'});
-    const page=await context.newPage();page.setDefaultTimeout(15000);
+    const page=await context.newPage();activePage=page;page.setDefaultTimeout(15000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.clock.install({time:new Date('2026-09-28T16:30:00Z')});
     await page.addInitScript(seed=>{
@@ -45,7 +45,7 @@ let browser;
     await page.screenshot({path:`test-results/customer-${width}.png`,fullPage:true});await finish();
     assert.equal((await stored()).length,1);assert.equal((await stored())[0].status,'Confirmed');scenarios++;
     // Customer's persisted booking is visible to admin and its overlap cannot be selected.
-    await goto('/admin/bookings');await page.getByRole('button',{name:'New Booking',exact:true}).click();
+    await goto('/admin/bookings');await page.locator('.create-booking-btn').click();
     const form=page.locator('.create-modal'), selects=form.locator('select');assert.equal(await selects.nth(2).isDisabled(),true);
     await selects.nth(0).selectOption('Haircut');await selects.nth(1).selectOption('Falak Shair');
     const slots=await selects.nth(2).locator('option').allTextContents();assert.equal(slots.includes('5:00 PM'),false);assert.equal(slots.includes('5:30 PM'),false);assert.ok(slots.includes('6:00 PM'));
@@ -61,4 +61,4 @@ let browser;
     assert.deepEqual(errors,[]);console.log(`PASS ${width}px: customer, admin, group, home and all nine admin routes`);await context.close();
   }
   console.log(`PASS ${scenarios} browser scenarios`);
-})().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();server.close();});
+})().catch(async error=>{console.error(error);if(activePage&&!activePage.isClosed()){await activePage.screenshot({path:'test-results/failure.png',fullPage:true});fs.writeFileSync('test-results/failure.html',await activePage.content());console.error((await activePage.locator('body').innerText()).slice(-4000));}process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();server.close();});

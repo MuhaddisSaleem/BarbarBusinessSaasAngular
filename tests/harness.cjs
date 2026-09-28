@@ -4,7 +4,7 @@ const vm = require('node:vm');
 // Load actual application methods; Angular's production build covers templates and DI.
 function load(file, name, globals = {}) {
   const source = fs.readFileSync(path.join(__dirname, '../src/app', file), 'utf8')
-    .replace(/^import .*;\r?\n/gm, '')
+    .replace(/^import [\s\S]*?;\r?\n/gm, '')
     .replace(/@Injectable\([^\n]*\)\r?\n/g, '')
     .replace(/@Component\([\s\S]*?\}\)\r?\n/, '');
   let code;
