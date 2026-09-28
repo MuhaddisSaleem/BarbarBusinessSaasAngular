@@ -217,12 +217,18 @@ export class AdminSettingsService {
     return { success: true, message: 'Settings saved successfully.' };
   }
 
-  reset(): AdminSettings {
-    this.settings = this.clone(DEFAULT_SETTINGS);
+  reset(): SettingsSaveResult {
+    const next = this.clone(DEFAULT_SETTINGS);
 
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
+      try {
+        window.localStorage.setItem(this.storageKey, JSON.stringify(next));
+      } catch {
+        return { success: false, message: 'Could not reset settings in this browser.' };
+      }
     }
+
+    this.settings = next;
 
     this.notificationService.add({
       type: 'system',
@@ -232,7 +238,7 @@ export class AdminSettingsService {
       url: '/admin/settings'
     });
 
-    return this.current;
+    return { success: true, message: 'Settings reset to defaults.' };
   }
 
   private validate(settings: AdminSettings): SettingsSaveResult {
