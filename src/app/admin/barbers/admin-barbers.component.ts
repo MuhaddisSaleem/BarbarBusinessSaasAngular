@@ -433,6 +433,7 @@ export class AdminBarbersComponent {
         .split(',')
         .map(item => item.trim().toLowerCase())
         .filter(Boolean)
+        .filter(service => !(booking.specialService?.trim() && service === 'custom home service'))
         .some(service => !specialtySet.has(service))
     );
 
@@ -440,6 +441,22 @@ export class AdminBarbersComponent {
       this.showFeedback(
         false,
         'This barber has an upcoming booking for "' + incompatibleBooking.service + '". Keep those specialties or reassign the booking first.'
+      );
+      return;
+    }
+
+    const outsideNewShift = upcomingBookings.find(booking =>
+      !this.barberService.workingHoursCover(
+        this.editBarber.workingHours,
+        booking.time,
+        booking.duration
+      )
+    );
+
+    if (outsideNewShift) {
+      this.showFeedback(
+        false,
+        'The new working hours do not cover upcoming booking ' + outsideNewShift.code + ' at ' + outsideNewShift.time + '. Reassign or reschedule it first.'
       );
       return;
     }
@@ -466,8 +483,12 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const result = this.barberService.updateAvailability(barber.id, availability);
-    this.showFeedback(result.success, result.message);
+    if (availability === 'Not Available Today') {
+      this.markUnavailableToday(barber);
+      return;
+    }
+
+    this.markAvailableToday(barber);
   }
 
   markUnavailableToday(barber: AdminBarber): void {
