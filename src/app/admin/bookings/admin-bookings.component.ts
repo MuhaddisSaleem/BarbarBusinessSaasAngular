@@ -70,7 +70,11 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   get minDate(): string {
-    return this.todayKey;
+    if (this.settingsService.current.allowSameDayBooking) return this.todayKey;
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return this.toDateKey(tomorrow);
   }
 
   get maxDate(): string {
@@ -323,13 +327,20 @@ export class AdminBookingsComponent implements OnInit {
     if (!dateKey) return [];
 
     const date = new Date(dateKey + 'T12:00:00');
+    if (!this.settingsService.isBookingDateAllowed(date)) return [];
+
     const hours = this.settingsService.hoursForDate(date);
     if (!hours) return [];
 
     const slots: string[] = [];
     const interval = this.settingsService.bookingInterval;
 
+    const now = new Date();
+    const isToday = dateKey === this.todayKey;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
     for (let minutes = hours.start; minutes + duration <= hours.end; minutes += interval) {
+      if (isToday && minutes <= nowMinutes) continue;
       slots.push(this.minutesToTime(minutes));
     }
 
