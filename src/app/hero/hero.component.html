@@ -1,5 +1,21 @@
 <section class="royal-hero" id="home">
-  <div class="hero-photo" aria-hidden="true"></div>
+  <div class="hero-photo" *ngIf="!brandingMedia.heroMediaUrl()" aria-hidden="true"></div>
+  <img
+    *ngIf="brandingMedia.heroMediaType() === 'image'"
+    class="hero-media hero-media-image"
+    [src]="brandingMedia.heroMediaUrl()"
+    alt=""
+    aria-hidden="true">
+  <video
+    *ngIf="brandingMedia.heroMediaType() === 'video'"
+    class="hero-media hero-media-video"
+    [src]="brandingMedia.heroMediaUrl()"
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="metadata"
+    aria-hidden="true"></video>
   <div class="hero-overlay" aria-hidden="true"></div>
 
   <div class="hero-shell">
@@ -7,17 +23,20 @@
       <div class="container-fluid p-0">
         <a class="brand navbar-brand d-inline-flex align-items-center m-0" href="#home" [attr.aria-label]="businessName + ' home'">
           <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 64 72" role="img">
-              <path d="M15 17 22 8l10 9L42 8l7 9-4 9H19l-4-9Z" fill="currentColor"/>
-              <circle cx="22" cy="8" r="2.8" fill="currentColor"/><circle cx="42" cy="8" r="2.8" fill="currentColor"/>
-              <path d="M17 31 47 63M47 31 17 63" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-              <circle cx="13" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
-              <circle cx="51" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
-            </svg>
+            <img *ngIf="brandingMedia.logoUrl(); else defaultBrandMark" [src]="brandingMedia.logoUrl()" alt="">
+            <ng-template #defaultBrandMark>
+              <svg viewBox="0 0 64 72" role="img">
+                <path d="M15 17 22 8l10 9L42 8l7 9-4 9H19l-4-9Z" fill="currentColor"/>
+                <circle cx="22" cy="8" r="2.8" fill="currentColor"/><circle cx="42" cy="8" r="2.8" fill="currentColor"/>
+                <path d="M17 31 47 63M47 31 17 63" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="13" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="51" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
+              </svg>
+            </ng-template>
           </span>
           <span class="brand-copy">
             <strong>{{ businessNameUpper }}</strong>
-            <small>LOOK GOOD · FEEL GREAT</small>
+            <small *ngIf="brandSubtitle">{{ brandSubtitle }}</small>
           </span>
         </a>
 
@@ -44,15 +63,15 @@
 
     <div class="hero-content d-flex align-items-start">
       <div class="hero-copy">
-        <span class="eyebrow">PREMIUM BARBERSHOP</span>
-        <h1>{{ businessNameUpper }}</h1>
+        <span class="eyebrow" *ngIf="heroEyebrow">{{ heroEyebrow }}</span>
+        <h1>{{ heroHeadline }}</h1>
 
         <div class="location-row d-flex align-items-center">
           <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
           <span>{{ locationLabel }}</span>
         </div>
 
-        <p class="tagline">More Than a Haircut. It's a Lifestyle.</p>
+        <p class="tagline" *ngIf="heroTagline">{{ heroTagline }}</p>
 
         <div class="hero-features row g-0 d-flex align-items-stretch flex-wrap">
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
