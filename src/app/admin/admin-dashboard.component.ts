@@ -196,10 +196,13 @@ export class AdminDashboardComponent {
   get barberLoad(): DashboardBarberLoad[] {
     const today = this.dateKey(0);
     const hours = this.settingsService.hoursForDate(new Date(today + 'T12:00:00'));
-    const capacity = hours ? Math.max(0, hours.end - hours.start) : 0;
 
     return this.barberService.active.map(barber => {
       const available = this.barberService.isAvailableOnDate(barber.id, today);
+      const barberHours = this.barberService.workingWindowFor(barber.id);
+      const capacity = hours && barberHours
+        ? Math.max(0, Math.min(hours.end, barberHours.end) - Math.max(hours.start, barberHours.start))
+        : 0;
       const bookings = this.todayBookings.filter(item =>
         item.status !== 'Cancelled' && item.barber === barber.name
       );
