@@ -1,17 +1,21 @@
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
+import { BrandingMediaService } from '../admin/settings/branding-media.service';
 
 @Component({
   selector: 'app-hero',
   standalone: true,
+  imports: [CommonModule],
   templateUrl: './hero.component.html',
   styleUrl: './hero.component.scss'
 })
 export class HeroComponent {
   constructor(
     private readonly settingsService: AdminSettingsService,
-    private readonly barberService: AdminBarberService
+    private readonly barberService: AdminBarberService,
+    public readonly brandingMedia: BrandingMediaService
   ) {}
 
   get businessName(): string {
@@ -20,6 +24,22 @@ export class HeroComponent {
 
   get businessNameUpper(): string {
     return this.businessName.toUpperCase();
+  }
+
+  get brandSubtitle(): string {
+    return this.settingsService.current.brandSubtitle || '';
+  }
+
+  get heroEyebrow(): string {
+    return this.settingsService.current.heroEyebrow || '';
+  }
+
+  get heroHeadline(): string {
+    return (this.settingsService.current.heroHeadline || this.businessName).toUpperCase();
+  }
+
+  get heroTagline(): string {
+    return this.settingsService.current.heroTagline || '';
   }
 
   get locationLabel(): string {
