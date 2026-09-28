@@ -325,6 +325,36 @@ export class AdminBarbersComponent {
       return;
     }
 
+    const upcomingBookings = this.activeUpcomingBookingsFor(this.editCandidate.name);
+
+    if (
+      this.editBarber.name.trim() !== this.editCandidate.name
+      && upcomingBookings.length
+    ) {
+      this.showFeedback(
+        false,
+        'Reassign or complete upcoming bookings before changing this barber\'s name.'
+      );
+      return;
+    }
+
+    const specialtySet = new Set(this.editBarber.specialties.map(item => item.trim().toLowerCase()));
+    const incompatibleBooking = upcomingBookings.find(booking =>
+      booking.service
+        .split(',')
+        .map(item => item.trim().toLowerCase())
+        .filter(Boolean)
+        .some(service => !specialtySet.has(service))
+    );
+
+    if (incompatibleBooking) {
+      this.showFeedback(
+        false,
+        'This barber has an upcoming booking for "' + incompatibleBooking.service + '". Keep those specialties or reassign the booking first.'
+      );
+      return;
+    }
+
     const result = this.barberService.updateBarber(this.editCandidate.id, {
       name: this.editBarber.name,
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
@@ -352,6 +382,17 @@ export class AdminBarbersComponent {
   }
 
   markUnavailableToday(barber: AdminBarber): void {
+    const todayBookings = this.activeUpcomingBookingsFor(barber.name)
+      .filter(booking => booking.date === this.todayKey);
+
+    if (todayBookings.length) {
+      this.showFeedback(
+        false,
+        barber.name + ' has ' + todayBookings.length + ' active booking' + (todayBookings.length === 1 ? '' : 's') + ' today. Reassign or cancel them first.'
+      );
+      return;
+    }
+
     const result = this.barberService.updateAvailability(barber.id, 'Not Available Today');
     this.showFeedback(result.success, result.message);
   }
@@ -380,6 +421,20 @@ export class AdminBarbersComponent {
   saveLeave(): void {
     if (!this.selectedBarber) return;
 
+    const overlappingBookings = this.activeUpcomingBookingsFor(this.selectedBarber.name)
+      .filter(booking =>
+        booking.date >= this.leaveForm.from
+        && booking.date <= this.leaveForm.to
+      );
+
+    if (overlappingBookings.length) {
+      this.showFeedback(
+        false,
+        this.selectedBarber.name + ' has ' + overlappingBookings.length + ' active booking' + (overlappingBookings.length === 1 ? '' : 's') + ' during this period. Reassign or cancel them first.'
+      );
+      return;
+    }
+
     const result = this.barberService.updateLeave(
       this.selectedBarber.id,
       this.leaveForm.type,
@@ -396,16 +451,23 @@ export class AdminBarbersComponent {
   }
 
   toggleAccountStatus(barber: AdminBarber): void {
+    if (barber.accountStatus === 'Active') {
+      const upcoming = this.activeUpcomingBookingsFor(barber.name);
+      if (upcoming.length) {
+        this.showFeedback(
+          false,
+          barber.name + ' has ' + upcoming.length + ' active upcoming booking' + (upcoming.length === 1 ? '' : 's') + '. Reassign or cancel them before deactivating.'
+        );
+        return;
+      }
+    }
+
     const result = this.barberService.toggleAccountStatus(barber.id);
     this.showFeedback(result.success, result.message);
   }
 
   requestDelete(barber: AdminBarber): void {
-    const upcomingCount = this.bookingService.all.filter(booking =>
-      booking.barber === barber.name
-      && booking.date >= this.todayKey
-      && (booking.status === 'Pending' || booking.status === 'Confirmed')
-    ).length;
+    const upcomingCount = this.activeUpcomingBookingsFor(barber.name).length;
 
     if (upcomingCount) {
       this.showFeedback(
@@ -453,6 +515,14 @@ export class AdminBarbersComponent {
     if (availability === 'Not Available Today') return 'bi-slash-circle';
     if (availability === 'On Leave') return 'bi-calendar2-minus';
     return 'bi-airplane';
+  }
+
+  private activeUpcomingBookingsFor(barberName: string) {
+    return this.bookingService.all.filter(booking =>
+      booking.barber === barberName
+      && booking.date >= this.todayKey
+      && (booking.status === 'Pending' || booking.status === 'Confirmed')
+    );
   }
 
   get todayKey(): string {
