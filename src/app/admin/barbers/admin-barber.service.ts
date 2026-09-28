@@ -76,6 +76,10 @@ export class AdminBarberService {
       return { success: false, message: 'A barber with this mobile number already exists.' };
     }
 
+    if (!this.workingWindow(input.workingHours)) {
+      return { success: false, message: 'Enter working hours like 8:00 AM - 9:00 PM.' };
+    }
+
     const nextId = this.barbers.length ? Math.max(...this.barbers.map(item => item.id)) + 1 : 1;
 
     this.barbers = [
@@ -147,6 +151,10 @@ export class AdminBarberService {
 
     if (!changes.specialties.length) {
       return { success: false, message: 'Select at least one specialty.' };
+    }
+
+    if (!this.workingWindow(changes.workingHours)) {
+      return { success: false, message: 'Enter working hours like 8:00 AM - 9:00 PM.' };
     }
 
     const previous = {
@@ -383,6 +391,21 @@ export class AdminBarberService {
     return { success: true, message: '' };
   }
 
+  isWorkingAt(id: number, time: string, duration: number): boolean {
+    const barber = this.getById(id);
+    if (!barber || barber.accountStatus !== 'Active') return false;
+
+    const window = this.workingWindow(barber.workingHours);
+    if (!window) return true;
+
+    const start = this.timeToMinutes(time);
+    if (!Number.isFinite(start) || !Number.isFinite(Number(duration)) || Number(duration) <= 0) {
+      return false;
+    }
+
+    return start >= window.start && start + Number(duration) <= window.end;
+  }
+
   supportsServices(id: number, serviceNames: string[]): boolean {
     const barber = this.getById(id);
     if (!barber || barber.accountStatus !== 'Active') return false;
@@ -519,6 +542,40 @@ export class AdminBarberService {
     }
 
     return raw;
+  }
+
+  private workingWindow(value: string): { start: number; end: number } | null {
+    const normalized = String(value || '')
+      .replace(/[–—]/g, '-')
+      .replace(/\s+to\s+/i, ' - ')
+      .trim();
+
+    const match = normalized.match(
+      /^(\d{1,2}:\d{2}\s*(?:AM|PM))\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM))$/i
+    );
+
+    if (!match) return null;
+
+    const start = this.timeToMinutes(match[1]);
+    const end = this.timeToMinutes(match[2]);
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+    return { start, end };
+  }
+
+  private timeToMinutes(value: string): number {
+    const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return Number.NaN;
+
+    let hour = Number(match[1]);
+    const minute = Number(match[2]);
+    const period = match[3].toUpperCase();
+
+    if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return Number.NaN;
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+
+    return hour * 60 + minute;
   }
 
   private persist(): boolean {
