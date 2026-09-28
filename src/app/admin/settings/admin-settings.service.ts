@@ -267,8 +267,8 @@ export class AdminSettingsService {
       return { success: false, message: 'Hero tagline must be 140 characters or fewer.' };
     }
 
-    if (Number(settings.bookingInterval) < 5) {
-      return { success: false, message: 'Booking interval must be at least 5 minutes.' };
+    if (!Number.isInteger(Number(settings.bookingInterval)) || Number(settings.bookingInterval) < 5) {
+      return { success: false, message: 'Booking interval must be a whole number of at least 5 minutes.' };
     }
 
     if (!Number.isInteger(Number(settings.maxAdvanceDays)) || Number(settings.maxAdvanceDays) < 1) {
