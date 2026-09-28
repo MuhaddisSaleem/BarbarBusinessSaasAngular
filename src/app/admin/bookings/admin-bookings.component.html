@@ -75,14 +75,14 @@
         <div class="col-6 col-lg-auto">
           <select [(ngModel)]="selectedBarber" aria-label="Filter by barber">
             <option value="All">Select Barber</option>
-            <option *ngFor="let barber of bookingService.barbers" [value]="barber">{{ barber }}</option>
+            <option *ngFor="let barber of filterBarbers" [value]="barber">{{ barber }}</option>
           </select>
         </div>
 
         <div class="col-6 col-lg-auto">
           <select [(ngModel)]="selectedService" aria-label="Filter by service">
             <option value="All">Select Service</option>
-            <option *ngFor="let service of bookingService.services" [value]="service.name">{{ service.name }}</option>
+            <option *ngFor="let service of filterServices" [value]="service">{{ service }}</option>
           </select>
         </div>
 
@@ -250,7 +250,7 @@
         </div>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'">
         <h4>Booking Status</h4>
         <div class="status-actions">
           <button type="button" [class.active]="selectedBooking.status === 'Pending'" (click)="setStatus('Pending')">Pending</button>
