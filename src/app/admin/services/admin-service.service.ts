@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { NotificationService } from '../notifications/notification.service';
 
 export type ServiceStatus = 'Active' | 'Inactive';
 
@@ -19,6 +20,8 @@ export interface ServiceMutationResult {
 
 @Injectable({ providedIn: 'root' })
 export class AdminServiceService {
+  constructor(private readonly notificationService: NotificationService) {}
+
   private readonly storageKey = 'royal-barbers.admin-services.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-services.demo-cleaned.v1';
   private services: AdminService[] = this.loadServices();
@@ -79,6 +82,14 @@ export class AdminServiceService {
       return { success: false, message: 'Could not save this service locally. Try a smaller image.' };
     }
 
+    this.notificationService.add({
+      type: 'system',
+      title: 'Service added',
+      message: next.name + ' was added at Rs. ' + this.effectivePrice(next).toLocaleString('en-US') + '.',
+      icon: 'bi-scissors',
+      url: '/admin/services'
+    });
+
     return { success: true, message: next.name + ' added successfully.' };
   }
 
@@ -110,6 +121,14 @@ export class AdminServiceService {
       return { success: false, message: 'Could not save the service changes.' };
     }
 
+    this.notificationService.add({
+      type: 'system',
+      title: 'Service updated',
+      message: service.name + ' details or pricing were updated.',
+      icon: 'bi-pencil-square',
+      url: '/admin/services'
+    });
+
     return { success: true, message: service.name + ' updated successfully.' };
   }
 
@@ -124,6 +143,14 @@ export class AdminServiceService {
       service.status = previous;
       return { success: false, message: 'Could not save the service status.' };
     }
+
+    this.notificationService.add({
+      type: 'system',
+      title: 'Service ' + (service.status === 'Active' ? 'activated' : 'hidden'),
+      message: service.name + ' is now ' + service.status.toLowerCase() + '.',
+      icon: service.status === 'Active' ? 'bi-eye' : 'bi-eye-slash',
+      url: '/admin/services'
+    });
 
     return {
       success: true,
@@ -142,6 +169,14 @@ export class AdminServiceService {
       this.services = previous;
       return { success: false, message: 'Could not delete this service.' };
     }
+
+    this.notificationService.add({
+      type: 'system',
+      title: 'Service deleted',
+      message: service.name + ' was removed from the service list.',
+      icon: 'bi-trash3',
+      url: '/admin/services'
+    });
 
     return { success: true, message: service.name + ' deleted successfully.' };
   }
