@@ -1,6 +1,6 @@
 <app-admin-shell eyebrow="BOOKING OPERATIONS" title="Bookings">
   <div class="bookings-page container-fluid">
-    <div class="feedback-toast" *ngIf="feedbackMessage" [class.error]="feedbackType === 'error'">
+    <div role="status" aria-live="polite" class="feedback-toast" *ngIf="feedbackMessage" [class.error]="feedbackType === 'error'">
       <i class="bi" [ngClass]="feedbackType === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'"></i>
       {{ feedbackMessage }}
     </div>
@@ -12,10 +12,14 @@
         <p>Search, manage, reschedule and update customer appointments.</p>
       </div>
 
+      <div class="d-flex flex-wrap gap-2 appointment-tools">
+      <a class="reset-filter-btn" routerLink="/admin/calendar"><i class="bi bi-calendar-week"></i> Calendar</a>
+      <button type="button" class="reset-filter-btn" (click)="openCreateModal(true)"><i class="bi bi-person-plus"></i> Add Walk-In</button>
       <button type="button" class="create-booking-btn" (click)="openCreateModal()">
         <i class="bi bi-plus-lg"></i>
         New Booking
       </button>
+      </div>
     </section>
 
     <section class="row g-3 booking-stats">
@@ -65,29 +69,35 @@
       </div>
 
       <div class="filter-bar row g-2 g-lg-3">
+        <div class="col-6 col-lg-auto">
+          <select [(ngModel)]="selectedStatus" (ngModelChange)="page = 1" aria-label="Filter by status">
+            <option value="All">All statuses</option>
+            <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+          </select>
+        </div>
         <div class="col-12 col-lg">
           <label class="search-box d-flex align-items-center">
             <i class="bi bi-search"></i>
-            <input type="search" [(ngModel)]="searchTerm" placeholder="Search name, phone, booking ID, service...">
+            <input type="search" aria-label="Search appointments" [(ngModel)]="searchTerm" (ngModelChange)="page = 1" placeholder="Search name, phone, booking ID, service...">
           </label>
         </div>
 
         <div class="col-6 col-lg-auto">
-          <select [(ngModel)]="selectedBarber" aria-label="Filter by barber">
+          <select [(ngModel)]="selectedBarber" (ngModelChange)="page = 1" aria-label="Filter by barber">
             <option value="All">Select Barber</option>
             <option *ngFor="let barber of filterBarbers" [value]="barber">{{ barber }}</option>
           </select>
         </div>
 
         <div class="col-6 col-lg-auto">
-          <select [(ngModel)]="selectedService" aria-label="Filter by service">
+          <select [(ngModel)]="selectedService" (ngModelChange)="page = 1" aria-label="Filter by service">
             <option value="All">Select Service</option>
             <option *ngFor="let service of filterServices" [value]="service">{{ service }}</option>
           </select>
         </div>
 
         <div class="col-8 col-lg-auto">
-          <input type="date" [(ngModel)]="selectedDate">
+          <input type="date" aria-label="Filter by date" [(ngModel)]="selectedDate" (ngModelChange)="page = 1">
         </div>
 
         <div class="col-4 col-lg-auto">
@@ -113,7 +123,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let booking of bookings" (click)="openBooking(booking)">
+            <tr *ngFor="let booking of pagedBookings" (click)="openBooking(booking)">
               <td>
                 <strong>{{ booking.code }}</strong>
                 <small>{{ booking.source }} · {{ booking.serviceLocation === 'Home' ? 'Home Service' : 'Salon' }}</small>
@@ -132,27 +142,27 @@
                 <small>{{ booking.time }}</small>
               </td>
               <td>
-                <span class="status-pill" [ngClass]="booking.status.toLowerCase()">
+                <span class="status-pill" [ngClass]="booking.status.toLowerCase().replace(' ', '-')">
                   <i class="bi" [ngClass]="statusIcon(booking.status)"></i>
                   {{ booking.status }}
                 </span>
               </td>
               <td class="amount">Rs. {{ booking.amount | number }}</td>
-              <td class="row-action"><i class="bi bi-chevron-right"></i></td>
+              <td class="row-action"><button type="button" class="icon-btn" (click)="$event.stopPropagation(); openBooking(booking)" [attr.aria-label]="'Open booking ' + booking.code"><i class="bi bi-chevron-right"></i></button></td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div class="mobile-bookings d-md-none">
-        <button type="button" class="mobile-booking-card" *ngFor="let booking of bookings" (click)="openBooking(booking)">
+        <button type="button" class="mobile-booking-card" *ngFor="let booking of pagedBookings" (click)="openBooking(booking)">
           <div class="d-flex align-items-start justify-content-between gap-3">
             <div>
               <span class="booking-code">{{ booking.code }}</span>
               <strong>{{ booking.customerName }}</strong>
               <small>{{ booking.phone }}</small>
             </div>
-            <span class="status-pill" [ngClass]="booking.status.toLowerCase()">
+            <span class="status-pill" [ngClass]="booking.status.toLowerCase().replace(' ', '-')">
               <i class="bi" [ngClass]="statusIcon(booking.status)"></i>
               {{ booking.status }}
             </span>
@@ -176,6 +186,13 @@
         </button>
       </div>
 
+      <nav class="appointment-pagination" *ngIf="bookings.length" aria-label="Appointment pages">
+        <span>{{ bookings.length }} appointments · Page {{ currentPage }} of {{ pageCount }}</span>
+        <div class="d-flex gap-2">
+          <button type="button" (click)="changePage(-1)" [disabled]="currentPage === 1">Previous</button>
+          <button type="button" (click)="changePage(1)" [disabled]="currentPage === pageCount">Next</button>
+        </div>
+      </nav>
       <div class="empty-state" *ngIf="!bookings.length">
         <i class="bi bi-calendar2-x"></i>
         <strong>No bookings found</strong>
@@ -204,11 +221,14 @@
           <strong>{{ selectedBooking.customerName }}</strong>
           <span>{{ selectedBooking.phone }}</span>
         </div>
-        <span class="status-pill" [ngClass]="selectedBooking.status.toLowerCase()">{{ selectedBooking.status }}</span>
+        <span class="status-pill" [ngClass]="selectedBooking.status.toLowerCase().replace(' ', '-')">{{ selectedBooking.status }}</span>
       </section>
 
       <section class="detail-section">
         <h4>Appointment</h4>
+        <div class="detail-row"><span>Barber</span><strong>{{ selectedBooking.barber }}</strong></div>
+        <div class="detail-row"><span>Date</span><strong>{{ selectedBooking.date | date:'dd MMM yyyy' }}</strong></div>
+        <div class="detail-row"><span>Time</span><strong>{{ selectedBooking.time }}</strong></div>
         <div class="detail-row"><span>Service</span><strong>{{ selectedBooking.service }}</strong></div>
         <div class="detail-row"><span>Duration</span><strong>{{ selectedBooking.duration }} minutes</strong></div>
         <div class="detail-row"><span>Amount</span><strong class="gold">Rs. {{ selectedBooking.amount | number }}</strong></div>
@@ -232,7 +252,7 @@
           <strong>Special service request</strong>
           <p>{{ selectedBooking.specialService }}</p>
         </div>
-        <div class="edit-row custom-price-edit" *ngIf="selectedBooking.specialService">
+        <div class="edit-row custom-price-edit" *ngIf="selectedBooking.specialService && bookingService.isOpen(selectedBooking)">
           <input
             type="number"
             min="1"
@@ -250,13 +270,13 @@
         </div>
       </section>
 
-      <section class="detail-section" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'">
+      <section class="detail-section" *ngIf="bookingService.isOpen(selectedBooking)">
         <h4>Booking Status</h4>
         <div class="status-actions">
-          <button type="button" [class.active]="selectedBooking.status === 'Pending'" (click)="setStatus('Pending')">Pending</button>
-          <button type="button" [class.active]="selectedBooking.status === 'Confirmed'" (click)="setStatus('Confirmed')">Confirmed</button>
-          <button type="button" (click)="setStatus('Completed')">Completed</button>
+          <button type="button" *ngFor="let status of statusActions" (click)="setStatus(status)"
+            [disabled]="status === 'No Show' && !selectedBookingPastGrace">{{ status }}</button>
         </div>
+        <small class="booking-notes">No Show is available after the late-arrival grace period.</small>
       </section>
 
       <section class="detail-section">
@@ -273,28 +293,22 @@
         </p>
       </section>
 
-      <section class="detail-section" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'">
-        <h4>Assigned Barber</h4>
-        <div class="edit-row">
-          <select [(ngModel)]="editBarber" (ngModelChange)="onEditBarberChange()">
+      <section class="detail-section" *ngIf="bookingService.canReschedule(selectedBooking)">
+        <h4>Reschedule / Reassign</h4>
+        <div class="schedule-grid">
+          <input type="date" aria-label="Appointment date" [(ngModel)]="editDate" (ngModelChange)="onEditDateChange()" [min]="minDate" [max]="maxDate">
+          <select aria-label="Assigned barber" [(ngModel)]="editBarber" (ngModelChange)="onEditBarberChange()">
             <option value="">Select eligible barber</option>
             <option *ngFor="let barber of editBarbers">{{ barber }}</option>
           </select>
-          <button type="button" (click)="saveBarber()">Update</button>
-        </div>
-      </section>
-
-      <section class="detail-section" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'">
-        <h4>Reschedule</h4>
-        <div class="schedule-grid">
-          <input type="date" [(ngModel)]="editDate" (ngModelChange)="onEditDateChange()" [min]="minDate" [max]="maxDate">
-          <select [(ngModel)]="editTime">
+          <select aria-label="Appointment time" [(ngModel)]="editTime">
+            <option value="">Select available time</option>
             <option *ngFor="let slot of editTimeSlots">{{ slot }}</option>
           </select>
         </div>
+        <p class="booking-notes" *ngIf="editBarber && editDate && !editTimeSlots.length">No available times. Choose another date or barber.</p>
         <button type="button" class="save-schedule-btn" (click)="saveSchedule()">
-          <i class="bi bi-calendar2-check"></i>
-          Save new schedule
+          <i class="bi bi-calendar2-check"></i> Save barber &amp; schedule
         </button>
       </section>
 
@@ -303,7 +317,7 @@
         <p class="booking-notes">{{ selectedBooking.notes }}</p>
       </section>
 
-      <button type="button" class="cancel-booking-btn" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'" (click)="requestCancel()">
+      <button type="button" class="cancel-booking-btn" *ngIf="bookingService.isOpen(selectedBooking)" (click)="requestCancel()">
         <i class="bi bi-x-circle"></i>
         Cancel booking
       </button>
@@ -315,7 +329,7 @@
     <div class="modal-header d-flex align-items-start justify-content-between">
       <div>
         <span class="eyebrow">ADMIN BOOKING</span>
-        <h3>Create New Booking</h3>
+        <h3>{{ walkInMode ? 'Add Walk-In' : 'Create New Booking' }}</h3>
       </div>
       <button type="button" class="icon-btn" (click)="closeCreateModal()"><i class="bi bi-x-lg"></i></button>
     </div>
@@ -355,7 +369,7 @@
 
         <label>
           <span>Date *</span>
-          <input type="date" [(ngModel)]="newBooking.date" (ngModelChange)="onCreateServiceOrDateChange()" [min]="minDate" [max]="maxDate">
+          <input type="date" [(ngModel)]="newBooking.date" (ngModelChange)="onCreateServiceOrDateChange()" [min]="walkInMode ? todayKey : minDate" [max]="walkInMode ? todayKey : maxDate" [disabled]="walkInMode">
         </label>
 
         <label class="full">
@@ -372,9 +386,10 @@
         </label>
       </div>
 
+      <p class="booking-notes" *ngIf="newBooking.service && newBooking.barber && !createTimeSlots.length">No available times for this service and barber. Choose another barber or date.</p>
       <button type="button" class="submit-booking-btn" (click)="createBooking()">
         <i class="bi bi-check2-circle"></i>
-        Create Booking
+        {{ walkInMode ? 'Add Walk-In' : 'Create Booking' }}
       </button>
     </div>
   </section>

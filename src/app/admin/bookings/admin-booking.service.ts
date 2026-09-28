@@ -4,7 +4,9 @@ import { AdminServiceService } from '../services/admin-service.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 import { NotificationService } from '../notifications/notification.service';
 
-export type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
+export type BookingStatus = 'Pending' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled' | 'No Show';
+
+export const BOOKING_STATUSES: BookingStatus[] = ['Pending', 'Confirmed', 'In Progress', 'Completed', 'Cancelled', 'No Show'];
 
 export interface AdminBooking {
   id: number;
@@ -18,7 +20,7 @@ export interface AdminBooking {
   time: string;
   amount: number;
   status: BookingStatus;
-  source: 'Online' | 'Admin';
+  source: 'Online' | 'Admin' | 'Walk-in';
   notes?: string;
   groupSize?: number;
   serviceLocation?: 'Salon' | 'Home';
@@ -104,28 +106,51 @@ export class AdminBookingService {
   }
 
 
+  isOpen(booking: AdminBooking): boolean {
+    return ['Pending', 'Confirmed', 'In Progress'].includes(booking.status);
+  }
+
+  canReschedule(booking: AdminBooking): boolean {
+    return booking.status === 'Pending' || booking.status === 'Confirmed';
+  }
+
+  blocksSlot(booking: AdminBooking): boolean {
+    return booking.status !== 'Cancelled' && booking.status !== 'No Show';
+  }
+
+  allowedStatuses(booking: AdminBooking): BookingStatus[] {
+    const transitions: Record<BookingStatus, BookingStatus[]> = {
+      Pending: ['Confirmed', 'Cancelled', 'No Show'],
+      Confirmed: ['In Progress', 'Completed', 'Cancelled', 'No Show'],
+      'In Progress': ['Completed', 'Cancelled'],
+      Completed: [], Cancelled: [], 'No Show': []
+    };
+    return transitions[booking.status] || [];
+  }
+
   updateStatus(id: number, status: BookingStatus): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
 
+    if (booking.status === status) return { success: true, message: 'Status is already ' + status + '.' };
+    if (!this.allowedStatuses(booking).includes(status)) {
+      return { success: false, message: 'This status change is not allowed for the appointment.' };
+    }
+    if (status === 'No Show' && !this.isPastLateArrivalGrace(booking)) {
+      return { success: false, message: 'Wait until the late-arrival grace period has passed before marking a no-show.' };
+    }
+    const startsAt = new Date(booking.date + 'T00:00:00');
+    startsAt.setMinutes(this.timeToMinutes(booking.time));
+    if ((status === 'In Progress' || status === 'Completed') && startsAt.getTime() > Date.now()) {
+      return { success: false, message: 'The appointment has not started yet.' };
+    }
     if (
-      (status === 'Confirmed' || status === 'Completed')
+      ['Confirmed', 'In Progress', 'Completed'].includes(status)
       && booking.serviceLocation === 'Home'
       && booking.specialService?.trim()
       && !(Number(booking.specialServiceAmount) > 0)
     ) {
-      return {
-        success: false,
-        message: 'Set the custom home-service price before confirming this booking.'
-      };
-    }
-
-    if (booking.status === 'Cancelled' && status !== 'Cancelled') {
-      return { success: false, message: 'Cancelled bookings cannot be reopened.' };
-    }
-
-    if (booking.status === 'Completed' && status !== 'Completed') {
-      return { success: false, message: 'Completed bookings cannot be moved back to another status.' };
+      return { success: false, message: 'Set the custom home-service price before confirming this booking.' };
     }
 
     const previousStatus = booking.status;
@@ -152,52 +177,13 @@ export class AdminBookingService {
   assignBarber(id: number, barber: string): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
-    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
-      return { success: false, message: 'This booking can no longer be reassigned.' };
-    }
-    const barberId = this.barberIdByName(barber);
-    if (!barberId) return { success: false, message: 'Selected barber is not active.' };
-
-    if (!this.barberService.isAvailableOnDate(barberId, booking.date)) {
-      return { success: false, message: barber + ' is not available on this booking date.' };
-    }
-
-    if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(booking))) {
-      return { success: false, message: barber + ' does not provide all services in this booking.' };
-    }
-
-    if (!this.barberService.isWorkingAt(barberId, booking.time, booking.duration)) {
-      return { success: false, message: barber + ' is outside their configured working hours at this time.' };
-    }
-
-    if (this.hasConflict(barber, booking.date, booking.time, booking.duration, id)) {
-      return { success: false, message: barber + ' already has an overlapping appointment at this time.' };
-    }
-    const previousBarber = booking.barber;
-    booking.barber = barber;
-
-    if (!this.persist()) {
-      booking.barber = previousBarber;
-      return { success: false, message: 'Could not save the barber assignment. Please try again.' };
-    }
-
-    if (previousBarber !== barber) {
-      this.notificationService.add({
-        type: 'booking',
-        title: 'Barber reassigned',
-        message: booking.code + ' moved from ' + previousBarber + ' to ' + barber + '.',
-        icon: 'bi-person-gear',
-        url: '/admin/bookings?booking=' + booking.id
-      });
-    }
-
-    return { success: true, message: barber + ' assigned successfully.' };
+    return this.reschedule(id, booking.date, booking.time, barber);
   }
 
-  reschedule(id: number, date: string, time: string): BookingMutationResult {
+  reschedule(id: number, date: string, time: string, barber?: string): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
-    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+    if (!this.canReschedule(booking)) {
       return { success: false, message: 'This booking can no longer be rescheduled.' };
     }
     if (!date || !time) return { success: false, message: 'Please choose both a date and time.' };
@@ -205,34 +191,38 @@ export class AdminBookingService {
     const scheduleValidation = this.validateSchedule(date, time, booking.duration);
     if (!scheduleValidation.success) return scheduleValidation;
 
-    const barberId = this.barberIdByName(booking.barber);
+    const nextBarber = barber || booking.barber;
+    const barberId = this.barberIdByName(nextBarber);
     if (!barberId || !this.barberService.isAvailableOnDate(barberId, date)) {
-      return { success: false, message: booking.barber + ' is not available on the selected date.' };
+      return { success: false, message: nextBarber + ' is not available on the selected date.' };
     }
 
     if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(booking))) {
-      return { success: false, message: booking.barber + ' no longer provides all services in this booking.' };
+      return { success: false, message: nextBarber + ' no longer provides all services in this booking.' };
     }
 
     if (!this.barberService.isWorkingAt(barberId, time, booking.duration)) {
-      return { success: false, message: booking.barber + ' is outside their configured working hours at this time.' };
+      return { success: false, message: nextBarber + ' is outside their configured working hours at this time.' };
     }
 
-    if (this.hasConflict(booking.barber, date, time, booking.duration, id)) {
-      return { success: false, message: booking.barber + ' already has an overlapping appointment at this time.' };
+    if (this.hasConflict(nextBarber, date, time, booking.duration, id)) {
+      return { success: false, message: nextBarber + ' already has an overlapping appointment at this time.' };
     }
+    const previousBarber = booking.barber;
     const previousDate = booking.date;
     const previousTime = booking.time;
+    booking.barber = nextBarber;
     booking.date = date;
     booking.time = time;
 
     if (!this.persist()) {
+      booking.barber = previousBarber;
       booking.date = previousDate;
       booking.time = previousTime;
       return { success: false, message: 'Could not save the new appointment schedule. Please try again.' };
     }
 
-    if (previousDate !== date || previousTime !== time) {
+    if (previousDate !== date || previousTime !== time || previousBarber !== nextBarber) {
       this.notificationService.add({
         type: 'rescheduled',
         title: 'Booking rescheduled',
@@ -248,6 +238,8 @@ export class AdminBookingService {
   updateSpecialServiceAmount(id: number, amount: number): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
+
+    if (!this.isOpen(booking)) return { success: false, message: 'Closed appointments cannot be repriced.' };
 
     if (booking.serviceLocation !== 'Home' || !booking.specialService?.trim()) {
       return { success: false, message: 'This booking does not contain a custom home-service request.' };
@@ -294,7 +286,7 @@ export class AdminBookingService {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
 
-    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+    if (!this.canReschedule(booking)) {
       return { success: false, message: 'This booking can no longer be cancelled by the customer.' };
     }
 
@@ -397,8 +389,15 @@ export class AdminBookingService {
     };
   }
 
-  addBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
-    const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration);
+  addBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>, walkIn = false): BookingMutationResult {
+    if (!input.customerName.trim() || !/^923\d{9}$/.test(input.phone.replace(/\D/g, ''))) {
+      return { success: false, message: 'Enter a customer name and valid Pakistan mobile number.' };
+    }
+    const service = this.services.find(item => item.name === input.service);
+    if (!service || service.duration !== input.duration || service.amount !== input.amount) {
+      return { success: false, message: 'The service has changed. Select it again before saving.' };
+    }
+    const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration, walkIn);
     if (!scheduleValidation.success) return scheduleValidation;
 
     const barberId = this.barberIdByName(input.barber);
@@ -426,7 +425,7 @@ export class AdminBookingService {
         id: nextId,
         code: this.bookingCode(nextId),
         status: 'Confirmed',
-        source: 'Admin'
+        source: walkIn ? 'Walk-in' : 'Admin'
       },
       ...this.bookings
     ];
@@ -439,7 +438,7 @@ export class AdminBookingService {
     const created = this.bookings[0];
     this.notificationService.add({
       type: 'booking',
-      title: 'Admin booking created',
+      title: walkIn ? 'Walk-in booked' : 'Admin booking created',
       message: created.customerName + ' booked ' + created.service + ' with ' + created.barber + ' for ' + created.date + ' at ' + created.time + '.',
       icon: 'bi-calendar2-plus',
       url: '/admin/bookings?booking=' + created.id
@@ -448,7 +447,7 @@ export class AdminBookingService {
     return { success: true, message: 'Booking created successfully.' };
   }
 
-  private validateSchedule(dateKey: string, time: string, duration: number): BookingMutationResult {
+  private validateSchedule(dateKey: string, time: string, duration: number, walkIn = false): BookingMutationResult {
     const dateMatch = String(dateKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!dateMatch) {
       return { success: false, message: 'Select a valid appointment date.' };
@@ -464,7 +463,13 @@ export class AdminBookingService {
       0
     );
 
-    if (!this.settingsService.isBookingDateAllowed(date)) {
+    if (date.getFullYear() !== Number(dateMatch[1]) || date.getMonth() !== Number(dateMatch[2]) - 1 || date.getDate() !== Number(dateMatch[3])) {
+      return { success: false, message: 'Select a valid appointment date.' };
+    }
+    const today = new Date();
+    const sameDay = date.toDateString() === today.toDateString();
+    if (walkIn && !sameDay) return { success: false, message: 'Walk-ins must be booked for today.' };
+    if (!walkIn && !this.settingsService.isBookingDateAllowed(date)) {
       return { success: false, message: 'This date is outside the current booking window or the salon is closed.' };
     }
 
@@ -493,7 +498,7 @@ export class AdminBookingService {
 
     if (dateKey === todayKey) {
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      if (start <= nowMinutes) {
+      if (walkIn ? start < nowMinutes : start <= nowMinutes) {
         return { success: false, message: 'The selected appointment time has already passed.' };
       }
     }
@@ -523,7 +528,7 @@ export class AdminBookingService {
     const start = this.timeToMinutes(time);
     const end = start + duration;
     return this.bookings.some(item => {
-      if (item.id === ignoreId || item.status === 'Cancelled' || item.barber !== barber || item.date !== date) return false;
+      if (item.id === ignoreId || !this.blocksSlot(item) || item.barber !== barber || item.date !== date) return false;
       const otherStart = this.timeToMinutes(item.time);
       const otherEnd = otherStart + item.duration;
       return start < otherEnd && end > otherStart;
@@ -562,7 +567,7 @@ export class AdminBookingService {
           amount: Number(item.amount) || 0,
           groupSize: Number(item.groupSize) || 1,
           status: this.isBookingStatus(item.status) ? item.status : 'Pending',
-          source: item.source === 'Admin' ? 'Admin' : 'Online',
+          source: item.source === 'Walk-in' ? 'Walk-in' : (item.source === 'Admin' ? 'Admin' : 'Online'),
           notes: item.notes || '',
           serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
           serviceAddress: item.serviceAddress || '',
@@ -593,10 +598,7 @@ export class AdminBookingService {
   }
 
   private isBookingStatus(value: string): value is BookingStatus {
-    return value === 'Pending'
-      || value === 'Confirmed'
-      || value === 'Completed'
-      || value === 'Cancelled';
+    return BOOKING_STATUSES.includes(value as BookingStatus);
   }
 
   private bookingCode(id: number): string {
@@ -638,6 +640,7 @@ export class AdminBookingService {
     if (!match) return Number.NaN;
     let hour = Number(match[1]);
     const minute = Number(match[2]);
+    if (hour < 1 || hour > 12 || minute > 59) return Number.NaN;
     const period = match[3].toUpperCase();
     if (period === 'PM' && hour !== 12) hour += 12;
     if (period === 'AM' && hour === 12) hour = 0;

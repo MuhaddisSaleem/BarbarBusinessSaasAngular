@@ -50,6 +50,9 @@
           <option value="Confirmed">Confirmed</option>
           <option value="Pending">Pending</option>
           <option value="Completed">Completed</option>
+          <option value="In Progress">In Progress</option>
+          <option value="No Show">No Show</option>
+          <option value="Cancelled">Cancelled</option>
         </select>
 
         <button type="button" class="reset-btn" (click)="resetFilters()">
@@ -138,7 +141,7 @@
                 <td>{{ booking.duration }} min</td>
 
                 <td>
-                  <span class="status-pill" [ngClass]="booking.status.toLowerCase()">
+                  <span class="status-pill" [ngClass]="booking.status.toLowerCase().replace(' ', '-')">
                     <i class="bi" [ngClass]="statusIcon(booking.status)"></i>
                     {{ booking.status }}
                   </span>
@@ -165,7 +168,7 @@
                 <small>{{ booking.phone }}</small>
               </div>
 
-              <span class="status-pill" [ngClass]="booking.status.toLowerCase()">
+              <span class="status-pill" [ngClass]="booking.status.toLowerCase().replace(' ', '-')">
                 {{ booking.status }}
               </span>
             </div>
@@ -320,7 +323,7 @@
         <div class="detail-row"><span>Amount</span><strong class="gold">Rs. {{ selectedBooking.amount | number }}</strong></div>
       </section>
 
-      <section class="status-box" [ngClass]="selectedBooking.status.toLowerCase()">
+      <section class="status-box" [ngClass]="selectedBooking.status.toLowerCase().replace(' ', '-')">
         <i class="bi" [ngClass]="statusIcon(selectedBooking.status)"></i>
         <div>
           <strong>{{ selectedBooking.status }}</strong>

@@ -78,7 +78,7 @@ export class AdminReportsComponent {
 
   get bookedValue(): number {
     return this.filteredBookings
-      .filter(item => item.status !== 'Cancelled')
+      .filter(item => this.bookingService.blocksSlot(item))
       .reduce((sum, item) => sum + item.amount, 0);
   }
 
@@ -95,7 +95,7 @@ export class AdminReportsComponent {
   }
 
   get completionRate(): number {
-    const eligible = this.filteredBookings.filter(item => item.status !== 'Cancelled').length;
+    const eligible = this.filteredBookings.filter(item => this.bookingService.blocksSlot(item)).length;
     return eligible ? Math.round((this.completedBookings / eligible) * 100) : 0;
   }
 
@@ -103,7 +103,7 @@ export class AdminReportsComponent {
     const groups = new Map<string, AdminBooking[]>();
 
     this.filteredBookings
-      .filter(item => item.status !== 'Cancelled')
+      .filter(item => this.bookingService.blocksSlot(item))
       .forEach(item => {
         const list = groups.get(item.service) || [];
         list.push(item);
@@ -143,7 +143,7 @@ export class AdminReportsComponent {
       completed: bookings.filter(item => item.status === 'Completed').length,
       cancelled: bookings.filter(item => item.status === 'Cancelled').length,
       value: bookings
-        .filter(item => item.status !== 'Cancelled')
+        .filter(item => this.bookingService.blocksSlot(item))
         .reduce((sum, item) => sum + item.amount, 0),
       percent: 0
     }));
@@ -177,7 +177,7 @@ export class AdminReportsComponent {
           .filter(item => item.status === 'Completed')
           .reduce((sum, item) => sum + item.amount, 0),
         bookedValue: bookings
-          .filter(item => item.status !== 'Cancelled')
+          .filter(item => this.bookingService.blocksSlot(item))
           .reduce((sum, item) => sum + item.amount, 0)
       }))
       .sort((a, b) => b.date.localeCompare(a.date));

@@ -236,3 +236,13 @@ button,input,select,textarea { font:inherit; }
   color:#aab3b7;
   line-height:1.45;
 }
+
+// Phase 3 appointment controls share the existing dark/gold palette.
+.appointment-tools a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+.appointment-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 18px; color: #b7bbc5; font-size: 13px; }
+.appointment-pagination button { border: 1px solid #373b44; border-radius: 8px; padding: 8px 14px; background: #22252d; color: #f0e5ca; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.status-pill.in-progress { background: rgba(99, 102, 241, .16); color: #b4b7ff; }
+.status-pill.no-show { background: rgba(249, 115, 22, .14); color: #fdba74; }
+.status-actions { flex-wrap: wrap; }
+@media (max-width: 575px) { .appointment-tools { width: 100%; } .appointment-tools > * { flex: 1 1 auto; justify-content: center; } }

@@ -78,7 +78,7 @@ export class AdminCustomerService {
       a.date.localeCompare(b.date) || this.timeToMinutes(a.time) - this.timeToMinutes(b.time)
     );
 
-    const nonCancelled = sorted.filter(item => item.status !== 'Cancelled');
+    const nonCancelled = sorted.filter(item => this.bookingService.blocksSlot(item));
     const completed = sorted.filter(item => item.status === 'Completed');
     const now = new Date();
     const nowKey = this.todayKey();

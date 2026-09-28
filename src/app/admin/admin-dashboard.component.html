@@ -83,7 +83,7 @@
                   class="status-pill"
                   [class.pending]="item.status === 'Pending'"
                   [class.completed]="item.status === 'Completed'"
-                  [class.cancelled]="item.status === 'Cancelled'">
+                  [class.cancelled]="item.status === 'Cancelled'" [class.in-progress]="item.status === 'In Progress'" [class.no-show]="item.status === 'No Show'">
                   <i></i>{{ item.status }}
                 </span>
               </div>
