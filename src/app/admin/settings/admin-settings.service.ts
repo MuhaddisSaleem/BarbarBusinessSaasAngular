@@ -241,8 +241,16 @@ export class AdminSettingsService {
       return { success: false, message: 'Booking interval must be at least 5 minutes.' };
     }
 
-    if (Number(settings.maxAdvanceDays) < 1) {
-      return { success: false, message: 'Advance booking window must be at least 1 day.' };
+    if (!Number.isInteger(Number(settings.maxAdvanceDays)) || Number(settings.maxAdvanceDays) < 1) {
+      return { success: false, message: 'Advance booking window must be a whole number of at least 1 day.' };
+    }
+
+    if (!Number.isInteger(Number(settings.cancellationHours)) || Number(settings.cancellationHours) < 0) {
+      return { success: false, message: 'Cancellation notice must be a whole number of 0 hours or more.' };
+    }
+
+    if (!Number.isInteger(Number(settings.lateArrivalMinutes)) || Number(settings.lateArrivalMinutes) < 0) {
+      return { success: false, message: 'Late arrival grace must be a whole number of 0 minutes or more.' };
     }
 
     if (
