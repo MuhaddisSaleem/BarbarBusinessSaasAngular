@@ -24,6 +24,7 @@ export interface AdminBooking {
   serviceLocation?: 'Salon' | 'Home';
   serviceAddress?: string;
   specialService?: string;
+  specialServiceAmount?: number;
 }
 
 export interface BookingMutationResult {
@@ -90,6 +91,18 @@ export class AdminBookingService {
   updateStatus(id: number, status: BookingStatus): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
+
+    if (
+      (status === 'Confirmed' || status === 'Completed')
+      && booking.serviceLocation === 'Home'
+      && booking.specialService?.trim()
+      && !(Number(booking.specialServiceAmount) > 0)
+    ) {
+      return {
+        success: false,
+        message: 'Set the custom home-service price before confirming this booking.'
+      };
+    }
 
     const previousStatus = booking.status;
     booking.status = status;
@@ -192,6 +205,42 @@ export class AdminBookingService {
     }
 
     return { success: true, message: 'Appointment rescheduled successfully.' };
+  }
+
+  updateSpecialServiceAmount(id: number, amount: number): BookingMutationResult {
+    const booking = this.getById(id);
+    if (!booking) return { success: false, message: 'Booking not found.' };
+
+    if (booking.serviceLocation !== 'Home' || !booking.specialService?.trim()) {
+      return { success: false, message: 'This booking does not contain a custom home-service request.' };
+    }
+
+    const nextAmount = Number(amount);
+    if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
+      return { success: false, message: 'Enter a valid custom service amount greater than 0.' };
+    }
+
+    const previousSpecialAmount = Number(booking.specialServiceAmount) || 0;
+    const previousTotal = booking.amount;
+
+    booking.specialServiceAmount = Math.round(nextAmount);
+    booking.amount = Math.max(0, previousTotal - previousSpecialAmount) + booking.specialServiceAmount;
+
+    if (!this.persist()) {
+      booking.specialServiceAmount = previousSpecialAmount;
+      booking.amount = previousTotal;
+      return { success: false, message: 'Could not save the custom service price.' };
+    }
+
+    this.notificationService.add({
+      type: 'booking',
+      title: 'Custom home-service price set',
+      message: booking.code + ' custom service was priced at Rs. ' + booking.specialServiceAmount.toLocaleString('en-US') + '.',
+      icon: 'bi-cash-coin',
+      url: '/admin/bookings?booking=' + booking.id
+    });
+
+    return { success: true, message: 'Custom home-service price updated.' };
   }
 
   cancel(id: number): BookingMutationResult {
@@ -466,7 +515,8 @@ export class AdminBookingService {
           notes: item.notes || '',
           serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
           serviceAddress: item.serviceAddress || '',
-          specialService: item.specialService || ''
+          specialService: item.specialService || '',
+          specialServiceAmount: Number(item.specialServiceAmount) || 0
         }));
 
       if (needsCleanup) {
