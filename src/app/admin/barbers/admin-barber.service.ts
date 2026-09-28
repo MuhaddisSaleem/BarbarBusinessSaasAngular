@@ -391,6 +391,18 @@ export class AdminBarberService {
     return { success: true, message: '' };
   }
 
+  workingHoursCover(workingHours: string, time: string, duration: number): boolean {
+    const window = this.workingWindow(workingHours);
+    if (!window) return false;
+
+    const start = this.timeToMinutes(time);
+    if (!Number.isFinite(start) || !Number.isFinite(Number(duration)) || Number(duration) <= 0) {
+      return false;
+    }
+
+    return start >= window.start && start + Number(duration) <= window.end;
+  }
+
   workingWindowFor(id: number): { start: number; end: number } | null {
     const barber = this.getById(id);
     if (!barber || barber.accountStatus !== 'Active') return null;
