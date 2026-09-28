@@ -9,6 +9,7 @@ import {
   BarberAvailability
 } from './admin-barber.service';
 import { AdminServiceService } from '../services/admin-service.service';
+import { AdminBookingService } from '../bookings/admin-booking.service';
 
 @Component({
   selector: 'app-admin-barbers',
@@ -37,6 +38,10 @@ export class AdminBarbersComponent {
   imageValidationMessage = '';
   manualFaceConfirmed = false;
 
+  editImageValidationState: 'idle' | 'checking' | 'valid' | 'invalid' | 'unsupported' = 'idle';
+  editImageValidationMessage = '';
+  editManualFaceConfirmed = false;
+
   newBarber = this.emptyBarberForm();
   editBarber = this.emptyBarberForm();
 
@@ -60,7 +65,8 @@ export class AdminBarbersComponent {
 
   constructor(
     public readonly barberService: AdminBarberService,
-    public readonly serviceService: AdminServiceService
+    public readonly serviceService: AdminServiceService,
+    private readonly bookingService: AdminBookingService
   ) {}
 
   get filteredBarbers(): AdminBarber[] {
@@ -274,6 +280,9 @@ export class AdminBarbersComponent {
       workingHours: barber.workingHours,
       image: barber.image
     };
+    this.editImageValidationState = 'valid';
+    this.editImageValidationMessage = 'Current barber photo is already approved.';
+    this.editManualFaceConfirmed = false;
     this.editModalOpen = true;
     this.feedbackMessage = '';
   }
@@ -302,12 +311,27 @@ export class AdminBarbersComponent {
       return;
     }
 
+    if (!this.editBarber.image) {
+      this.showFeedback(false, 'A barber profile photo is required.');
+      return;
+    }
+
+    const photoAccepted =
+      this.editImageValidationState === 'valid'
+      || (this.editImageValidationState === 'unsupported' && this.editManualFaceConfirmed);
+
+    if (!photoAccepted) {
+      this.showFeedback(false, 'Please complete the barber face check before saving.');
+      return;
+    }
+
     const result = this.barberService.updateBarber(this.editCandidate.id, {
       name: this.editBarber.name,
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
       experience: this.editBarber.experience,
       specialties: this.editBarber.specialties,
-      workingHours: this.editBarber.workingHours
+      workingHours: this.editBarber.workingHours,
+      image: this.editBarber.image
     });
 
     this.showFeedback(result.success, result.message);
@@ -377,6 +401,20 @@ export class AdminBarbersComponent {
   }
 
   requestDelete(barber: AdminBarber): void {
+    const upcomingCount = this.bookingService.all.filter(booking =>
+      booking.barber === barber.name
+      && booking.date >= this.todayKey
+      && (booking.status === 'Pending' || booking.status === 'Confirmed')
+    ).length;
+
+    if (upcomingCount) {
+      this.showFeedback(
+        false,
+        barber.name + ' has ' + upcomingCount + ' upcoming booking' + (upcomingCount === 1 ? '' : 's') + '. Reassign or cancel them before deleting this barber.'
+      );
+      return;
+    }
+
     this.deleteCandidate = barber;
     this.deleteModalOpen = true;
   }
