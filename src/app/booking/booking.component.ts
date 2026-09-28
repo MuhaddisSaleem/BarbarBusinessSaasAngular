@@ -176,6 +176,9 @@ export class BookingComponent implements OnInit {
   setServiceLocation(location: 'salon' | 'home'): void {
     if (this.serviceLocation === location) return;
 
+    const destinationServices = location === 'home' ? this.homeServices : this.salonServices;
+    const destinationById = new Map(destinationServices.map(service => [service.id, service]));
+
     this.serviceLocation = location;
     this.clearValidationMessage();
     this.clearSelectedTime();
@@ -186,11 +189,19 @@ export class BookingComponent implements OnInit {
       this.participants = [this.participants[0] || this.createPerson(1, 'You')];
       this.activeParticipantIndex = 0;
       this.nextPersonId = 2;
-      this.participants[0].selectedBarber = 'any';
-    } else {
-      this.participants.forEach(person => {
-        if (person.selectedBarber === 'any') person.selectedBarber = null;
-      });
+    }
+
+    this.participants.forEach(person => {
+      person.selectedServices = person.selectedServices
+        .map(service => destinationById.get(service.id))
+        .filter((service): service is Service => !!service);
+
+      person.selectedBarber = location === 'home'
+        ? 'any'
+        : (person.selectedBarber === 'any' ? null : person.selectedBarber);
+    });
+
+    if (location === 'salon') {
       this.homeAddress = '';
       this.specialHomeService = '';
     }
