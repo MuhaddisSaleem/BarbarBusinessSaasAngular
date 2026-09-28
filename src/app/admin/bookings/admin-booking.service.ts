@@ -183,6 +183,29 @@ export class AdminBookingService {
     return this.updateStatus(id, 'Cancelled');
   }
 
+  customerCancel(id: number): BookingMutationResult {
+    const booking = this.getById(id);
+    if (!booking) return { success: false, message: 'Booking not found.' };
+
+    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+      return { success: false, message: 'This booking can no longer be cancelled by the customer.' };
+    }
+
+    if (!this.settingsService.canCustomerCancel(booking.date, booking.time)) {
+      return {
+        success: false,
+        message: 'The cancellation window has closed. Please contact the salon for assistance.'
+      };
+    }
+
+    return this.updateStatus(id, 'Cancelled');
+  }
+
+  isPastLateArrivalGrace(booking: AdminBooking): boolean {
+    return (booking.status === 'Pending' || booking.status === 'Confirmed')
+      && this.settingsService.isPastLateArrivalGrace(booking.date, booking.time);
+  }
+
   addOnlineBookings(
     inputs: Array<Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>>
   ): BookingMutationResult {
