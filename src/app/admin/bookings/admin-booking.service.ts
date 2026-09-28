@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { AdminBarberService } from '../barbers/admin-barber.service';
 import { AdminServiceService } from '../services/admin-service.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
+import { NotificationService } from '../notifications/notification.service';
 
 export type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
 
@@ -32,7 +33,8 @@ export class AdminBookingService {
   constructor(
     private readonly barberService: AdminBarberService,
     private readonly serviceService: AdminServiceService,
-    private readonly settingsService: AdminSettingsService
+    private readonly settingsService: AdminSettingsService,
+    private readonly notificationService: NotificationService
   ) {}
 
   get barbers(): string[] {
@@ -71,6 +73,16 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the booking status. Please try again.' };
     }
 
+    if (previousStatus !== status) {
+      this.notificationService.add({
+        type: status === 'Cancelled' ? 'cancelled' : 'booking',
+        title: status === 'Cancelled' ? 'Booking cancelled' : 'Booking status updated',
+        message: booking.code + ' for ' + booking.customerName + ' is now ' + status.toLowerCase() + '.',
+        icon: status === 'Cancelled' ? 'bi-x-circle' : (status === 'Completed' ? 'bi-check2-circle' : 'bi-calendar2-check'),
+        url: '/admin/bookings?booking=' + booking.id
+      });
+    }
+
     return { success: true, message: 'Booking ' + booking.code + ' marked ' + status.toLowerCase() + '.' };
   }
 
@@ -86,6 +98,16 @@ export class AdminBookingService {
     if (!this.persist()) {
       booking.barber = previousBarber;
       return { success: false, message: 'Could not save the barber assignment. Please try again.' };
+    }
+
+    if (previousBarber !== barber) {
+      this.notificationService.add({
+        type: 'booking',
+        title: 'Barber reassigned',
+        message: booking.code + ' moved from ' + previousBarber + ' to ' + barber + '.',
+        icon: 'bi-person-gear',
+        url: '/admin/bookings?booking=' + booking.id
+      });
     }
 
     return { success: true, message: barber + ' assigned successfully.' };
@@ -107,6 +129,16 @@ export class AdminBookingService {
       booking.date = previousDate;
       booking.time = previousTime;
       return { success: false, message: 'Could not save the new appointment schedule. Please try again.' };
+    }
+
+    if (previousDate !== date || previousTime !== time) {
+      this.notificationService.add({
+        type: 'rescheduled',
+        title: 'Booking rescheduled',
+        message: booking.code + ' for ' + booking.customerName + ' moved to ' + date + ' at ' + time + '.',
+        icon: 'bi-calendar2-week',
+        url: '/admin/bookings?booking=' + booking.id
+      });
     }
 
     return { success: true, message: 'Appointment rescheduled successfully.' };
@@ -167,6 +199,19 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the booking. Please try again.' };
     }
 
+    if (this.settingsService.current.notifyOwnerOnNewBooking) {
+      const first = created[0];
+      this.notificationService.add({
+        type: 'booking',
+        title: created.length > 1 ? 'New group booking' : 'New online booking',
+        message: created.length > 1
+          ? first.customerName + ' booked ' + created.length + ' appointments for ' + first.date + '.'
+          : first.customerName + ' booked ' + first.service + ' with ' + first.barber + ' for ' + first.date + ' at ' + first.time + '.',
+        icon: 'bi-calendar2-plus',
+        url: '/admin/bookings?booking=' + first.id
+      });
+    }
+
     return {
       success: true,
       message: created.length > 1
@@ -205,6 +250,15 @@ export class AdminBookingService {
       this.bookings = previousBookings;
       return { success: false, message: 'Could not save the booking. Please try again.' };
     }
+
+    const created = this.bookings[0];
+    this.notificationService.add({
+      type: 'booking',
+      title: 'Admin booking created',
+      message: created.customerName + ' booked ' + created.service + ' with ' + created.barber + ' for ' + created.date + ' at ' + created.time + '.',
+      icon: 'bi-calendar2-plus',
+      url: '/admin/bookings?booking=' + created.id
+    });
 
     return { success: true, message: 'Booking created successfully.' };
   }
