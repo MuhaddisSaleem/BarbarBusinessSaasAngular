@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus } from '../bookings/admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
+import { AdminBarberService } from '../barbers/admin-barber.service';
 
 type ScheduleView = 'daily' | 'week';
 
@@ -32,6 +33,7 @@ export class AdminCalendarComponent {
   constructor(
     public readonly bookingService: AdminBookingService,
     public readonly settingsService: AdminSettingsService,
+    private readonly barberService: AdminBarberService,
     private readonly router: Router
   ) {}
 
@@ -105,7 +107,7 @@ export class AdminCalendarComponent {
       return {
         name,
         bookings: bookings.length,
-        nextAvailable: this.findNextAvailable(bookings),
+        nextAvailable: this.findNextAvailable(name, bookings),
         bookedMinutes: bookings.reduce((sum, item) => sum + item.duration, 0)
       };
     });
@@ -211,7 +213,12 @@ export class AdminCalendarComponent {
     return 'bi-check-circle';
   }
 
-  private findNextAvailable(bookings: AdminBooking[]): string {
+  private findNextAvailable(barberName: string, bookings: AdminBooking[]): string {
+    const barber = this.barberService.active.find(item => item.name === barberName);
+    if (!barber || !this.barberService.isAvailableOnDate(barber.id, this.selectedDateKey)) {
+      return 'Unavailable';
+    }
+
     const hours = this.settingsService.hoursForDate(this.selectedDate);
     if (!hours) return 'Closed';
 
