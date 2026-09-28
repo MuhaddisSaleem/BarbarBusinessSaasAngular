@@ -224,7 +224,8 @@
         <h4>Assigned Barber</h4>
         <div class="edit-row">
           <select [(ngModel)]="editBarber">
-            <option *ngFor="let barber of bookingService.barbers">{{ barber }}</option>
+            <option value="">Select eligible barber</option>
+            <option *ngFor="let barber of editBarbers">{{ barber }}</option>
           </select>
           <button type="button" (click)="saveBarber()">Update</button>
         </div>
@@ -233,7 +234,7 @@
       <section class="detail-section">
         <h4>Reschedule</h4>
         <div class="schedule-grid">
-          <input type="date" [(ngModel)]="editDate" [min]="minDate" [max]="maxDate">
+          <input type="date" [(ngModel)]="editDate" (ngModelChange)="onEditDateChange()" [min]="minDate" [max]="maxDate">
           <select [(ngModel)]="editTime">
             <option *ngFor="let slot of editTimeSlots">{{ slot }}</option>
           </select>
@@ -283,7 +284,7 @@
 
         <label class="full">
           <span>Service *</span>
-          <select [(ngModel)]="newBooking.service">
+          <select [(ngModel)]="newBooking.service" (ngModelChange)="onCreateServiceOrDateChange()">
             <option value="">Select service</option>
             <option *ngFor="let service of bookingService.services" [value]="service.name">
               {{ service.name }} · Rs. {{ service.amount | number }}
@@ -294,14 +295,14 @@
         <label>
           <span>Barber *</span>
           <select [(ngModel)]="newBooking.barber">
-            <option value="">Select barber</option>
-            <option *ngFor="let barber of bookingService.barbers">{{ barber }}</option>
+            <option value="">Select eligible barber</option>
+            <option *ngFor="let barber of createBarbers">{{ barber }}</option>
           </select>
         </label>
 
         <label>
           <span>Date *</span>
-          <input type="date" [(ngModel)]="newBooking.date" [min]="minDate" [max]="maxDate">
+          <input type="date" [(ngModel)]="newBooking.date" (ngModelChange)="onCreateServiceOrDateChange()" [min]="minDate" [max]="maxDate">
         </label>
 
         <label class="full">
