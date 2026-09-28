@@ -4,7 +4,7 @@
       <div>
         <span class="eyebrow">ACTIVITY CENTER</span>
         <h2>Notifications</h2>
-        <p>Stay updated on bookings, payments, schedule changes and salon activity.</p>
+        <p>Stay updated on bookings, schedule changes, barbers, services and salon activity.</p>
       </div>
 
       <div class="heading-actions d-flex align-items-center gap-2">
@@ -51,7 +51,10 @@
               <i class="unread-dot" *ngIf="notification.unread"></i>
             </span>
             <span class="notification-message">{{ notification.message }}</span>
-            <small><i class="bi bi-clock"></i>{{ notification.time }}</small>
+            <small>
+              <i class="bi bi-clock"></i>{{ notification.time }}
+              <span *ngIf="notification.dateLabel"> · {{ notification.dateLabel }}</span>
+            </small>
           </span>
 
           <i class="bi bi-chevron-right notification-chevron"></i>
@@ -59,8 +62,12 @@
 
         <div class="empty-state" *ngIf="!notifications.length">
           <i class="bi bi-bell-slash"></i>
-          <strong>You’re all caught up</strong>
-          <span>There are no unread notifications right now.</span>
+          <strong>{{ activeFilter === 'unread' ? 'You’re all caught up' : 'No activity yet' }}</strong>
+          <span>
+            {{ activeFilter === 'unread'
+              ? 'There are no unread notifications right now.'
+              : 'Real salon activity will appear here automatically.' }}
+          </span>
         </div>
       </div>
     </section>
