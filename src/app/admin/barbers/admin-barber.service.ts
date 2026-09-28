@@ -103,7 +103,7 @@ export class AdminBarberService {
 
   updateBarber(
     id: number,
-    changes: Pick<AdminBarber, 'name' | 'phone' | 'experience' | 'specialties' | 'workingHours'>
+    changes: Pick<AdminBarber, 'name' | 'phone' | 'experience' | 'specialties' | 'workingHours' | 'image'>
   ): BarberMutationResult {
     const barber = this.getById(id);
     if (!barber) return { success: false, message: 'Barber not found.' };
@@ -135,7 +135,8 @@ export class AdminBarberService {
       phone: barber.phone,
       experience: barber.experience,
       specialties: [...barber.specialties],
-      workingHours: barber.workingHours
+      workingHours: barber.workingHours,
+      image: barber.image
     };
 
     barber.name = changes.name.trim();
@@ -143,6 +144,7 @@ export class AdminBarberService {
     barber.experience = this.normalizeExperience(changes.experience);
     barber.specialties = changes.specialties.filter(Boolean);
     barber.workingHours = changes.workingHours.trim();
+    barber.image = changes.image || barber.image || 'assets/images/barber-placeholder.svg';
 
     if (!this.persist()) {
       barber.name = previous.name;
@@ -150,6 +152,7 @@ export class AdminBarberService {
       barber.experience = previous.experience;
       barber.specialties = previous.specialties;
       barber.workingHours = previous.workingHours;
+      barber.image = previous.image;
       return { success: false, message: 'Could not save the barber changes.' };
     }
 
@@ -288,6 +291,27 @@ export class AdminBarberService {
       success: true,
       message: barber.name + ' is now ' + barber.accountStatus.toLowerCase() + '.'
     };
+  }
+
+  supportsServices(id: number, serviceNames: string[]): boolean {
+    const barber = this.getById(id);
+    if (!barber || barber.accountStatus !== 'Active') return false;
+
+    const required = serviceNames
+      .map(name => name.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (!required.length) return true;
+
+    const specialties = new Set(
+      barber.specialties.map(name => name.trim().toLowerCase()).filter(Boolean)
+    );
+
+    return required.every(name => specialties.has(name));
+  }
+
+  eligibleForBooking(id: number, dateKey: string, serviceNames: string[]): boolean {
+    return this.isAvailableOnDate(id, dateKey) && this.supportsServices(id, serviceNames);
   }
 
   isAvailableOnDate(id: number, dateKey: string): boolean {
