@@ -315,7 +315,7 @@ export class AdminServiceService {
             ? null
             : Number(item.homeDiscountPrice),
           image: item.image || 'assets/images/service-placeholder.svg',
-          status: item.status || 'Active'
+          status: item.status === 'Inactive' ? 'Inactive' : 'Active'
         }));
 
       if (needsCleanup) {
