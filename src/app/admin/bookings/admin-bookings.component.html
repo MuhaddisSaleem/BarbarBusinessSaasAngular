@@ -273,7 +273,7 @@
         </p>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'">
         <h4>Assigned Barber</h4>
         <div class="edit-row">
           <select [(ngModel)]="editBarber">
@@ -284,7 +284,7 @@
         </div>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'">
         <h4>Reschedule</h4>
         <div class="schedule-grid">
           <input type="date" [(ngModel)]="editDate" (ngModelChange)="onEditDateChange()" [min]="minDate" [max]="maxDate">
@@ -303,7 +303,7 @@
         <p class="booking-notes">{{ selectedBooking.notes }}</p>
       </section>
 
-      <button type="button" class="cancel-booking-btn" *ngIf="selectedBooking.status !== 'Cancelled'" (click)="requestCancel()">
+      <button type="button" class="cancel-booking-btn" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'" (click)="requestCancel()">
         <i class="bi bi-x-circle"></i>
         Cancel booking
       </button>
