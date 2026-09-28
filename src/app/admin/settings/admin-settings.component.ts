@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminSettings, AdminSettingsService } from './admin-settings.service';
+import { BrandingMediaService } from './branding-media.service';
 
 @Component({
   selector: 'app-admin-settings',
@@ -16,10 +17,14 @@ export class AdminSettingsComponent {
   feedbackMessage = '';
   feedbackType: 'success' | 'error' = 'success';
   resetConfirmOpen = false;
+  brandingBusy = false;
 
   readonly bookingIntervals = [10, 15, 20, 30, 45, 60];
 
-  constructor(public readonly settingsService: AdminSettingsService) {
+  constructor(
+    public readonly settingsService: AdminSettingsService,
+    public readonly brandingMedia: BrandingMediaService
+  ) {
     this.settings = this.settingsService.current;
   }
 
@@ -45,11 +50,12 @@ export class AdminSettingsComponent {
     this.resetConfirmOpen = false;
   }
 
-  confirmReset(): void {
+  async confirmReset(): Promise<void> {
     this.settings = this.settingsService.reset();
+    await this.brandingMedia.clearAll();
     this.resetConfirmOpen = false;
     this.feedbackType = 'success';
-    this.feedbackMessage = 'Settings reset to the default salon configuration.';
+    this.feedbackMessage = 'Settings and landing page branding reset to defaults.';
   }
 
   onPhoneInput(event: Event, field: 'businessPhone' | 'whatsappNumber'): void {
@@ -79,7 +85,50 @@ export class AdminSettingsComponent {
     input.value = String(hours);
   }
 
+  async onLogoSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.brandingBusy = true;
+    const result = await this.brandingMedia.saveLogo(file);
+    this.brandingBusy = false;
+    this.showBrandingFeedback(result.success, result.message);
+    input.value = '';
+  }
+
+  async onHeroMediaSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.brandingBusy = true;
+    const result = await this.brandingMedia.saveHeroMedia(file);
+    this.brandingBusy = false;
+    this.showBrandingFeedback(result.success, result.message);
+    input.value = '';
+  }
+
+  async removeLogo(): Promise<void> {
+    await this.brandingMedia.clearLogo();
+    this.showBrandingFeedback(true, 'Business logo removed.');
+  }
+
+  async removeHeroMedia(): Promise<void> {
+    await this.brandingMedia.clearHeroMedia();
+    this.showBrandingFeedback(true, 'Landing page hero media removed.');
+  }
+
   copyBusinessPhoneToWhatsapp(): void {
     this.settings.whatsappNumber = this.settings.businessPhone;
+  }
+
+  private showBrandingFeedback(success: boolean, message: string): void {
+    this.feedbackType = success ? 'success' : 'error';
+    this.feedbackMessage = message;
+
+    window.setTimeout(() => {
+      if (this.feedbackMessage === message) this.feedbackMessage = '';
+    }, 3500);
   }
 }
