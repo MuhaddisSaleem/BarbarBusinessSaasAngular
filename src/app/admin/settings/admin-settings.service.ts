@@ -363,15 +363,20 @@ export class AdminSettingsService {
       if (!raw) return this.clone(DEFAULT_SETTINGS);
 
       const parsed = JSON.parse(raw) as Partial<AdminSettings>;
+      const storedHours = Array.isArray(parsed.businessHours) ? parsed.businessHours : [];
+
       return {
         ...this.clone(DEFAULT_SETTINGS),
         ...parsed,
-        businessHours: Array.isArray(parsed.businessHours)
-          ? parsed.businessHours.map((day, index) => ({
-              ...DEFAULT_HOURS[index],
-              ...day
-            }))
-          : DEFAULT_HOURS.map(day => ({ ...day }))
+        businessHours: DEFAULT_HOURS.map(defaultDay => {
+          const savedDay = storedHours.find(day => day?.key === defaultDay.key);
+          return {
+            ...defaultDay,
+            ...(savedDay || {}),
+            key: defaultDay.key,
+            label: defaultDay.label
+          };
+        })
       };
     } catch {
       return this.clone(DEFAULT_SETTINGS);
