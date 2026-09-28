@@ -255,7 +255,7 @@
         <div class="status-actions">
           <button type="button" [class.active]="selectedBooking.status === 'Pending'" (click)="setStatus('Pending')">Pending</button>
           <button type="button" [class.active]="selectedBooking.status === 'Confirmed'" (click)="setStatus('Confirmed')">Confirmed</button>
-          <button type="button" [class.active]="selectedBooking.status === 'Completed'" (click)="setStatus('Completed')">Completed</button>
+          <button type="button" (click)="setStatus('Completed')">Completed</button>
         </div>
       </section>
 
