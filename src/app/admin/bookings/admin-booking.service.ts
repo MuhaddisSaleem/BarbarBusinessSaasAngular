@@ -349,18 +349,53 @@ export class AdminBookingService {
   }
 
   private validateSchedule(dateKey: string, time: string, duration: number): BookingMutationResult {
-    const date = new Date(dateKey + 'T12:00:00');
-    const hours = this.settingsService.hoursForDate(date);
+    const dateMatch = String(dateKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+      return { success: false, message: 'Select a valid appointment date.' };
+    }
 
+    const date = new Date(
+      Number(dateMatch[1]),
+      Number(dateMatch[2]) - 1,
+      Number(dateMatch[3]),
+      12,
+      0,
+      0,
+      0
+    );
+
+    if (!this.settingsService.isBookingDateAllowed(date)) {
+      return { success: false, message: 'This date is outside the current booking window or the salon is closed.' };
+    }
+
+    const hours = this.settingsService.hoursForDate(date);
     if (!hours) {
       return { success: false, message: 'The salon is closed on the selected date.' };
     }
 
     const start = this.timeToMinutes(time);
-    const end = start + duration;
+    const end = start + Number(duration);
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || Number(duration) <= 0) {
+      return { success: false, message: 'Select a valid appointment time and duration.' };
+    }
 
     if (start < hours.start || end > hours.end) {
       return { success: false, message: 'This appointment falls outside the configured business hours.' };
+    }
+
+    const now = new Date();
+    const todayKey = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0')
+    ].join('-');
+
+    if (dateKey === todayKey) {
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      if (start <= nowMinutes) {
+        return { success: false, message: 'The selected appointment time has already passed.' };
+      }
     }
 
     return { success: true, message: '' };
@@ -499,7 +534,7 @@ export class AdminBookingService {
 
   private timeToMinutes(time: string): number {
     const match = time.match(/^(\d{1,2}):(\d{2})\s(AM|PM)$/i);
-    if (!match) return 0;
+    if (!match) return Number.NaN;
     let hour = Number(match[1]);
     const minute = Number(match[2]);
     const period = match[3].toUpperCase();
