@@ -296,6 +296,77 @@ export class AdminBarberService {
     };
   }
 
+  renameSpecialty(previousName: string, nextName: string): BarberMutationResult {
+    const from = previousName.trim();
+    const to = nextName.trim();
+    if (!from || !to || from.toLowerCase() === to.toLowerCase()) {
+      return { success: true, message: '' };
+    }
+
+    const snapshots = this.barbers.map(barber => ({
+      id: barber.id,
+      specialties: [...barber.specialties]
+    }));
+
+    let changed = false;
+    this.barbers.forEach(barber => {
+      const next = barber.specialties.map(specialty =>
+        specialty.trim().toLowerCase() === from.toLowerCase() ? to : specialty
+      );
+
+      const unique = Array.from(new Map(
+        next.map(specialty => [specialty.trim().toLowerCase(), specialty.trim()])
+      ).values()).filter(Boolean);
+
+      if (JSON.stringify(unique) !== JSON.stringify(barber.specialties)) {
+        barber.specialties = unique;
+        changed = true;
+      }
+    });
+
+    if (changed && !this.persist()) {
+      snapshots.forEach(snapshot => {
+        const barber = this.getById(snapshot.id);
+        if (barber) barber.specialties = snapshot.specialties;
+      });
+      return { success: false, message: 'Could not update barber specialties for the renamed service.' };
+    }
+
+    return { success: true, message: '' };
+  }
+
+  removeSpecialty(serviceName: string): BarberMutationResult {
+    const target = serviceName.trim().toLowerCase();
+    if (!target) return { success: true, message: '' };
+
+    const snapshots = this.barbers.map(barber => ({
+      id: barber.id,
+      specialties: [...barber.specialties]
+    }));
+
+    let changed = false;
+    this.barbers.forEach(barber => {
+      const next = barber.specialties.filter(
+        specialty => specialty.trim().toLowerCase() !== target
+      );
+
+      if (next.length !== barber.specialties.length) {
+        barber.specialties = next;
+        changed = true;
+      }
+    });
+
+    if (changed && !this.persist()) {
+      snapshots.forEach(snapshot => {
+        const barber = this.getById(snapshot.id);
+        if (barber) barber.specialties = snapshot.specialties;
+      });
+      return { success: false, message: 'Could not update barber specialties for the deleted service.' };
+    }
+
+    return { success: true, message: '' };
+  }
+
   supportsServices(id: number, serviceNames: string[]): boolean {
     const barber = this.getById(id);
     if (!barber || barber.accountStatus !== 'Active') return false;
