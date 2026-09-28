@@ -63,6 +63,18 @@ export class AdminBookingService {
       .map(barber => barber.name);
   }
 
+  availableBarbersForBooking(booking: AdminBooking, dateKey: string): string[] {
+    const services = this.bookingServiceNames(booking);
+
+    return this.barberService.active
+      .filter(barber =>
+        (!dateKey || this.barberService.isAvailableOnDate(barber.id, dateKey))
+        && this.barberService.supportsServices(barber.id, services)
+      )
+      .sort((a, b) => b.rating - a.rating || a.id - b.id)
+      .map(barber => barber.name);
+  }
+
   private readonly storageKey = 'royal-barbers.admin-bookings.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-bookings.demo-cleaned.v1';
   private bookings: AdminBooking[] = this.loadBookings();
