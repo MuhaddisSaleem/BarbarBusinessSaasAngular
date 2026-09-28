@@ -1284,3 +1284,88 @@ button { -webkit-tap-highlight-color: transparent; }
     grid-template-columns:1fr;
   }
 }
+
+
+/* Separate Salon / Home service catalogs */
+.service-subheading {
+  gap:12px;
+  margin:4px 0 12px;
+  padding:10px 12px;
+  border:1px solid #2d393e;
+  border-radius:8px;
+  background:#0d1417;
+
+  h3 {
+    margin:4px 0 0;
+    color:#eef1f2;
+    font-size:13px;
+  }
+}
+
+.service-type-label {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:$gold-soft;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+
+.selected-service-type {
+  padding:4px 7px;
+  border:1px solid rgba(103,212,154,.22);
+  border-radius:20px;
+  background:rgba(103,212,154,.07);
+  color:#67d49a;
+  font-size:7px;
+  font-weight:800;
+}
+
+.home-services-section {
+  margin-top:26px;
+  padding-top:22px;
+  border-top:1px solid #273238;
+
+  .home-heading {
+    border-color:rgba(103,212,154,.18);
+    background:rgba(103,212,154,.025);
+  }
+
+  .service-type-label {
+    color:#77dca3;
+  }
+}
+
+.home-service-card {
+  border-color:#335047;
+
+  &:hover {
+    border-color:rgba(103,212,154,.55);
+  }
+
+  &.selected {
+    border-color:#67d49a;
+    box-shadow:0 0 0 1px rgba(103,212,154,.12);
+  }
+}
+
+.no-home-services {
+  margin-top:10px;
+  padding:14px;
+  border:1px dashed #354047;
+  border-radius:8px;
+  color:#78868b;
+  font-size:9px;
+  text-align:center;
+}
+
+@media (max-width:575.98px) {
+  .service-subheading {
+    align-items:flex-start !important;
+  }
+
+  .selected-service-type {
+    flex:0 0 auto;
+  }
+}
