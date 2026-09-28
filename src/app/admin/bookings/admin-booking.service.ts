@@ -150,6 +150,10 @@ export class AdminBookingService {
       return { success: false, message: barber + ' does not provide all services in this booking.' };
     }
 
+    if (!this.barberService.isWorkingAt(barberId, booking.time, booking.duration)) {
+      return { success: false, message: barber + ' is outside their configured working hours at this time.' };
+    }
+
     if (this.hasConflict(barber, booking.date, booking.time, booking.duration, id)) {
       return { success: false, message: barber + ' already has an overlapping appointment at this time.' };
     }
@@ -192,6 +196,10 @@ export class AdminBookingService {
 
     if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(booking))) {
       return { success: false, message: booking.barber + ' no longer provides all services in this booking.' };
+    }
+
+    if (!this.barberService.isWorkingAt(barberId, time, booking.duration)) {
+      return { success: false, message: booking.barber + ' is outside their configured working hours at this time.' };
     }
 
     if (this.hasConflict(booking.barber, date, time, booking.duration, id)) {
@@ -311,6 +319,10 @@ export class AdminBookingService {
         return { success: false, message: input.barber + ' does not provide all selected services.' };
       }
 
+      if (!this.barberService.isWorkingAt(barberId, input.time, input.duration)) {
+        return { success: false, message: input.barber + ' is outside their configured working hours at this time.' };
+      }
+
       if (
         this.hasConflict(input.barber, input.date, input.time, input.duration)
         || staged.some(item => this.bookingsOverlap(item, input))
@@ -380,6 +392,10 @@ export class AdminBookingService {
 
     if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(input))) {
       return { success: false, message: input.barber + ' does not provide this service.' };
+    }
+
+    if (!this.barberService.isWorkingAt(barberId, input.time, input.duration)) {
+      return { success: false, message: input.barber + ' is outside their configured working hours at this time.' };
     }
 
     if (this.hasConflict(input.barber, input.date, input.time, input.duration)) {
