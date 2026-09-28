@@ -96,8 +96,8 @@ export class AdminDashboardComponent {
   }
 
   get stats(): DashboardStat[] {
-    const todayBookings = this.todayBookings.filter(item => this.bookingService.blocksSlot(item));
-    const yesterdayBookings = this.bookingsForDate(this.dateKey(-1)).filter(item => this.bookingService.blocksSlot(item));
+    const todayBookings = this.todayBookings;
+    const yesterdayBookings = this.bookingsForDate(this.dateKey(-1));
     const customers = this.customerService.all;
     const activeBarbers = this.barberService.active;
     const availableBarbers = this.barberService.availableToday.length;

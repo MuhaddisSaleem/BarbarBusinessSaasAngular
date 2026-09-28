@@ -128,7 +128,8 @@ export class AdminBookingsComponent implements OnInit {
 
   get editTimeSlots(): string[] {
     const duration = this.selectedBooking?.duration ?? 30;
-    const slots = this.slotsForDuration(duration, this.editDate);
+    const slots = this.slotsForDuration(duration, this.editDate,
+      this.selectedBooking?.source === 'Walk-in' && this.editDate === this.todayKey);
 
     if (!this.selectedBooking || !this.editBarber) return slots;
 

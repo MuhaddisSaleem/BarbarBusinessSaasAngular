@@ -296,7 +296,7 @@
       <section class="detail-section" *ngIf="bookingService.canReschedule(selectedBooking)">
         <h4>Reschedule / Reassign</h4>
         <div class="schedule-grid">
-          <input type="date" aria-label="Appointment date" [(ngModel)]="editDate" (ngModelChange)="onEditDateChange()" [min]="minDate" [max]="maxDate">
+          <input type="date" aria-label="Appointment date" [(ngModel)]="editDate" (ngModelChange)="onEditDateChange()" [min]="selectedBooking.source === 'Walk-in' ? todayKey : minDate" [max]="maxDate">
           <select aria-label="Assigned barber" [(ngModel)]="editBarber" (ngModelChange)="onEditBarberChange()">
             <option value="">Select eligible barber</option>
             <option *ngFor="let barber of editBarbers">{{ barber }}</option>

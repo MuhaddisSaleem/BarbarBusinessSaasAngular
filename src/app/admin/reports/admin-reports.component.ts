@@ -95,7 +95,7 @@ export class AdminReportsComponent {
   }
 
   get completionRate(): number {
-    const eligible = this.filteredBookings.filter(item => this.bookingService.blocksSlot(item)).length;
+    const eligible = this.filteredBookings.filter(item => item.status !== 'Cancelled').length;
     return eligible ? Math.round((this.completedBookings / eligible) * 100) : 0;
   }
 

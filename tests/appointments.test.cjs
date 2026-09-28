@@ -153,3 +153,30 @@ test('filters/pagination and walk-in form defaults use the shared appointments',
   c.newBooking.service = 'Haircut'; c.newBooking.barber = 'Ali';
   assert.equal(c.createTimeSlots.includes('12:00 PM'), true);
 });
+
+test('walk-in can be rescheduled today when online same-day booking is disabled', () => {
+  const f = fixture(); f.settings.current.allowSameDayBooking = false;
+  const b = f.seed({ source: 'Walk-in' });
+  assert.equal(f.service.reschedule(b.id, today, '2:00 PM', 'Bilal').success, true);
+  f.component.openBooking(b);
+  assert.equal(f.component.editTimeSlots.includes('3:00 PM'), true);
+});
+test('calendar day/week filters agree and no-shows do not consume capacity or booked value', () => {
+  const f = fixture(); f.seed(); f.seed({ status: 'No Show' }); f.seed({ status: 'Cancelled' });
+  const Calendar = load('src/app/admin/calendar/admin-calendar.component.ts', 'AdminCalendarComponent');
+  const c = new Calendar(f.service, f.settings, f.barbers, {});
+  c.selectedStatus = 'No Show';
+  assert.equal(c.dailyBookings.length, 1);
+  assert.equal(c.bookingsForDate(new Clock()).length, 1);
+  assert.equal(c.totalBookedValue, 500);
+  assert.equal(c.weekValue(new Clock()), 0);
+});
+test('reports exclude no-show value but include missed appointments in completion rate', () => {
+  const f = fixture(); f.seed({ status: 'Completed' }); f.seed({ status: 'No Show' }); f.seed({ status: 'Cancelled' });
+  const Reports = load('src/app/admin/reports/admin-reports.component.ts', 'AdminReportsComponent');
+  const r = new Reports(f.service, f.settings);
+  assert.equal(r.totalBookings, 3);
+  assert.equal(r.bookedValue, 500);
+  assert.equal(r.completedRevenue, 500);
+  assert.equal(r.completionRate, 50);
+});

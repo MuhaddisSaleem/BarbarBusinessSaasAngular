@@ -188,7 +188,9 @@ export class AdminBookingService {
     }
     if (!date || !time) return { success: false, message: 'Please choose both a date and time.' };
 
-    const scheduleValidation = this.validateSchedule(date, time, booking.duration);
+    const sameDayWalkIn = booking.source === 'Walk-in'
+      && new Date(date + 'T12:00:00').toDateString() === new Date().toDateString();
+    const scheduleValidation = this.validateSchedule(date, time, booking.duration, sameDayWalkIn);
     if (!scheduleValidation.success) return scheduleValidation;
 
     const nextBarber = barber || booking.barber;
