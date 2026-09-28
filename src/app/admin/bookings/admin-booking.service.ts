@@ -88,6 +88,22 @@ export class AdminBookingService {
     return this.bookings.find(item => item.id === id);
   }
 
+  isBarberSlotAvailable(
+    barberName: string,
+    dateKey: string,
+    time: string,
+    duration: number,
+    ignoreId?: number
+  ): boolean {
+    const barberId = this.barberIdByName(barberName);
+    if (!barberId) return false;
+    if (!this.barberService.isAvailableOnDate(barberId, dateKey)) return false;
+    if (!this.barberService.isWorkingAt(barberId, time, duration)) return false;
+
+    return !this.hasConflict(barberName, dateKey, time, duration, ignoreId);
+  }
+
+
   updateStatus(id: number, status: BookingStatus): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
