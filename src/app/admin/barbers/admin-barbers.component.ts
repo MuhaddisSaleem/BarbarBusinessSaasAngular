@@ -145,7 +145,7 @@ export class AdminBarbersComponent {
       specialties: this.newBarber.specialties,
       workingHours: this.newBarber.workingHours.trim(),
       image: this.newBarber.image || 'assets/images/barber-placeholder.svg',
-      rating: 0,
+      rating: 5,
       availability: 'Available Today',
       accountStatus: 'Active',
       note: ''
