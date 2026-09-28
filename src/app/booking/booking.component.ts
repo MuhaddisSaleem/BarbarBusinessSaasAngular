@@ -199,7 +199,9 @@ export class BookingComponent implements OnInit {
   }
 
   onSpecialHomeServiceInput(): void {
-    if (this.serviceLocation !== 'home') return;
+    if (this.serviceLocation !== 'home') {
+      this.setServiceLocation('home');
+    }
 
     this.activeParticipant.selectedBarber = 'any';
     this.clearValidationMessage();
