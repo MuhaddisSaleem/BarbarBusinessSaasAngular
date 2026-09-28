@@ -233,13 +233,15 @@ export class AdminCalendarComponent {
 
     while (candidate + interval <= hours.end) {
       const candidateEnd = candidate + interval;
+      const candidateLabel = this.minutesToLabel(candidate);
+      const insideBarberShift = this.barberService.isWorkingAt(barber.id, candidateLabel, interval);
       const conflict = bookings.some(booking => {
         const start = this.timeToMinutes(booking.time);
         const end = start + booking.duration;
         return candidate < end && candidateEnd > start;
       });
 
-      if (!conflict) return this.minutesToLabel(candidate);
+      if (insideBarberShift && !conflict) return candidateLabel;
       candidate += interval;
     }
 
