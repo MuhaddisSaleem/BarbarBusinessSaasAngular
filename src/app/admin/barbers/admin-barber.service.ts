@@ -60,6 +60,14 @@ export class AdminBarberService {
       return { success: false, message: 'Barber name is required.' };
     }
 
+    if (
+      this.barbers.some(
+        item => item.name.trim().toLowerCase() === input.name.trim().toLowerCase()
+      )
+    ) {
+      return { success: false, message: 'A barber with this name already exists.' };
+    }
+
     if (!/^\+923\d{9}$/.test(normalizedPhone)) {
       return { success: false, message: 'Enter a valid Pakistan mobile number.' };
     }
@@ -115,6 +123,14 @@ export class AdminBarberService {
 
     if (!changes.name.trim()) {
       return { success: false, message: 'Barber name is required.' };
+    }
+
+    if (
+      this.barbers.some(
+        item => item.id !== id && item.name.trim().toLowerCase() === changes.name.trim().toLowerCase()
+      )
+    ) {
+      return { success: false, message: 'Another barber already uses this name.' };
     }
 
     if (!/^\+923\d{9}$/.test(normalizedPhone)) {
