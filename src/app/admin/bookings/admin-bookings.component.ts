@@ -94,7 +94,7 @@ export class AdminBookingsComponent implements OnInit {
 
   get editBarbers(): string[] {
     if (!this.selectedBooking) return [];
-    return this.bookingService.availableBarbersForService(this.selectedBooking.service, this.editDate);
+    return this.bookingService.availableBarbersForBooking(this.selectedBooking, this.editDate);
   }
 
   get selectedBookingPastGrace(): boolean {
