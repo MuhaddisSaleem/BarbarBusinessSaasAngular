@@ -8,6 +8,18 @@ export type BookingStatus = 'Pending' | 'Confirmed' | 'In Progress' | 'Completed
 
 export const BOOKING_STATUSES: BookingStatus[] = ['Pending', 'Confirmed', 'In Progress', 'Completed', 'Cancelled', 'No Show'];
 
+/** Accept local/national/international Pakistan mobile formats without truncating digits. */
+export function normalizePakistanMobile(value: string): string {
+  const input = String(value || '').trim();
+  if (!/^\+?[\d\s()-]+$/.test(input)) return '';
+  let digits = input.replace(/\D/g, '');
+  if (digits.startsWith('0092')) digits = digits.slice(4);
+  else if (digits.startsWith('92')) digits = digits.slice(2);
+  else if (!input.startsWith('+') && digits.startsWith('0')) digits = digits.slice(1);
+  else if (input.startsWith('+')) return '';
+  return /^3\d{9}$/.test(digits) ? digits : '';
+}
+
 export interface AdminBooking {
   id: number;
   code: string;
@@ -392,7 +404,8 @@ export class AdminBookingService {
   }
 
   addBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>, walkIn = false): BookingMutationResult {
-    if (!input.customerName.trim() || !/^923\d{9}$/.test(input.phone.replace(/\D/g, ''))) {
+    const phone = normalizePakistanMobile(input.phone);
+    if (!input.customerName.trim() || !phone) {
       return { success: false, message: 'Enter a customer name and valid Pakistan mobile number.' };
     }
     const service = this.services.find(item => item.name === input.service);
@@ -424,6 +437,7 @@ export class AdminBookingService {
     this.bookings = [
       {
         ...input,
+        phone: '+92 ' + phone.slice(0, 3) + ' ' + phone.slice(3),
         id: nextId,
         code: this.bookingCode(nextId),
         status: 'Confirmed',

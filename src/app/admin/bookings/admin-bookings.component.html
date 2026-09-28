@@ -343,10 +343,12 @@
 
         <label>
           <span>Pakistan Mobile *</span>
-          <div class="phone-field d-flex">
+          <div class="phone-field d-flex" [class.invalid]="!!phoneError">
             <b>+92</b>
-            <input type="tel" inputmode="numeric" [ngModel]="newBooking.phone" (ngModelChange)="onPhoneInput($event)" maxlength="10" placeholder="3001234567">
+            <input type="tel" inputmode="tel" autocomplete="tel-national" [ngModel]="newBooking.phone" (ngModelChange)="onPhoneInput($event)" (blur)="onPhoneBlur()" [attr.aria-invalid]="!!phoneError" aria-describedby="booking-phone-help booking-phone-error" placeholder="3001234567">
           </div>
+          <small id="booking-phone-help" class="phone-help">Accepts 3001234567, 03001234567 or +923001234567.</small>
+          <small id="booking-phone-error" class="phone-error" role="status">{{ phoneError }}</small>
         </label>
 
         <label class="full">

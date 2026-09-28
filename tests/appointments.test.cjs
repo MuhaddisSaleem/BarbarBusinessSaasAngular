@@ -50,7 +50,7 @@ function fixture() {
   const Service = load('src/app/admin/bookings/admin-booking.service.ts', 'AdminBookingService', { window });
   const service = new Service(barbers, services, settings, { add: item => notifications.push(item) });
   const seed = (changes = {}) => { const item = { ...base, id: service.all.length + 1, code: 'RB-test', status: 'Confirmed', source: 'Admin', ...changes }; service.all.push(item); return item; };
-  const Component = load('src/app/admin/bookings/admin-bookings.component.ts', 'AdminBookingsComponent', { window, BOOKING_STATUSES: ['Pending','Confirmed','In Progress','Completed','Cancelled','No Show'] });
+  const Component = load('src/app/admin/bookings/admin-bookings.component.ts', 'AdminBookingsComponent', { window, normalizePakistanMobile: load('src/app/admin/bookings/admin-booking.service.ts', 'normalizePakistanMobile', { window }), BOOKING_STATUSES: ['Pending','Confirmed','In Progress','Completed','Cancelled','No Show'] });
   const component = new Component(service, { snapshot: { queryParamMap: new Map() } }, settings);
   return { service, settings, barbers, seed, storage, window, notifications, component, Service, services, failSave: value => fail = value };
 }
@@ -179,4 +179,39 @@ test('reports exclude no-show value but include missed appointments in completio
   assert.equal(r.bookedValue, 500);
   assert.equal(r.completedRevenue, 500);
   assert.equal(r.completionRate, 50);
+});
+
+
+test('phone field accepts common Pakistan formats without truncation and persists one format', () => {
+  for (const phone of ['3001234567', '03001234567', '+923001234567', '923001234567', '00923001234567', '+92 (300) 123-4567', '0300 123 4567']) {
+    const f = fixture(), c = f.component;
+    c.openCreateModal();
+    Object.assign(c.newBooking, base);
+    c.onPhoneInput(phone);
+    assert.equal(c.newBooking.phone, phone);
+    c.onPhoneBlur();
+    assert.equal(c.newBooking.phone, '3001234567');
+    assert.equal(c.phoneError, '');
+    c.createBooking();
+    assert.equal(f.service.all.length, 1);
+    assert.equal(f.service.all[0].phone, '+92 300 1234567');
+  }
+});
+test('invalid or overlong phone numbers remain visible and cannot create an appointment', () => {
+  for (const phone of ['', '0300123456', '030012345678', '30012345678', '+13001234567', '+3001234567', '03abc001234567']) {
+    const f = fixture(), c = f.component;
+    c.openCreateModal();
+    Object.assign(c.newBooking, base);
+    c.onPhoneInput(phone); c.onPhoneBlur();
+    assert.equal(c.newBooking.phone, phone);
+    assert.notEqual(c.phoneError, '');
+    c.createBooking();
+    assert.equal(f.service.all.length, 0);
+    assert.equal(f.service.addBooking({ ...base, phone }).success, false);
+  }
+});
+test('service normalizes phones even without a form blur event', () => {
+  const f = fixture();
+  assert.equal(f.service.addBooking({ ...base, phone: '03001234567' }).success, true);
+  assert.equal(f.service.all[0].phone, '+92 300 1234567');
 });

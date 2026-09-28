@@ -3,7 +3,7 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
-import { AdminBooking, AdminBookingService, BOOKING_STATUSES, BookingStatus } from './admin-booking.service';
+import { AdminBooking, AdminBookingService, BOOKING_STATUSES, BookingStatus, normalizePakistanMobile } from './admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 
 type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
@@ -26,6 +26,7 @@ export class AdminBookingsComponent implements OnInit {
   page = 1;
   readonly pageSize = 10;
   walkInMode = false;
+  phoneTouched = false;
 
   selectedBooking: AdminBooking | null = null;
   drawerOpen = false;
@@ -341,6 +342,7 @@ export class AdminBookingsComponent implements OnInit {
   openCreateModal(walkIn = false): void {
     this.closeDrawer();
     this.walkInMode = walkIn;
+    this.phoneTouched = false;
     this.createModalOpen = true;
     this.feedbackMessage = '';
     this.newBooking = {
@@ -360,11 +362,16 @@ export class AdminBookingsComponent implements OnInit {
 
   createBooking(): void {
     const form = this.newBooking;
-    const digits = form.phone.replace(/\D/g, '');
+    this.phoneTouched = true;
+    const digits = normalizePakistanMobile(form.phone);
     const service = this.bookingService.services.find(item => item.name === form.service);
 
-    if (!form.customerName.trim() || !/^3\d{9}$/.test(digits) || !service || !form.barber || !form.date || !form.time) {
-      this.showFeedback(false, 'Complete all required fields and enter a valid Pakistan mobile number.');
+    if (!digits) {
+      this.showFeedback(false, this.phoneError);
+      return;
+    }
+    if (!form.customerName.trim() || !service || !form.barber || !form.date || !form.time) {
+      this.showFeedback(false, 'Complete the customer, service, barber, date and time fields.');
       return;
     }
 
@@ -391,7 +398,21 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   onPhoneInput(value: string): void {
-    this.newBooking.phone = value.replace(/\D/g, '').slice(0, 10);
+    // Preserve input while typing/pasting; validation must never silently drop digits.
+    this.newBooking.phone = value;
+  }
+
+  get phoneError(): string {
+    if (!this.phoneTouched || normalizePakistanMobile(this.newBooking.phone)) return '';
+    return this.newBooking.phone.trim()
+      ? 'Enter a valid mobile number, e.g. 03001234567 or +923001234567.'
+      : 'Enter the customer’s mobile number.';
+  }
+
+  onPhoneBlur(): void {
+    this.phoneTouched = true;
+    const normalized = normalizePakistanMobile(this.newBooking.phone);
+    if (normalized) this.newBooking.phone = normalized;
   }
 
   statusIcon(status: BookingStatus): string {

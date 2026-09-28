@@ -246,3 +246,12 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .status-pill.no-show { background: rgba(249, 115, 22, .14); color: #fdba74; }
 .status-actions { flex-wrap: wrap; }
 @media (max-width: 575px) { .appointment-tools { width: 100%; } .appointment-tools > * { flex: 1 1 auto; justify-content: center; } }
+
+.phone-field { min-width: 0; }
+.phone-field input { min-width: 0; flex: 1 1 0; }
+.phone-field b { flex-shrink: 0; }
+.phone-field.invalid { border-color: #ff8d8d; }
+.phone-help, .phone-error { display: block; margin-top: 6px; font-size: 11px; line-height: 1.5; }
+.phone-help { color: #9ba5a9; }
+.phone-error { color: #ff8d8d; }
+.phone-error:empty { display: none; }
