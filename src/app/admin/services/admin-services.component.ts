@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminService, AdminServiceService, ServiceStatus } from './admin-service.service';
+import { AdminBookingService } from '../bookings/admin-booking.service';
 
 @Component({
   selector: 'app-admin-services',
@@ -28,7 +29,10 @@ export class AdminServicesComponent {
   newService = this.emptyServiceForm();
   editService = this.emptyServiceForm();
 
-  constructor(public readonly serviceService: AdminServiceService) {}
+  constructor(
+    public readonly serviceService: AdminServiceService,
+    private readonly bookingService: AdminBookingService
+  ) {}
 
   get filteredServices(): AdminService[] {
     const term = this.searchTerm.trim().toLowerCase();
@@ -77,6 +81,15 @@ export class AdminServicesComponent {
   }
 
   requestDelete(service: AdminService): void {
+    const upcoming = this.activeUpcomingBookingsForService(service.name);
+    if (upcoming.length) {
+      this.showFeedback(
+        false,
+        service.name + ' is used by ' + upcoming.length + ' active upcoming booking' + (upcoming.length === 1 ? '' : 's') + '. Complete, cancel or move those bookings before deleting the service.'
+      );
+      return;
+    }
+
     this.deleteCandidate = service;
     this.deleteModalOpen = true;
   }
@@ -98,6 +111,19 @@ export class AdminServicesComponent {
     if (!this.editCandidate) return;
 
     const payload = this.buildPayload(this.editService);
+    const nameChanged = payload.name.trim().toLowerCase() !== this.editCandidate.name.trim().toLowerCase();
+
+    if (nameChanged) {
+      const upcoming = this.activeUpcomingBookingsForService(this.editCandidate.name);
+      if (upcoming.length) {
+        this.showFeedback(
+          false,
+          'This service is used by active upcoming bookings. Keep its current name until those bookings are completed, cancelled or moved.'
+        );
+        return;
+      }
+    }
+
     const result = this.serviceService.updateService(this.editCandidate.id, payload);
 
     this.showFeedback(result.success, result.message);
@@ -168,6 +194,29 @@ export class AdminServicesComponent {
 
   homeDiscountPercent(service: AdminService): number {
     return this.serviceService.homeDiscountPercent(service);
+  }
+
+  private activeUpcomingBookingsForService(serviceName: string) {
+    const target = serviceName.trim().toLowerCase();
+    const today = this.todayKey();
+
+    return this.bookingService.all.filter(booking =>
+      booking.date >= today
+      && (booking.status === 'Pending' || booking.status === 'Confirmed')
+      && booking.service
+        .split(',')
+        .map(name => name.trim().toLowerCase())
+        .includes(target)
+    );
+  }
+
+  private todayKey(): string {
+    const date = new Date();
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0')
+    ].join('-');
   }
 
   private buildPayload(form: ReturnType<AdminServicesComponent['emptyServiceForm']>) {
