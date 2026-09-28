@@ -95,6 +95,30 @@ export class AdminSettingsService {
     return Math.max(1, Number(this.settings.maxAdvanceDays) || 30);
   }
 
+  get cancellationHours(): number {
+    return Math.max(0, Number(this.settings.cancellationHours) || 0);
+  }
+
+  get lateArrivalMinutes(): number {
+    return Math.max(0, Number(this.settings.lateArrivalMinutes) || 0);
+  }
+
+  canCustomerCancel(dateKey: string, time: string, now = new Date()): boolean {
+    const appointment = this.bookingDateTime(dateKey, time);
+    if (!appointment) return false;
+
+    const cutoffMs = this.cancellationHours * 60 * 60 * 1000;
+    return appointment.getTime() - now.getTime() >= cutoffMs;
+  }
+
+  isPastLateArrivalGrace(dateKey: string, time: string, now = new Date()): boolean {
+    const appointment = this.bookingDateTime(dateKey, time);
+    if (!appointment) return false;
+
+    const graceMs = this.lateArrivalMinutes * 60 * 1000;
+    return now.getTime() > appointment.getTime() + graceMs;
+  }
+
   isBookingDateAllowed(date: Date): boolean {
     const candidate = this.startOfDay(date);
     const today = this.startOfDay(new Date());
@@ -240,6 +264,30 @@ export class AdminSettingsService {
     }
 
     return { success: true, message: '' };
+  }
+
+  private bookingDateTime(dateKey: string, time: string): Date | null {
+    const dateMatch = String(dateKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const timeMatch = String(time || '').match(/^(\d{1,2}):(\d{2})\s(AM|PM)$/i);
+
+    if (!dateMatch || !timeMatch) return null;
+
+    let hour = Number(timeMatch[1]);
+    const minute = Number(timeMatch[2]);
+    const period = timeMatch[3].toUpperCase();
+
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+
+    return new Date(
+      Number(dateMatch[1]),
+      Number(dateMatch[2]) - 1,
+      Number(dateMatch[3]),
+      hour,
+      minute,
+      0,
+      0
+    );
   }
 
   private clockToMinutes(value: string): number | null {
