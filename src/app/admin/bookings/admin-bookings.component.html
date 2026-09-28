@@ -212,7 +212,12 @@
         <div class="detail-row"><span>Service</span><strong>{{ selectedBooking.service }}</strong></div>
         <div class="detail-row"><span>Duration</span><strong>{{ selectedBooking.duration }} minutes</strong></div>
         <div class="detail-row"><span>Amount</span><strong class="gold">Rs. {{ selectedBooking.amount | number }}</strong></div>
-        <div class="detail-row" *ngIf="selectedBooking.specialService"><span>Custom service price</span><strong class="gold">To be confirmed</strong></div>
+        <div class="detail-row" *ngIf="selectedBooking.specialService">
+          <span>Custom service price</span>
+          <strong class="gold">
+            {{ selectedBooking.specialServiceAmount ? ('Rs. ' + (selectedBooking.specialServiceAmount | number)) : 'To be confirmed' }}
+          </strong>
+        </div>
         <div class="detail-row"><span>Service type</span><strong>{{ selectedBooking.serviceLocation === 'Home' ? 'Home Service' : 'Salon Visit' }}</strong></div>
         <div class="detail-row"><span>Source</span><strong>{{ selectedBooking.source }}</strong></div>
       </section>
@@ -227,6 +232,18 @@
           <strong>Special service request</strong>
           <p>{{ selectedBooking.specialService }}</p>
         </div>
+        <div class="edit-row custom-price-edit" *ngIf="selectedBooking.specialService">
+          <input
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="customServiceAmount"
+            placeholder="Custom service amount (Rs.)">
+          <button type="button" (click)="saveCustomServicePrice()">Save Price</button>
+        </div>
+        <small class="booking-notes" *ngIf="selectedBooking.specialService && !selectedBooking.specialServiceAmount">
+          Set the custom service price before marking this booking Confirmed.
+        </small>
         <div class="booking-notes">
           <strong>Barber preparation</strong>
           <p>Assigned barber should arrive in professional uniform with sanitized essentials for the selected services.</p>
