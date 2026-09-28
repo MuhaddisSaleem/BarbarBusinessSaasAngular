@@ -33,7 +33,7 @@
           <span>Barber</span>
           <select [(ngModel)]="selectedBarber">
             <option value="All">All Barbers</option>
-            <option *ngFor="let barber of bookingService.barbers" [value]="barber">{{ barber }}</option>
+            <option *ngFor="let barber of filterBarbers" [value]="barber">{{ barber }}</option>
           </select>
         </label>
       </div>
