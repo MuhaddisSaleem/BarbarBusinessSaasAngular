@@ -99,11 +99,36 @@ export class AdminBookingsComponent implements OnInit {
 
   get createTimeSlots(): string[] {
     const service = this.bookingService.services.find(item => item.name === this.newBooking.service);
-    return this.slotsForDuration(service?.duration ?? 30, this.newBooking.date);
+    const duration = service?.duration ?? 30;
+    const slots = this.slotsForDuration(duration, this.newBooking.date);
+
+    if (!this.newBooking.barber) return slots;
+
+    return slots.filter(time =>
+      this.bookingService.isBarberSlotAvailable(
+        this.newBooking.barber,
+        this.newBooking.date,
+        time,
+        duration
+      )
+    );
   }
 
   get editTimeSlots(): string[] {
-    return this.slotsForDuration(this.selectedBooking?.duration ?? 30, this.editDate);
+    const duration = this.selectedBooking?.duration ?? 30;
+    const slots = this.slotsForDuration(duration, this.editDate);
+
+    if (!this.selectedBooking || !this.editBarber) return slots;
+
+    return slots.filter(time =>
+      this.bookingService.isBarberSlotAvailable(
+        this.editBarber,
+        this.editDate,
+        time,
+        duration,
+        this.selectedBooking?.id
+      )
+    );
   }
 
   get createBarbers(): string[] {
@@ -144,6 +169,14 @@ export class AdminBookingsComponent implements OnInit {
     if (!this.editBarbers.includes(this.editBarber)) {
       this.editBarber = '';
     }
+    this.editTime = '';
+  }
+
+  onCreateBarberChange(): void {
+    this.newBooking.time = '';
+  }
+
+  onEditBarberChange(): void {
     this.editTime = '';
   }
 
