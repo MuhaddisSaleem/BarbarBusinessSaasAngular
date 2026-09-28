@@ -453,7 +453,7 @@
         <div class="d-flex justify-content-between"><span>Date</span><strong>{{ selectedDate?.date | date:'dd MMM yyyy' }}</strong></div>
         <div class="d-flex justify-content-between"><span>Booking window</span><strong>{{ selectedTime }} – {{ bookingEndTime }}</strong></div>
         <div class="d-flex justify-content-between"><span>Service type</span><strong>{{ serviceLocation === 'home' ? 'Home Service' : 'Salon Visit' }}</strong></div>
-        <div class="d-flex justify-content-between" *ngIf="serviceLocation === 'home'"><span>Assigned barber</span><strong>{{ confirmedAssignments[0]?.barber || 'Assigned automatically' }}</strong></div>
+        <div class="d-flex justify-content-between" *ngIf="serviceLocation === 'home'"><span>Assigned barber</span><strong>{{ confirmedAssignments.length ? confirmedAssignments[0].barber : 'Assigned automatically' }}</strong></div>
         <div class="d-flex justify-content-between" *ngIf="serviceLocation === 'home'"><span>Address</span><strong>{{ homeAddress }}</strong></div>
         <div class="d-flex justify-content-between" *ngIf="hasHomeCustomService"><span>Custom service</span><strong>Price to be confirmed</strong></div>
         <div class="d-flex justify-content-between"><span>{{ hasHomeCustomService ? 'Listed services total' : 'Total' }}</span><strong>Rs. {{ totalPrice | number }}</strong></div>
