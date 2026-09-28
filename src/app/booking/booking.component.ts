@@ -220,16 +220,21 @@ export class BookingComponent implements OnInit {
   selectBarber(barber: Barber | 'any'): void {
     this.clearValidationMessage();
 
-    if (barber !== 'any' && this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
-      const unsupportedPerson = this.participants.find(person => !this.barberSupportsPerson(barber, person));
+    if (barber !== 'any') {
+      if (!this.barberService.isAvailableOnDate(barber.id, this.barberStatusDate)) {
+        const label = this.barberService.availabilityLabelForDate(barber.id, this.barberStatusDate) || 'Not available';
+        this.bookingValidationMessage = barber.name + ' is ' + label.toLowerCase() + ' for this date.';
+        return;
+      }
+
+      const unsupportedPerson = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
+        ? this.participants.find(person => !this.barberSupportsPerson(barber, person))
+        : (!this.barberSupportsPerson(barber, this.activeParticipant) ? this.activeParticipant : undefined);
+
       if (unsupportedPerson) {
         this.bookingValidationMessage = barber.name + ' does not provide all services selected for ' + unsupportedPerson.label + '.';
         return;
       }
-    } else if (barber !== 'any' && this.isBarberUnavailable(barber)) {
-      const label = this.getBarberAvailabilityLabel(barber) || 'Not available';
-      this.bookingValidationMessage = barber.name + ' is ' + label.toLowerCase() + ' for this date.';
-      return;
     }
 
     if (this.bookingMode === 'group' && this.groupStrategy === 'sequential') {
@@ -249,7 +254,14 @@ export class BookingComponent implements OnInit {
     this.setSelectedDate(cell.date);
 
     this.participants.forEach(person => {
-      if (person.selectedBarber && person.selectedBarber !== 'any' && this.isBarberUnavailable(person.selectedBarber)) {
+      if (
+        person.selectedBarber
+        && person.selectedBarber !== 'any'
+        && (
+          !this.barberService.isAvailableOnDate(person.selectedBarber.id, this.barberStatusDate)
+          || !this.barberSupportsPerson(person.selectedBarber, person)
+        )
+      ) {
         person.selectedBarber = null;
       }
     });
