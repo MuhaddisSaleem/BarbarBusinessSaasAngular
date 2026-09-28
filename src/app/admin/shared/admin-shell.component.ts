@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { AdminNotification, NotificationService } from '../notifications/notification.service';
 import { AdminBookingService } from '../bookings/admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
+import { BrandingMediaService } from '../settings/branding-media.service';
 
 @Component({
   selector: 'app-admin-shell',
@@ -41,7 +42,8 @@ export class AdminShellComponent {
     public readonly router: Router,
     public readonly notificationService: NotificationService,
     public readonly bookingService: AdminBookingService,
-    public readonly settingsService: AdminSettingsService
+    public readonly settingsService: AdminSettingsService,
+    public readonly brandingMedia: BrandingMediaService
   ) {}
 
   get businessName(): string {
