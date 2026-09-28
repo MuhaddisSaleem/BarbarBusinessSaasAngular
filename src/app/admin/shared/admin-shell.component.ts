@@ -130,6 +130,11 @@ export class AdminShellComponent {
 
   openNotification(notification: AdminNotification): void {
     this.notificationService.markAsRead(notification.id);
+    this.notificationMenuOpen = false;
+
+    if (notification.url) {
+      void this.router.navigateByUrl(notification.url);
+    }
   }
 
   markAllNotificationsAsRead(event: MouseEvent): void {
