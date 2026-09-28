@@ -507,7 +507,13 @@ export class AdminBarberService {
           image: item.image || 'assets/images/barber-placeholder.svg',
           rating: this.normalizeRating(item.rating),
           experience: this.normalizeExperience(item.experience),
-          specialties: Array.isArray(item.specialties) ? item.specialties : []
+          specialties: Array.isArray(item.specialties) ? item.specialties.filter(Boolean) : [],
+          workingHours: String(item.workingHours || '').trim(),
+          availability: this.normalizeAvailability(item.availability),
+          accountStatus: item.accountStatus === 'Inactive' ? 'Inactive' : 'Active',
+          leaveFrom: item.leaveFrom || undefined,
+          leaveTo: item.leaveTo || undefined,
+          note: String(item.note || '')
         }));
 
       if (needsCleanup) {
@@ -519,6 +525,14 @@ export class AdminBarberService {
     } catch {
       return [];
     }
+  }
+
+  private normalizeAvailability(value: BarberAvailability): BarberAvailability {
+    return value === 'Not Available Today'
+      || value === 'On Leave'
+      || value === 'Vacation'
+      ? value
+      : 'Available Today';
   }
 
   private normalizeRating(value: number): number {
