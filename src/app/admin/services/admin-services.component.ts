@@ -60,6 +60,10 @@ export class AdminServicesComponent {
       originalPrice: String(service.originalPrice),
       hasDiscount: this.serviceService.hasDiscount(service),
       discountPrice: service.discountPrice === null ? '' : String(service.discountPrice),
+      homeServiceEnabled: service.homeServiceEnabled,
+      homeOriginalPrice: service.homeOriginalPrice === null ? '' : String(service.homeOriginalPrice),
+      hasHomeDiscount: this.serviceService.hasHomeDiscount(service),
+      homeDiscountPrice: service.homeDiscountPrice === null ? '' : String(service.homeDiscountPrice),
       image: service.image,
       status: service.status
     };
@@ -158,12 +162,25 @@ export class AdminServicesComponent {
     return this.serviceService.discountPercent(service);
   }
 
+  homePriceAfterDiscount(service: AdminService): number {
+    return this.serviceService.effectiveHomePrice(service);
+  }
+
+  homeDiscountPercent(service: AdminService): number {
+    return this.serviceService.homeDiscountPercent(service);
+  }
+
   private buildPayload(form: ReturnType<AdminServicesComponent['emptyServiceForm']>) {
     return {
       name: form.name,
       duration: Number(form.duration),
       originalPrice: Number(form.originalPrice),
       discountPrice: form.hasDiscount && form.discountPrice ? Number(form.discountPrice) : null,
+      homeServiceEnabled: form.homeServiceEnabled,
+      homeOriginalPrice: form.homeServiceEnabled && form.homeOriginalPrice ? Number(form.homeOriginalPrice) : null,
+      homeDiscountPrice: form.homeServiceEnabled && form.hasHomeDiscount && form.homeDiscountPrice
+        ? Number(form.homeDiscountPrice)
+        : null,
       image: form.image,
       status: form.status
     };
@@ -176,6 +193,10 @@ export class AdminServicesComponent {
       originalPrice: '',
       hasDiscount: false,
       discountPrice: '',
+      homeServiceEnabled: true,
+      homeOriginalPrice: '',
+      hasHomeDiscount: false,
+      homeDiscountPrice: '',
       image: '',
       status: 'Active' as ServiceStatus
     };
