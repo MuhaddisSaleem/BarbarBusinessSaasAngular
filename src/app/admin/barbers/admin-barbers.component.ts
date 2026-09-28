@@ -296,6 +296,72 @@ export class AdminBarbersComponent {
     this.editBarber.phone = value.replace(/\D/g, '').slice(0, 10);
   }
 
+  async onEditImageSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    this.editImageValidationState = 'idle';
+    this.editImageValidationMessage = '';
+    this.editManualFaceConfirmed = false;
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.editImageValidationState = 'invalid';
+      this.editImageValidationMessage = 'Please select a valid image file.';
+      this.showFeedback(false, this.editImageValidationMessage);
+      input.value = '';
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      this.editImageValidationState = 'invalid';
+      this.editImageValidationMessage = 'Barber image must be smaller than 2 MB.';
+      this.showFeedback(false, this.editImageValidationMessage);
+      input.value = '';
+      return;
+    }
+
+    this.editImageValidationState = 'checking';
+    this.editImageValidationMessage = 'Checking the new photo for one clear barber face...';
+
+    try {
+      const dataUrl = await this.readFileAsDataUrl(file);
+      const faceCheck = await this.detectFaces(file);
+
+      if (faceCheck.supported && faceCheck.count === 0) {
+        this.editImageValidationState = 'invalid';
+        this.editImageValidationMessage = 'No face detected. Upload a clear photo of the barber.';
+        this.showFeedback(false, this.editImageValidationMessage);
+        input.value = '';
+        return;
+      }
+
+      if (faceCheck.supported && faceCheck.count > 1) {
+        this.editImageValidationState = 'invalid';
+        this.editImageValidationMessage = 'Multiple faces detected. Upload a photo containing only the barber.';
+        this.showFeedback(false, this.editImageValidationMessage);
+        input.value = '';
+        return;
+      }
+
+      this.editBarber.image = dataUrl;
+
+      if (faceCheck.supported) {
+        this.editImageValidationState = 'valid';
+        this.editImageValidationMessage = 'Face detected successfully. The new profile photo is ready.';
+      } else {
+        this.editImageValidationState = 'unsupported';
+        this.editImageValidationMessage = 'Automatic face detection is not available in this browser. Please confirm the photo contains one clear barber face.';
+      }
+    } catch {
+      this.editImageValidationState = 'invalid';
+      this.editImageValidationMessage = 'We could not validate this image. Please try another clear photo.';
+      this.showFeedback(false, this.editImageValidationMessage);
+      input.value = '';
+    }
+  }
+
   saveBarberChanges(): void {
     if (!this.editCandidate) return;
 
