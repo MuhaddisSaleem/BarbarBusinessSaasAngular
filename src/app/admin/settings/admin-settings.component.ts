@@ -51,11 +51,27 @@ export class AdminSettingsComponent {
   }
 
   async confirmReset(): Promise<void> {
-    this.settings = this.settingsService.reset();
-    await this.brandingMedia.clearAll();
+    const result = this.settingsService.reset();
+
+    if (!result.success) {
+      this.resetConfirmOpen = false;
+      this.feedbackType = 'error';
+      this.feedbackMessage = result.message;
+      return;
+    }
+
+    this.settings = this.settingsService.current;
+
+    try {
+      await this.brandingMedia.clearAll();
+      this.feedbackType = 'success';
+      this.feedbackMessage = 'Settings and landing page branding reset to defaults.';
+    } catch {
+      this.feedbackType = 'error';
+      this.feedbackMessage = 'Settings were reset, but the saved logo or hero media could not be cleared.';
+    }
+
     this.resetConfirmOpen = false;
-    this.feedbackType = 'success';
-    this.feedbackMessage = 'Settings and landing page branding reset to defaults.';
   }
 
   onPhoneInput(event: Event, field: 'businessPhone' | 'whatsappNumber'): void {
@@ -110,13 +126,21 @@ export class AdminSettingsComponent {
   }
 
   async removeLogo(): Promise<void> {
-    await this.brandingMedia.clearLogo();
-    this.showBrandingFeedback(true, 'Business logo removed.');
+    try {
+      await this.brandingMedia.clearLogo();
+      this.showBrandingFeedback(true, 'Business logo removed.');
+    } catch {
+      this.showBrandingFeedback(false, 'Could not remove the saved business logo.');
+    }
   }
 
   async removeHeroMedia(): Promise<void> {
-    await this.brandingMedia.clearHeroMedia();
-    this.showBrandingFeedback(true, 'Landing page hero media removed.');
+    try {
+      await this.brandingMedia.clearHeroMedia();
+      this.showBrandingFeedback(true, 'Landing page hero media removed.');
+    } catch {
+      this.showBrandingFeedback(false, 'Could not remove the saved hero media.');
+    }
   }
 
   copyBusinessPhoneToWhatsapp(): void {
