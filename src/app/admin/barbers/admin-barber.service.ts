@@ -391,6 +391,12 @@ export class AdminBarberService {
     return { success: true, message: '' };
   }
 
+  workingWindowFor(id: number): { start: number; end: number } | null {
+    const barber = this.getById(id);
+    if (!barber || barber.accountStatus !== 'Active') return null;
+    return this.workingWindow(barber.workingHours);
+  }
+
   isWorkingAt(id: number, time: string, duration: number): boolean {
     const barber = this.getById(id);
     if (!barber || barber.accountStatus !== 'Active') return false;
