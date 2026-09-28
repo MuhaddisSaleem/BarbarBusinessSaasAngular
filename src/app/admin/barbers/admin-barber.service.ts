@@ -396,7 +396,7 @@ export class AdminBarberService {
     if (!barber || barber.accountStatus !== 'Active') return false;
 
     const window = this.workingWindow(barber.workingHours);
-    if (!window) return true;
+    if (!window) return false;
 
     const start = this.timeToMinutes(time);
     if (!Number.isFinite(start) || !Number.isFinite(Number(duration)) || Number(duration) <= 0) {
