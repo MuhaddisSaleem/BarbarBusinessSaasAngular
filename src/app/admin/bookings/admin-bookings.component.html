@@ -221,6 +221,20 @@
       </section>
 
       <section class="detail-section">
+        <h4>Customer Policy</h4>
+        <div class="booking-notes">
+          <strong>Cancellation:</strong>
+          {{ selectedBookingCustomerCanCancel ? 'Customer cancellation window is still open.' : 'Customer cancellation cutoff has passed.' }}
+          <br>
+          <span *ngIf="cancellationHours > 0">Notice required: {{ cancellationHours }} hour{{ cancellationHours === 1 ? '' : 's' }}.</span>
+          <span *ngIf="cancellationHours === 0">Cancellation allowed until appointment time.</span>
+        </div>
+        <p class="booking-notes" *ngIf="selectedBookingPastGrace">
+          <strong>Late arrival:</strong> the {{ lateArrivalMinutes }} minute grace period has passed.
+        </p>
+      </section>
+
+      <section class="detail-section">
         <h4>Assigned Barber</h4>
         <div class="edit-row">
           <select [(ngModel)]="editBarber">
