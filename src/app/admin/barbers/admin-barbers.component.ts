@@ -199,7 +199,6 @@ export class AdminBarbersComponent {
     this.imageValidationMessage = 'Checking the photo for a clear barber face...';
 
     try {
-      const dataUrl = await this.readFileAsDataUrl(file);
       const faceCheck = await this.detectFaces(file);
 
       if (faceCheck.supported && faceCheck.count === 0) {
@@ -218,7 +217,7 @@ export class AdminBarbersComponent {
         return;
       }
 
-      this.newBarber.image = dataUrl;
+      this.newBarber.image = await this.compressProfileImage(file);
 
       if (faceCheck.supported) {
         this.imageValidationState = 'valid';
@@ -235,10 +234,35 @@ export class AdminBarbersComponent {
     }
   }
 
-  private readFileAsDataUrl(file: File): Promise<string> {
+  private compressProfileImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
+
+      reader.onload = () => {
+        const image = new Image();
+
+        image.onload = () => {
+          const maxWidth = 720;
+          const maxHeight = 720;
+          const ratio = Math.min(1, maxWidth / image.width, maxHeight / image.height);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * ratio));
+          canvas.height = Math.max(1, Math.round(image.height * ratio));
+
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('Canvas is not available.'));
+            return;
+          }
+
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+
+        image.onerror = () => reject(new Error('Invalid image.'));
+        image.src = String(reader.result || '');
+      };
+
       reader.onerror = () => reject(reader.error);
       reader.readAsDataURL(file);
     });
@@ -345,7 +369,7 @@ export class AdminBarbersComponent {
         return;
       }
 
-      this.editBarber.image = dataUrl;
+      this.editBarber.image = await this.compressProfileImage(file);
 
       if (faceCheck.supported) {
         this.editImageValidationState = 'valid';
