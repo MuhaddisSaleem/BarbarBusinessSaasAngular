@@ -1468,3 +1468,8 @@ button { -webkit-tap-highlight-color: transparent; }
     display:none;
   }
 }
+
+
+.steps.home-service-steps {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
