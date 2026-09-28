@@ -80,12 +80,17 @@ export class AdminCustomerService {
 
     const nonCancelled = sorted.filter(item => item.status !== 'Cancelled');
     const completed = sorted.filter(item => item.status === 'Completed');
+    const now = new Date();
     const nowKey = this.todayKey();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
     const upcoming = nonCancelled
       .filter(item =>
         (item.status === 'Pending' || item.status === 'Confirmed')
-        && item.date >= nowKey
+        && (
+          item.date > nowKey
+          || (item.date === nowKey && this.timeToMinutes(item.time) >= nowMinutes)
+        )
       )
       .sort((a, b) =>
         a.date.localeCompare(b.date) || this.timeToMinutes(a.time) - this.timeToMinutes(b.time)
