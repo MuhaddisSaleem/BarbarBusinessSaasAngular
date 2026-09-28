@@ -297,12 +297,12 @@ export class AdminServiceService {
         '7|6 Step Face Massage'
       ]);
 
-      const cleaned = parsed
+      const cleaned: AdminService[] = parsed
         .filter(item =>
           !needsCleanup
           || !demoServices.has(String(item.id) + '|' + String(item.name || ''))
         )
-        .map(item => ({
+        .map((item): AdminService => ({
           ...item,
           duration: Number(item.duration),
           originalPrice: Number(item.originalPrice),
