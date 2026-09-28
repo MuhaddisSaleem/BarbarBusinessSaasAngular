@@ -32,6 +32,7 @@ export class AdminBookingsComponent implements OnInit {
   editBarber = '';
   editDate = '';
   editTime = '';
+  customServiceAmount = '';
 
   newBooking = {
     customerName: '',
@@ -182,6 +183,9 @@ export class AdminBookingsComponent implements OnInit {
     this.editBarber = booking.barber;
     this.editDate = booking.date;
     this.editTime = booking.time;
+    this.customServiceAmount = booking.specialServiceAmount
+      ? String(booking.specialServiceAmount)
+      : '';
     this.drawerOpen = true;
     this.feedbackMessage = '';
   }
@@ -212,6 +216,23 @@ export class AdminBookingsComponent implements OnInit {
     if (!result.success) {
       this.editDate = this.selectedBooking.date;
       this.editTime = this.selectedBooking.time;
+    }
+  }
+
+  saveCustomServicePrice(): void {
+    if (!this.selectedBooking) return;
+
+    const result = this.bookingService.updateSpecialServiceAmount(
+      this.selectedBooking.id,
+      Number(this.customServiceAmount)
+    );
+
+    this.showFeedback(result.success, result.message);
+
+    if (!result.success) {
+      this.customServiceAmount = this.selectedBooking.specialServiceAmount
+        ? String(this.selectedBooking.specialServiceAmount)
+        : '';
     }
   }
 
