@@ -104,6 +104,14 @@ export class AdminBookingService {
       };
     }
 
+    if (booking.status === 'Cancelled' && status !== 'Cancelled') {
+      return { success: false, message: 'Cancelled bookings cannot be reopened.' };
+    }
+
+    if (booking.status === 'Completed' && status !== 'Completed') {
+      return { success: false, message: 'Completed bookings cannot be moved back to another status.' };
+    }
+
     const previousStatus = booking.status;
     booking.status = status;
 
@@ -128,6 +136,9 @@ export class AdminBookingService {
   assignBarber(id: number, barber: string): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
+    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+      return { success: false, message: 'This booking can no longer be reassigned.' };
+    }
     const barberId = this.barberIdByName(barber);
     if (!barberId) return { success: false, message: 'Selected barber is not active.' };
 
@@ -166,6 +177,9 @@ export class AdminBookingService {
   reschedule(id: number, date: string, time: string): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
+    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+      return { success: false, message: 'This booking can no longer be rescheduled.' };
+    }
     if (!date || !time) return { success: false, message: 'Please choose both a date and time.' };
 
     const scheduleValidation = this.validateSchedule(date, time, booking.duration);
@@ -244,6 +258,11 @@ export class AdminBookingService {
   }
 
   cancel(id: number): BookingMutationResult {
+    const booking = this.getById(id);
+    if (!booking) return { success: false, message: 'Booking not found.' };
+    if (booking.status === 'Completed') {
+      return { success: false, message: 'Completed bookings cannot be cancelled.' };
+    }
     return this.updateStatus(id, 'Cancelled');
   }
 
