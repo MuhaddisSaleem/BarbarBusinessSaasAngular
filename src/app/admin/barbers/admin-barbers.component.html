@@ -353,6 +353,41 @@
           </label>
         </label>
 
+        <label class="full">
+          <span>Barber Photo</span>
+          <div class="photo-upload-row d-flex align-items-center gap-3">
+            <img class="photo-preview" [src]="editBarber.image || 'assets/images/barber-placeholder.svg'" alt="Barber preview">
+            <label class="photo-upload-btn">
+              <input type="file" accept="image/*" (change)="onEditImageSelected($event)">
+              <i class="bi bi-camera"></i>
+              Change Photo
+            </label>
+            <small>JPG, PNG or WebP · max 2 MB</small>
+          </div>
+
+          <div class="face-check"
+            *ngIf="editImageValidationState !== 'idle'"
+            [class.checking]="editImageValidationState === 'checking'"
+            [class.valid]="editImageValidationState === 'valid'"
+            [class.invalid]="editImageValidationState === 'invalid'"
+            [class.unsupported]="editImageValidationState === 'unsupported'">
+            <i class="bi"
+              [ngClass]="{
+                'bi-hourglass-split': editImageValidationState === 'checking',
+                'bi-person-check': editImageValidationState === 'valid',
+                'bi-person-x': editImageValidationState === 'invalid',
+                'bi-exclamation-triangle': editImageValidationState === 'unsupported'
+              }"></i>
+            <span>{{ editImageValidationMessage }}</span>
+          </div>
+
+          <label class="manual-face-confirm d-flex align-items-start gap-2"
+            *ngIf="editImageValidationState === 'unsupported'">
+            <input type="checkbox" [(ngModel)]="editManualFaceConfirmed">
+            <span>I confirm this image contains one clear photo of the barber.</span>
+          </label>
+        </label>
+
         <label>
           <span>Years of Experience</span>
           <div class="experience-field d-flex align-items-center">
@@ -412,11 +447,11 @@
       <div class="edit-profile-preview d-flex align-items-center gap-3">
         <img
           class="photo-preview"
-          [src]="editCandidate.image || 'assets/images/barber-placeholder.svg'"
-          [alt]="editCandidate.name">
+          [src]="editBarber.image || 'assets/images/barber-placeholder.svg'"
+          [alt]="editBarber.name || editCandidate.name">
         <div>
-          <strong>{{ editCandidate.name }}</strong>
-          <small>Update barber details and assigned services below.</small>
+          <strong>{{ editBarber.name || editCandidate.name }}</strong>
+          <small>Update barber details, photo and assigned services below.</small>
         </div>
       </div>
 
@@ -472,9 +507,12 @@
         </label>
       </div>
 
-      <button type="button" class="submit-btn" (click)="saveBarberChanges()">
-        <i class="bi bi-check2-circle"></i>
-        Save Changes
+      <button type="button"
+        class="submit-btn"
+        [disabled]="editImageValidationState === 'checking'"
+        (click)="saveBarberChanges()">
+        <i class="bi" [ngClass]="editImageValidationState === 'checking' ? 'bi-hourglass-split' : 'bi-check2-circle'"></i>
+        {{ editImageValidationState === 'checking' ? 'Checking Photo...' : 'Save Changes' }}
       </button>
     </div>
   </section>
