@@ -54,13 +54,19 @@ export class AdminCustomerService {
       );
   }
 
-  saveNote(customerId: string, note: string): void {
+  saveNote(customerId: string, note: string): { success: boolean; message: string } {
     const notes = this.loadNotes();
     notes[customerId] = note.trim();
 
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(this.noteStorageKey, JSON.stringify(notes));
+      try {
+        window.localStorage.setItem(this.noteStorageKey, JSON.stringify(notes));
+      } catch {
+        return { success: false, message: 'Could not save the customer note in this browser.' };
+      }
     }
+
+    return { success: true, message: 'Customer note saved.' };
   }
 
   private buildCustomer(
