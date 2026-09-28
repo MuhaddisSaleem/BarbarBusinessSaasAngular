@@ -97,6 +97,23 @@ export class AdminBookingsComponent implements OnInit {
     return this.bookingService.availableBarbersForService(this.selectedBooking.service, this.editDate);
   }
 
+  get selectedBookingPastGrace(): boolean {
+    return !!this.selectedBooking && this.bookingService.isPastLateArrivalGrace(this.selectedBooking);
+  }
+
+  get selectedBookingCustomerCanCancel(): boolean {
+    return !!this.selectedBooking
+      && this.settingsService.canCustomerCancel(this.selectedBooking.date, this.selectedBooking.time);
+  }
+
+  get cancellationHours(): number {
+    return this.settingsService.cancellationHours;
+  }
+
+  get lateArrivalMinutes(): number {
+    return this.settingsService.lateArrivalMinutes;
+  }
+
   onCreateServiceOrDateChange(): void {
     if (!this.createBarbers.includes(this.newBooking.barber)) {
       this.newBooking.barber = '';
