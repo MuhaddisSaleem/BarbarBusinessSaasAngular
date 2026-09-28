@@ -45,8 +45,12 @@ export class BookingComponent implements OnInit {
     }));
   }
 
+  serviceLocation: 'salon' | 'home' = 'salon';
   bookingMode: 'single' | 'group' = 'single';
   groupStrategy: 'parallel' | 'sequential' = 'parallel';
+  homeAddress = '';
+  specialHomeService = '';
+  private readonly homeCustomServiceDuration = 60;
   participants: BookingPerson[] = [this.createPerson(1, 'You')];
   activeParticipantIndex = 0;
   private nextPersonId = 2;
@@ -101,10 +105,30 @@ export class BookingComponent implements OnInit {
   get selectedServices(): Service[] { return this.activeParticipant.selectedServices; }
   get selectedBarber(): Barber | 'any' | null { return this.activeParticipant.selectedBarber; }
   get isPakistanPhoneValid(): boolean { return /^3\d{9}$/.test(this.customer.phone); }
-  get allServicesSelected(): boolean { return this.participants.every(person => person.selectedServices.length > 0); }
-  get allBarbersSelected(): boolean { return this.participants.every(person => !!person.selectedBarber); }
-  get allParticipantsReady(): boolean { return this.allServicesSelected && this.allBarbersSelected; }
-  get customerDetailsComplete(): boolean { return this.customer.name.trim().length > 0 && this.isPakistanPhoneValid; }
+  get hasHomeCustomService(): boolean {
+    return this.serviceLocation === 'home' && this.specialHomeService.trim().length > 0;
+  }
+
+  get allServicesSelected(): boolean {
+    return this.participants.every(person =>
+      person.selectedServices.length > 0 || this.hasHomeCustomService
+    );
+  }
+
+  get allBarbersSelected(): boolean {
+    return this.serviceLocation === 'home'
+      || this.participants.every(person => !!person.selectedBarber);
+  }
+
+  get allParticipantsReady(): boolean {
+    return this.allServicesSelected && this.allBarbersSelected;
+  }
+
+  get customerDetailsComplete(): boolean {
+    return this.customer.name.trim().length > 0
+      && this.isPakistanPhoneValid
+      && (this.serviceLocation !== 'home' || this.homeAddress.trim().length > 0);
+  }
   get totalPrice(): number { return this.participants.reduce((total, person) => total + this.getPersonPrice(person), 0); }
   get totalDuration(): number { return this.getPersonDuration(this.activeParticipant); }
   get monthLabel(): string { return this.calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
@@ -133,7 +157,42 @@ export class BookingComponent implements OnInit {
   onPhoneBlur(): void { this.phoneTouched = true; }
   clearValidationMessage(): void { this.bookingValidationMessage = ''; }
 
+  setServiceLocation(location: 'salon' | 'home'): void {
+    if (this.serviceLocation === location) return;
+
+    this.serviceLocation = location;
+    this.clearValidationMessage();
+    this.clearSelectedTime();
+
+    if (location === 'home') {
+      this.bookingMode = 'single';
+      this.groupStrategy = 'parallel';
+      this.participants = [this.participants[0] || this.createPerson(1, 'You')];
+      this.activeParticipantIndex = 0;
+      this.nextPersonId = 2;
+      this.participants[0].selectedBarber = 'any';
+    } else {
+      this.participants.forEach(person => {
+        if (person.selectedBarber === 'any') person.selectedBarber = null;
+      });
+      this.homeAddress = '';
+      this.specialHomeService = '';
+    }
+
+    this.generateAvailableTimes();
+  }
+
+  onSpecialHomeServiceInput(): void {
+    if (this.serviceLocation !== 'home') return;
+
+    this.activeParticipant.selectedBarber = 'any';
+    this.clearValidationMessage();
+    this.clearSelectedTime();
+    this.generateAvailableTimes();
+  }
+
   setBookingMode(mode: 'single' | 'group'): void {
+    if (this.serviceLocation === 'home' && mode === 'group') return;
     if (this.bookingMode === mode) return;
 
     this.bookingMode = mode;
@@ -205,6 +264,7 @@ export class BookingComponent implements OnInit {
     }
 
     this.ensureCompatibleBarberSelection();
+    if (this.serviceLocation === 'home') person.selectedBarber = 'any';
     this.clearSelectedTime();
     this.generateAvailableTimes();
   }
@@ -254,6 +314,11 @@ export class BookingComponent implements OnInit {
     this.setSelectedDate(cell.date);
 
     this.participants.forEach(person => {
+      if (this.serviceLocation === 'home') {
+        person.selectedBarber = 'any';
+        return;
+      }
+
       if (
         person.selectedBarber
         && person.selectedBarber !== 'any'
@@ -435,17 +500,22 @@ export class BookingComponent implements OnInit {
       const barber = assignments.get(person.id);
       const time = this.getPersonBookingTime(index);
 
+      const standardServices = person.selectedServices.map(service => service.name).join(', ');
+
       return {
         customerName: this.customer.name.trim(),
         phone,
-        service: person.selectedServices.map(service => service.name).join(', '),
+        service: standardServices || 'Custom Home Service',
         duration: this.getPersonDuration(person),
         barber: barber?.name || '',
         date: this.selectedDate!.fullDate,
         time,
         amount: this.getPersonPrice(person),
         notes: this.customer.notes.trim(),
-        groupSize: this.participants.length
+        groupSize: this.participants.length,
+        serviceLocation: this.serviceLocation === 'home' ? 'Home' as const : 'Salon' as const,
+        serviceAddress: this.serviceLocation === 'home' ? this.homeAddress.trim() : '',
+        specialService: this.serviceLocation === 'home' ? this.specialHomeService.trim() : ''
       };
     });
 
@@ -462,7 +532,9 @@ export class BookingComponent implements OnInit {
       return;
     }
 
-    this.bookingSubmittedStatus = this.autoConfirmBookings ? 'Confirmed' : 'Pending';
+    this.bookingSubmittedStatus = this.hasHomeCustomService
+      ? 'Pending'
+      : (this.autoConfirmBookings ? 'Confirmed' : 'Pending');
     this.confirmedAssignments = [];
 
     this.participants.forEach((person, index) => {
@@ -483,33 +555,37 @@ export class BookingComponent implements OnInit {
   }
 
   private validateBookingBeforeConfirm(): boolean {
-    const missingServiceIndex = this.participants.findIndex(person => !person.selectedServices.length);
+    const missingServiceIndex = this.participants.findIndex(person =>
+      !person.selectedServices.length && !this.hasHomeCustomService
+    );
     if (missingServiceIndex !== -1) {
       this.activeParticipantIndex = missingServiceIndex;
       const person = this.participants[missingServiceIndex];
       return this.showValidationError(`Please select at least one service for ${person.label}.`, 'service-section');
     }
 
-    const missingBarberIndex = this.participants.findIndex(person => !person.selectedBarber);
-    if (missingBarberIndex !== -1) {
-      this.activeParticipantIndex = missingBarberIndex;
-      const person = this.participants[missingBarberIndex];
-      return this.showValidationError(`Please choose a barber for ${person.label}.`, 'barber-section');
-    }
+    if (this.serviceLocation === 'salon') {
+      const missingBarberIndex = this.participants.findIndex(person => !person.selectedBarber);
+      if (missingBarberIndex !== -1) {
+        this.activeParticipantIndex = missingBarberIndex;
+        const person = this.participants[missingBarberIndex];
+        return this.showValidationError(`Please choose a barber for ${person.label}.`, 'barber-section');
+      }
 
-    const incompatibleBarberIndex = this.participants.findIndex(person =>
-      person.selectedBarber
-      && person.selectedBarber !== 'any'
-      && !this.barberSupportsPerson(person.selectedBarber, person)
-    );
-
-    if (incompatibleBarberIndex !== -1) {
-      this.activeParticipantIndex = incompatibleBarberIndex;
-      const person = this.participants[incompatibleBarberIndex];
-      return this.showValidationError(
-        'The selected barber does not provide all services for ' + person.label + '. Please choose another barber.',
-        'barber-section'
+      const incompatibleBarberIndex = this.participants.findIndex(person =>
+        person.selectedBarber
+        && person.selectedBarber !== 'any'
+        && !this.barberSupportsPerson(person.selectedBarber, person)
       );
+
+      if (incompatibleBarberIndex !== -1) {
+        this.activeParticipantIndex = incompatibleBarberIndex;
+        const person = this.participants[incompatibleBarberIndex];
+        return this.showValidationError(
+          'The selected barber does not provide all services for ' + person.label + '. Please choose another barber.',
+          'barber-section'
+        );
+      }
     }
 
     if (!this.selectedDate) {
@@ -537,6 +613,14 @@ export class BookingComponent implements OnInit {
     if (!this.isPakistanPhoneValid) {
       this.phoneTouched = true;
       return this.showValidationError('Please enter a valid Pakistan mobile number, e.g. +92 300 1234567.', 'customer-details-section', 'customer-phone-input');
+    }
+
+    if (this.serviceLocation === 'home' && !this.homeAddress.trim()) {
+      return this.showValidationError(
+        'Please enter the complete address for your home service.',
+        'customer-details-section',
+        'home-service-address'
+      );
     }
 
     this.bookingValidationMessage = '';
@@ -617,12 +701,14 @@ export class BookingComponent implements OnInit {
   }
 
   getPersonDuration(person: BookingPerson): number {
-    return person.selectedServices.reduce((total, service) => total + service.duration, 0);
+    const listedDuration = person.selectedServices.reduce((total, service) => total + service.duration, 0);
+    const customDuration = this.hasHomeCustomService ? this.homeCustomServiceDuration : 0;
+    return listedDuration + customDuration;
   }
 
   getPersonBarberName(person: BookingPerson): string {
-    if (!person.selectedBarber) return 'Select barber';
-    if (person.selectedBarber === 'any') return 'Any available barber';
+    if (!person.selectedBarber) return this.serviceLocation === 'home' ? 'Best available barber' : 'Select barber';
+    if (person.selectedBarber === 'any') return this.serviceLocation === 'home' ? 'Best available barber' : 'Any available barber';
     return person.selectedBarber.name;
   }
 
@@ -637,6 +723,9 @@ export class BookingComponent implements OnInit {
   }
 
   private resetBookingForm(): void {
+    this.serviceLocation = 'salon';
+    this.homeAddress = '';
+    this.specialHomeService = '';
     this.bookingMode = 'single';
     this.groupStrategy = 'parallel';
     this.participants = [this.createPerson(1, 'You')];
@@ -788,18 +877,36 @@ export class BookingComponent implements OnInit {
     for (const person of this.participants) {
       if (person.selectedBarber !== 'any') continue;
 
-      const availableBarber = this.barbers.find(barber =>
-        !usedBarberIds.has(barber.id)
-        && this.barberSupportsPerson(barber, person)
-        && this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.getPersonDuration(person))
-      );
+      const candidates = this.barbers
+        .filter(barber =>
+          !usedBarberIds.has(barber.id)
+          && this.barberSupportsPerson(barber, person)
+          && this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.getPersonDuration(person))
+        )
+        .sort((a, b) => this.compareAutoAssignedBarbers(a, b, this.selectedDate!.fullDate));
 
+      const availableBarber = candidates[0];
       if (!availableBarber) return null;
+
       assignments.set(person.id, availableBarber);
       usedBarberIds.add(availableBarber.id);
     }
 
     return assignments.size === this.participants.length ? assignments : null;
+  }
+
+  private compareAutoAssignedBarbers(a: Barber, b: Barber, date: string): number {
+    if (b.rating !== a.rating) return b.rating - a.rating;
+
+    const aLoad = this.bookingService.all.filter(booking =>
+      booking.status !== 'Cancelled' && booking.barber === a.name && booking.date === date
+    ).length;
+    const bLoad = this.bookingService.all.filter(booking =>
+      booking.status !== 'Cancelled' && booking.barber === b.name && booking.date === date
+    ).length;
+
+    if (aLoad !== bLoad) return aLoad - bLoad;
+    return a.id - b.id;
   }
 
   private isBarberAvailable(barberId: number, requestedTime: string, date: string, duration: number): boolean {
