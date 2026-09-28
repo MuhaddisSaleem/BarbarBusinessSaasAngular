@@ -49,6 +49,12 @@ export class AdminReportsComponent {
     private readonly settingsService: AdminSettingsService
   ) {}
 
+  get filterBarbers(): string[] {
+    return Array.from(new Set(
+      this.bookingService.all.map(item => item.barber).filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b));
+  }
+
   get filteredBookings(): AdminBooking[] {
     return this.bookingService.all
       .filter(item => !this.dateFrom || item.date >= this.dateFrom)
