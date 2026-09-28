@@ -19,6 +19,11 @@ export interface AdminSettings {
   currency: string;
   timezone: string;
 
+  brandSubtitle: string;
+  heroEyebrow: string;
+  heroHeadline: string;
+  heroTagline: string;
+
   bookingInterval: number;
   maxAdvanceDays: number;
   cancellationHours: number;
@@ -59,6 +64,11 @@ const DEFAULT_SETTINGS: AdminSettings = {
   city: '',
   currency: 'PKR',
   timezone: 'Asia/Karachi',
+
+  brandSubtitle: 'LOOK GOOD · FEEL GREAT',
+  heroEyebrow: 'PREMIUM BARBERSHOP',
+  heroHeadline: '',
+  heroTagline: "More Than a Haircut. It's a Lifestyle.",
 
   bookingInterval: 30,
   maxAdvanceDays: 30,
@@ -166,6 +176,10 @@ export class AdminSettingsService {
       email: next.email.trim(),
       address: next.address.trim(),
       city: next.city.trim(),
+      brandSubtitle: next.brandSubtitle.trim(),
+      heroEyebrow: next.heroEyebrow.trim(),
+      heroHeadline: next.heroHeadline.trim(),
+      heroTagline: next.heroTagline.trim(),
       bookingInterval: Number(next.bookingInterval),
       maxAdvanceDays: Number(next.maxAdvanceDays),
       cancellationHours: Number(next.cancellationHours),
@@ -235,6 +249,22 @@ export class AdminSettingsService {
 
     if (settings.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.email)) {
       return { success: false, message: 'Enter a valid email address.' };
+    }
+
+    if (settings.brandSubtitle.length > 60) {
+      return { success: false, message: 'Header subtitle must be 60 characters or fewer.' };
+    }
+
+    if (settings.heroEyebrow.length > 60) {
+      return { success: false, message: 'Hero eyebrow text must be 60 characters or fewer.' };
+    }
+
+    if (settings.heroHeadline.length > 90) {
+      return { success: false, message: 'Hero headline must be 90 characters or fewer.' };
+    }
+
+    if (settings.heroTagline.length > 140) {
+      return { success: false, message: 'Hero tagline must be 140 characters or fewer.' };
     }
 
     if (Number(settings.bookingInterval) < 5) {
