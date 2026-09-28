@@ -193,7 +193,6 @@ export class AdminSettingsService {
     };
 
     const changed = JSON.stringify(this.settings) !== JSON.stringify(normalized);
-    this.settings = normalized;
 
     if (typeof window !== 'undefined') {
       try {
@@ -202,6 +201,8 @@ export class AdminSettingsService {
         return { success: false, message: 'Could not save settings in this browser.' };
       }
     }
+
+    this.settings = normalized;
 
     if (changed) {
       this.notificationService.add({
