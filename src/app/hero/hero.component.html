@@ -51,7 +51,7 @@
             <a class="nav-link" href="#home" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Home</a>
             <a class="nav-link" href="#about" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">About</a>
             <a class="nav-link" href="#services" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Services</a>
-            <a class="nav-link" href="#gallery" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Gallery</a>
+            <a class="nav-link" href="#services" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Gallery</a>
             <a class="nav-link" href="#contact" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Contact</a>
           </nav>
 
@@ -73,7 +73,7 @@
 
         <p class="tagline" *ngIf="heroTagline">{{ heroTagline }}</p>
 
-        <div class="hero-features row g-0 d-flex align-items-stretch flex-wrap">
+        <div id="about" class="hero-features row g-0 d-flex align-items-stretch flex-wrap">
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon star-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-star-fill"></i></span>
             <div><strong>{{ averageRatingLabel }}</strong><small>barber rating</small></div>
@@ -81,7 +81,7 @@
 
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
             <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-clock"></i></span>
-            <div><strong>Open until</strong><small>{{ todayClosingLabel }}</small></div>
+            <div><strong>{{ businessHoursStatus.label }}</strong><small>{{ businessHoursStatus.value }}</small></div>
           </div>
 
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
