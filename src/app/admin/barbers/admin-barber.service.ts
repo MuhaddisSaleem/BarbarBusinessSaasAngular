@@ -497,12 +497,12 @@ export class AdminBarberService {
         '+923337788990'
       ]);
 
-      const cleaned = parsed
+      const cleaned: AdminBarber[] = parsed
         .filter(item =>
           !needsCleanup
           || !demoPhones.has(String(item.phone || '').replace(/\s/g, ''))
         )
-        .map(item => ({
+        .map((item): AdminBarber => ({
           ...item,
           image: item.image || 'assets/images/barber-placeholder.svg',
           rating: this.normalizeRating(item.rating),
