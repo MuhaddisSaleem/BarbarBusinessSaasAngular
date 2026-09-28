@@ -83,6 +83,20 @@ export class AdminBookingsComponent implements OnInit {
     return this.toDateKey(date);
   }
 
+  get filterBarbers(): string[] {
+    return Array.from(new Set([
+      ...this.bookingService.barbers,
+      ...this.bookingService.all.map(item => item.barber).filter(Boolean)
+    ])).sort((a, b) => a.localeCompare(b));
+  }
+
+  get filterServices(): string[] {
+    return Array.from(new Set([
+      ...this.bookingService.services.map(item => item.name),
+      ...this.bookingService.all.map(item => item.service).filter(Boolean)
+    ])).sort((a, b) => a.localeCompare(b));
+  }
+
   get createTimeSlots(): string[] {
     const service = this.bookingService.services.find(item => item.name === this.newBooking.service);
     return this.slotsForDuration(service?.duration ?? 30, this.newBooking.date);
