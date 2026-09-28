@@ -49,6 +49,17 @@ export class AdminBookingService {
     }));
   }
 
+  availableBarbersForService(service: string, dateKey: string): string[] {
+    const services = this.serviceNames(service);
+
+    return this.barberService.active
+      .filter(barber =>
+        (!dateKey || this.barberService.isAvailableOnDate(barber.id, dateKey))
+        && this.barberService.supportsServices(barber.id, services)
+      )
+      .map(barber => barber.name);
+  }
+
   private readonly storageKey = 'royal-barbers.admin-bookings.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-bookings.demo-cleaned.v1';
   private bookings: AdminBooking[] = this.loadBookings();
@@ -89,6 +100,17 @@ export class AdminBookingService {
   assignBarber(id: number, barber: string): BookingMutationResult {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
+    const barberId = this.barberIdByName(barber);
+    if (!barberId) return { success: false, message: 'Selected barber is not active.' };
+
+    if (!this.barberService.isAvailableOnDate(barberId, booking.date)) {
+      return { success: false, message: barber + ' is not available on this booking date.' };
+    }
+
+    if (!this.barberService.supportsServices(barberId, this.serviceNames(booking.service))) {
+      return { success: false, message: barber + ' does not provide all services in this booking.' };
+    }
+
     if (this.hasConflict(barber, booking.date, booking.time, booking.duration, id)) {
       return { success: false, message: barber + ' already has an overlapping appointment at this time.' };
     }
@@ -117,6 +139,19 @@ export class AdminBookingService {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
     if (!date || !time) return { success: false, message: 'Please choose both a date and time.' };
+
+    const scheduleValidation = this.validateSchedule(date, time, booking.duration);
+    if (!scheduleValidation.success) return scheduleValidation;
+
+    const barberId = this.barberIdByName(booking.barber);
+    if (!barberId || !this.barberService.isAvailableOnDate(barberId, date)) {
+      return { success: false, message: booking.barber + ' is not available on the selected date.' };
+    }
+
+    if (!this.barberService.supportsServices(barberId, this.serviceNames(booking.service))) {
+      return { success: false, message: booking.barber + ' no longer provides all services in this booking.' };
+    }
+
     if (this.hasConflict(booking.barber, date, time, booking.duration, id)) {
       return { success: false, message: booking.barber + ' already has an overlapping appointment at this time.' };
     }
@@ -166,6 +201,10 @@ export class AdminBookingService {
         return { success: false, message: input.barber + ' is not available on this date.' };
       }
 
+      if (!this.barberService.supportsServices(barberId, this.serviceNames(input.service))) {
+        return { success: false, message: input.barber + ' does not provide all selected services.' };
+      }
+
       if (
         this.hasConflict(input.barber, input.date, input.time, input.duration)
         || staged.some(item => this.bookingsOverlap(item, input))
@@ -186,7 +225,7 @@ export class AdminBookingService {
         ...input,
         id,
         code: this.bookingCode(id),
-        status: 'Confirmed',
+        status: this.settingsService.current.autoConfirmBookings ? 'Confirmed' : 'Pending',
         source: 'Online'
       };
     });
@@ -227,6 +266,10 @@ export class AdminBookingService {
     const barberId = this.barberIdByName(input.barber);
     if (!barberId || !this.barberService.isAvailableOnDate(barberId, input.date)) {
       return { success: false, message: input.barber + ' is not available on this date.' };
+    }
+
+    if (!this.barberService.supportsServices(barberId, this.serviceNames(input.service))) {
+      return { success: false, message: input.barber + ' does not provide this service.' };
     }
 
     if (this.hasConflict(input.barber, input.date, input.time, input.duration)) {
@@ -386,6 +429,13 @@ export class AdminBookingService {
       : (words[0]?.slice(0, 2).toUpperCase() || 'BK');
 
     return prefix + '-' + String(2600 + id);
+  }
+
+  private serviceNames(service: string): string[] {
+    return String(service || '')
+      .split(',')
+      .map(name => name.trim())
+      .filter(Boolean);
   }
 
   private timeToMinutes(time: string): number {
