@@ -116,7 +116,7 @@
             <tr *ngFor="let booking of bookings" (click)="openBooking(booking)">
               <td>
                 <strong>{{ booking.code }}</strong>
-                <small>{{ booking.source }}</small>
+                <small>{{ booking.source }} · {{ booking.serviceLocation === 'Home' ? 'Home Service' : 'Salon' }}</small>
               </td>
               <td>
                 <strong>{{ booking.customerName }}</strong>
@@ -159,7 +159,11 @@
           </div>
 
           <div class="mobile-booking-grid">
-            <div><small>Service</small><strong>{{ booking.service }}</strong></div>
+            <div>
+              <small>Service</small>
+              <strong>{{ booking.service }}</strong>
+              <span class="home-booking-label" *ngIf="booking.serviceLocation === 'Home'"><i class="bi bi-house-heart"></i> Home Service</span>
+            </div>
             <div><small>Barber</small><strong>{{ booking.barber }}</strong></div>
             <div><small>Date</small><strong>{{ booking.date | date:'dd MMM' }}</strong></div>
             <div><small>Time</small><strong>{{ booking.time }}</strong></div>
@@ -208,7 +212,25 @@
         <div class="detail-row"><span>Service</span><strong>{{ selectedBooking.service }}</strong></div>
         <div class="detail-row"><span>Duration</span><strong>{{ selectedBooking.duration }} minutes</strong></div>
         <div class="detail-row"><span>Amount</span><strong class="gold">Rs. {{ selectedBooking.amount | number }}</strong></div>
+        <div class="detail-row" *ngIf="selectedBooking.specialService"><span>Custom service price</span><strong class="gold">To be confirmed</strong></div>
+        <div class="detail-row"><span>Service type</span><strong>{{ selectedBooking.serviceLocation === 'Home' ? 'Home Service' : 'Salon Visit' }}</strong></div>
         <div class="detail-row"><span>Source</span><strong>{{ selectedBooking.source }}</strong></div>
+      </section>
+
+      <section class="detail-section" *ngIf="selectedBooking.serviceLocation === 'Home'">
+        <h4>Home Service</h4>
+        <div class="booking-notes">
+          <strong>Address</strong>
+          <p>{{ selectedBooking.serviceAddress || 'No address provided.' }}</p>
+        </div>
+        <div class="booking-notes" *ngIf="selectedBooking.specialService">
+          <strong>Special service request</strong>
+          <p>{{ selectedBooking.specialService }}</p>
+        </div>
+        <div class="booking-notes">
+          <strong>Barber preparation</strong>
+          <p>Assigned barber should arrive in professional uniform with sanitized essentials for the selected services.</p>
+        </div>
       </section>
 
       <section class="detail-section">
