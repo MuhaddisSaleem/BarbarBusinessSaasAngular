@@ -98,11 +98,13 @@ export class AdminSettingsService {
   }
 
   get bookingInterval(): number {
-    return Math.max(5, Number(this.settings.bookingInterval) || 30);
+    const value = Number(this.settings.bookingInterval);
+    return Number.isInteger(value) && value >= 5 ? value : 30;
   }
 
   get maxAdvanceDays(): number {
-    return Math.max(1, Number(this.settings.maxAdvanceDays) || 30);
+    const value = Number(this.settings.maxAdvanceDays);
+    return Number.isInteger(value) && value >= 1 ? value : 30;
   }
 
   get cancellationHours(): number {
@@ -368,8 +370,10 @@ export class AdminSettingsService {
       return {
         ...this.clone(DEFAULT_SETTINGS),
         ...parsed,
-        businessHours: DEFAULT_HOURS.map(defaultDay => {
-          const savedDay = storedHours.find(day => day?.key === defaultDay.key);
+        businessHours: DEFAULT_HOURS.map((defaultDay, index) => {
+          const savedDay = storedHours.find(day => day?.key === defaultDay.key)
+            || storedHours.find(day => day?.label?.toLowerCase() === defaultDay.label.toLowerCase())
+            || (storedHours.every(day => !day?.key && !day?.label) ? storedHours[index] : undefined);
           return {
             ...defaultDay,
             ...(savedDay || {}),

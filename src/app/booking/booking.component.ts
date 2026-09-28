@@ -10,7 +10,6 @@ interface Service { id: number; name: string; duration: number; price: number; o
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
 interface BookingDate { date: Date; day: string; dateNumber: number; month: string; fullDate: string; }
 interface CalendarCell { date: Date | null; dayNumber: number | null; fullDate: string | null; }
-interface BookedAppointment { barberId: number; date: string; startTime: string; duration: number; }
 interface BookingPerson { id: number; label: string; selectedServices: Service[]; selectedBarber: Barber | 'any' | null; }
 interface ConfirmedAssignment { person: string; barber: string; time: string; }
 interface PersonSchedule { personId: number; time: string; barber: Barber; suggested: boolean; }
@@ -76,7 +75,6 @@ export class BookingComponent implements OnInit {
   calendarDate = this.startOfMonth(new Date());
   calendarCells: CalendarCell[] = [];
   availableTimes: string[] = [];
-  bookedAppointments: BookedAppointment[] = [];
   sequentialSchedule: PersonSchedule[] = [];
 
   customer = { name: '', phone: '', notes: '' };
@@ -599,12 +597,6 @@ export class BookingComponent implements OnInit {
       if (!barber) return;
 
       const personStartTime = this.getPersonBookingTime(index);
-      this.bookedAppointments.push({
-        barberId: barber.id,
-        date: this.selectedDate!.fullDate,
-        startTime: personStartTime,
-        duration: this.getPersonDuration(person)
-      });
       this.confirmedAssignments.push({ person: person.label, barber: barber.name, time: personStartTime });
     });
 
@@ -902,7 +894,7 @@ export class BookingComponent implements OnInit {
 
       let start = Math.max(earliestStart, window.start);
       const interval = this.settingsService.bookingInterval;
-      start = Math.ceil(start / interval) * interval;
+      start = window.start + Math.ceil((start - window.start) / interval) * interval;
 
       for (let minutes = start; minutes + duration <= window.end; minutes += interval) {
         const time = this.minutesToTime(minutes);
@@ -931,23 +923,33 @@ export class BookingComponent implements OnInit {
       usedBarberIds.add(selected.id);
     }
 
-    for (const person of this.participants) {
-      if (person.selectedBarber !== 'any') continue;
-
-      const candidates = this.barbers
-        .filter(barber =>
+    const choices = this.participants
+      .filter(person => person.selectedBarber === 'any')
+      .map(person => ({
+        person,
+        candidates: this.barbers.filter(barber =>
           !usedBarberIds.has(barber.id)
           && this.barberSupportsPerson(barber, person)
           && this.isBarberAvailable(barber.id, time, this.selectedDate!.fullDate, this.getPersonDuration(person))
-        )
-        .sort((a, b) => this.compareAutoAssignedBarbers(a, b, this.selectedDate!.fullDate));
+        ).sort((a, b) => this.compareAutoAssignedBarbers(a, b, this.selectedDate!.fullDate))
+      }))
+      .sort((a, b) => a.candidates.length - b.candidates.length);
 
-      const availableBarber = candidates[0];
-      if (!availableBarber) return null;
-
-      assignments.set(person.id, availableBarber);
-      usedBarberIds.add(availableBarber.id);
-    }
+    // Try alternatives when a preferred barber is needed by another participant.
+    const assign = (index: number): boolean => {
+      if (index === choices.length) return true;
+      const { person, candidates } = choices[index];
+      for (const barber of candidates) {
+        if (usedBarberIds.has(barber.id)) continue;
+        assignments.set(person.id, barber);
+        usedBarberIds.add(barber.id);
+        if (assign(index + 1)) return true;
+        assignments.delete(person.id);
+        usedBarberIds.delete(barber.id);
+      }
+      return false;
+    };
+    if (!assign(0)) return null;
 
     return assignments.size === this.participants.length ? assignments : null;
   }
@@ -979,10 +981,6 @@ export class BookingComponent implements OnInit {
     );
     if (!insideBusinessHours) return false;
 
-    const localBookings = this.bookedAppointments.filter(booking =>
-      booking.barberId === barberId && booking.date === date
-    );
-
     const barberName = this.barbers.find(barber => barber.id === barberId)?.name;
     const adminBookings = barberName
       ? this.bookingService.all.filter(booking =>
@@ -991,14 +989,6 @@ export class BookingComponent implements OnInit {
           && booking.date === date
         )
       : [];
-
-    const localConflict = localBookings.some(booking => {
-      const bookingStart = this.timeToMinutes(booking.startTime);
-      const bookingEnd = bookingStart + booking.duration;
-      return requestedStart < bookingEnd && requestedEnd > bookingStart;
-    });
-
-    if (localConflict) return false;
 
     return !adminBookings.some(booking => {
       const bookingStart = this.timeToMinutes(booking.time);

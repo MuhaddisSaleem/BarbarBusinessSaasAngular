@@ -232,7 +232,7 @@
           <strong>Special service request</strong>
           <p>{{ selectedBooking.specialService }}</p>
         </div>
-        <div class="edit-row custom-price-edit" *ngIf="selectedBooking.specialService">
+        <div class="edit-row custom-price-edit" *ngIf="selectedBooking.specialService && selectedBooking.status !== 'Completed' && selectedBooking.status !== 'Cancelled'">
           <input
             type="number"
             min="1"
@@ -286,6 +286,7 @@
 
       <section class="detail-section" *ngIf="selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed'">
         <h4>Reschedule</h4>
+        <p class="booking-notes">Times are for {{ selectedBooking.barber }}. Use Update above to change the assigned barber first.</p>
         <div class="schedule-grid">
           <input type="date" [(ngModel)]="editDate" (ngModelChange)="onEditDateChange()" [min]="minDate" [max]="maxDate">
           <select [(ngModel)]="editTime">
@@ -360,8 +361,8 @@
 
         <label class="full">
           <span>Time *</span>
-          <select [(ngModel)]="newBooking.time">
-            <option value="">Select time</option>
+          <select [(ngModel)]="newBooking.time" [disabled]="!newBooking.service || !newBooking.barber">
+            <option value="">{{ !newBooking.service || !newBooking.barber ? 'Choose service and barber first' : 'Select time' }}</option>
             <option *ngFor="let slot of createTimeSlots">{{ slot }}</option>
           </select>
         </label>

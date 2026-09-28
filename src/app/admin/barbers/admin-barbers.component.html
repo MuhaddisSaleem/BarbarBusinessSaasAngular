@@ -130,7 +130,7 @@
                 </small>
               </td>
 
-              <td>{{ barber.workingHours }}</td>
+              <td>{{ barber.workingHours || 'Salon business hours' }}</td>
 
               <td>
                 <span class="account-status" [class.inactive]="barber.accountStatus === 'Inactive'">
@@ -213,7 +213,7 @@
 
             <div>
               <small>Working Hours</small>
-              <strong>{{ barber.workingHours }}</strong>
+              <strong>{{ barber.workingHours || 'Salon business hours' }}</strong>
             </div>
           </div>
 
@@ -401,7 +401,7 @@
 
         <label>
           <span>Working Hours</span>
-          <input type="text" [(ngModel)]="newBarber.workingHours" placeholder="Enter working hours">
+          <input type="text" [(ngModel)]="newBarber.workingHours" placeholder="9 AM - 9 PM, or blank for salon hours">
         </label>
 
         <label class="full">
@@ -488,7 +488,7 @@
 
         <label>
           <span>Working Hours</span>
-          <input type="text" [(ngModel)]="editBarber.workingHours" placeholder="Enter working hours">
+          <input type="text" [(ngModel)]="editBarber.workingHours" placeholder="9 AM - 9 PM, or blank for salon hours">
         </label>
 
         <label class="full">

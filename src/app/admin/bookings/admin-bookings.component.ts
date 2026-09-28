@@ -109,7 +109,7 @@ export class AdminBookingsComponent implements OnInit {
     const duration = service?.duration ?? 30;
     const slots = this.slotsForDuration(duration, this.newBooking.date);
 
-    if (!this.newBooking.barber) return slots;
+    if (!service || !this.newBooking.barber) return [];
 
     return slots.filter(time =>
       this.bookingService.isBarberSlotAvailable(
@@ -125,11 +125,11 @@ export class AdminBookingsComponent implements OnInit {
     const duration = this.selectedBooking?.duration ?? 30;
     const slots = this.slotsForDuration(duration, this.editDate);
 
-    if (!this.selectedBooking || !this.editBarber) return slots;
+    if (!this.selectedBooking) return [];
 
     return slots.filter(time =>
       this.bookingService.isBarberSlotAvailable(
-        this.editBarber,
+        this.selectedBooking!.barber,
         this.editDate,
         time,
         duration,
@@ -145,7 +145,7 @@ export class AdminBookingsComponent implements OnInit {
 
   get editBarbers(): string[] {
     if (!this.selectedBooking) return [];
-    return this.bookingService.availableBarbersForBooking(this.selectedBooking, this.editDate);
+    return this.bookingService.availableBarbersForBooking(this.selectedBooking, this.selectedBooking.date);
   }
 
   get selectedBookingPastGrace(): boolean {
@@ -173,9 +173,6 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   onEditDateChange(): void {
-    if (!this.editBarbers.includes(this.editBarber)) {
-      this.editBarber = '';
-    }
     this.editTime = '';
   }
 
@@ -184,7 +181,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   onEditBarberChange(): void {
-    this.editTime = '';
+    // Assignment is saved separately; rescheduling continues to use the saved barber.
   }
 
   get bookings(): AdminBooking[] {
@@ -319,7 +316,7 @@ export class AdminBookingsComponent implements OnInit {
       phone: '',
       service: '',
       barber: '',
-      date: this.todayKey,
+      date: this.minDate,
       time: '',
       notes: ''
     };

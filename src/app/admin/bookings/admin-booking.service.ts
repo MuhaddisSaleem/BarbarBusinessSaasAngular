@@ -249,13 +249,17 @@ export class AdminBookingService {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
 
+    if (booking.status === 'Completed' || booking.status === 'Cancelled') {
+      return { success: false, message: 'Closed bookings cannot be repriced.' };
+    }
+
     if (booking.serviceLocation !== 'Home' || !booking.specialService?.trim()) {
       return { success: false, message: 'This booking does not contain a custom home-service request.' };
     }
 
     const nextAmount = Number(amount);
-    if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
-      return { success: false, message: 'Enter a valid custom service amount greater than 0.' };
+    if (!Number.isInteger(nextAmount) || nextAmount <= 0) {
+      return { success: false, message: 'Enter a whole-rupee custom service amount greater than 0.' };
     }
 
     const previousSpecialAmount = Number(booking.specialServiceAmount) || 0;
@@ -464,6 +468,12 @@ export class AdminBookingService {
       0
     );
 
+    if (date.getFullYear() !== Number(dateMatch[1])
+      || date.getMonth() !== Number(dateMatch[2]) - 1
+      || date.getDate() !== Number(dateMatch[3])) {
+      return { success: false, message: 'Select a valid appointment date.' };
+    }
+
     if (!this.settingsService.isBookingDateAllowed(date)) {
       return { success: false, message: 'This date is outside the current booking window or the salon is closed.' };
     }
@@ -639,6 +649,7 @@ export class AdminBookingService {
     let hour = Number(match[1]);
     const minute = Number(match[2]);
     const period = match[3].toUpperCase();
+    if (hour < 1 || hour > 12 || minute > 59) return Number.NaN;
     if (period === 'PM' && hour !== 12) hour += 12;
     if (period === 'AM' && hour === 12) hour = 0;
     return hour * 60 + minute;

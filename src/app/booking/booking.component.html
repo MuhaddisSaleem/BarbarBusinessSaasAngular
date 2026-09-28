@@ -301,7 +301,9 @@
               <div class="no-times" style="color: #ff4d4f;" *ngIf="!availableTimes.length && allParticipantsReady && selectedDate">
                 {{ serviceLocation === 'home'
                   ? 'No suitable barber is available for this home service on the selected date. Try another date or time.'
-                  : (groupStrategy === 'sequential'
+                  : (bookingMode === 'single'
+                    ? 'No available time fits these services and the selected barber’s hours on this date. Try another date or barber.'
+                    : groupStrategy === 'sequential'
                     ? 'The selected barber cannot fit all people on this date, even with alternative time suggestions. Try another date or barber.'
                     : 'No simultaneous availability for these selections on this date. Try another date or barber.') }}
               </div>

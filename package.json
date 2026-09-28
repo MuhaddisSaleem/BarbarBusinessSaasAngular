@@ -5,7 +5,9 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development"
+    "watch": "ng build --watch --configuration development",
+    "test:qa": "node --test tests/qa-regressions.test.cjs",
+    "test:ui": "node tests/ui-smoke.cjs"
   },
   "private": true,
   "dependencies": {
