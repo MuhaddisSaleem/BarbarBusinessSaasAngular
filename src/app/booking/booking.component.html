@@ -282,7 +282,7 @@
     <div class="page-shell container-fluid footer-inner row g-3 align-items-center">
       <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-calendar2-check"></i></div><div><strong>Easy Online Booking</strong><span>Book in seconds</span></div></div>
       <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-shield-check"></i></div><div><strong>100% Secure</strong><span>Your information is safe</span></div></div>
-      <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-clock-history"></i></div><div><strong>Free Cancellation</strong><span>Up to 2 hours before</span></div></div>
+      <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-clock-history"></i></div><div><strong>Cancellation Policy</strong><span>{{ cancellationHours ? ('Up to ' + cancellationHours + ' hours before') : 'Until appointment time' }}</span></div></div>
       <div class="footer-feature col-12 col-sm-6 col-lg d-flex align-items-center justify-content-center"><div class="footer-icon d-flex align-items-center justify-content-center"><i class="bi bi-headset"></i></div><div><strong>Need Help?</strong><span>{{ businessPhone }}</span></div></div>
       <div class="footer-signature col-12 col-lg-auto ms-lg-auto">Stay Sharp <span><i class="bi bi-gem"></i></span></div>
     </div>
@@ -291,11 +291,18 @@
   <div class="success-overlay d-flex align-items-center justify-content-center" *ngIf="bookingConfirmed">
     <div class="success-modal group-success-modal">
       <div class="success-icon d-flex align-items-center justify-content-center"><i class="bi bi-check-lg"></i></div>
-      <span class="success-label">{{ bookingMode === 'group' ? 'GROUP BOOKING CONFIRMED' : 'BOOKING CONFIRMED' }}</span>
-      <h2>You're all set!</h2>
-      <p *ngIf="bookingMode === 'single'">Your appointment at {{ businessName }} has been successfully booked.</p>
-      <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel'">All appointments are booked for the same time with separate barbers.</p>
-      <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential'">All appointments are booked with the same barber using the available time slots shown below.</p>
+      <span class="success-label">
+        {{ bookingSubmittedStatus === 'Confirmed'
+          ? (bookingMode === 'group' ? 'GROUP BOOKING CONFIRMED' : 'BOOKING CONFIRMED')
+          : (bookingMode === 'group' ? 'GROUP BOOKING REQUESTED' : 'BOOKING REQUESTED') }}
+      </span>
+      <h2>{{ bookingSubmittedStatus === 'Confirmed' ? "You're all set!" : 'Request received!' }}</h2>
+      <p *ngIf="bookingMode === 'single' && bookingSubmittedStatus === 'Confirmed'">Your appointment at {{ businessName }} has been successfully booked.</p>
+      <p *ngIf="bookingMode === 'single' && bookingSubmittedStatus === 'Pending'">Your appointment request has been received and is waiting for salon confirmation.</p>
+      <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel' && bookingSubmittedStatus === 'Confirmed'">All appointments are booked for the same time with separate barbers.</p>
+      <p *ngIf="bookingMode === 'group' && groupStrategy === 'parallel' && bookingSubmittedStatus === 'Pending'">All appointment requests were received and are waiting for salon confirmation.</p>
+      <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential' && bookingSubmittedStatus === 'Confirmed'">All appointments are booked with the same barber using the available time slots shown below.</p>
+      <p *ngIf="bookingMode === 'group' && groupStrategy === 'sequential' && bookingSubmittedStatus === 'Pending'">All appointment requests were received with the selected barber and are waiting for salon confirmation.</p>
 
       <div class="confirmed-people" *ngIf="bookingMode === 'group'">
         <div class="d-flex align-items-center justify-content-between" *ngFor="let assignment of confirmedAssignments"><span>{{ assignment.person }}</span><strong>{{ assignment.barber }} · {{ assignment.time }}</strong></div>
@@ -305,6 +312,7 @@
         <div class="d-flex justify-content-between"><span>Date</span><strong>{{ selectedDate?.date | date:'dd MMM yyyy' }}</strong></div>
         <div class="d-flex justify-content-between"><span>Booking window</span><strong>{{ selectedTime }} – {{ bookingEndTime }}</strong></div>
         <div class="d-flex justify-content-between"><span>Total</span><strong>Rs. {{ totalPrice | number }}</strong></div>
+        <div class="d-flex justify-content-between" *ngIf="lateArrivalMinutes > 0"><span>Late arrival grace</span><strong>{{ lateArrivalMinutes }} min</strong></div>
       </div>
       <button type="button" (click)="closeSuccess()">Done</button>
     </div>
