@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { NotificationService } from '../notifications/notification.service';
+import { AdminBarberService } from '../barbers/admin-barber.service';
 
 export type ServiceStatus = 'Active' | 'Inactive';
 
@@ -23,7 +24,10 @@ export interface ServiceMutationResult {
 
 @Injectable({ providedIn: 'root' })
 export class AdminServiceService {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly notificationService: NotificationService,
+    private readonly barberService: AdminBarberService
+  ) {}
 
   private readonly storageKey = 'royal-barbers.admin-services.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-services.demo-cleaned.v1';
@@ -152,6 +156,15 @@ export class AdminServiceService {
       return { success: false, message: 'Could not save the service changes.' };
     }
 
+    if (previous.name.trim().toLowerCase() !== service.name.trim().toLowerCase()) {
+      const specialtyResult = this.barberService.renameSpecialty(previous.name, service.name);
+      if (!specialtyResult.success) {
+        Object.assign(service, previous);
+        this.persist();
+        return specialtyResult;
+      }
+    }
+
     this.notificationService.add({
       type: 'system',
       title: 'Service updated',
@@ -199,6 +212,13 @@ export class AdminServiceService {
     if (!this.persist()) {
       this.services = previous;
       return { success: false, message: 'Could not delete this service.' };
+    }
+
+    const specialtyResult = this.barberService.removeSpecialty(service.name);
+    if (!specialtyResult.success) {
+      this.services = previous;
+      this.persist();
+      return specialtyResult;
     }
 
     this.notificationService.add({
