@@ -314,3 +314,50 @@ button,input,select { font:inherit; }
 
   .image-upload-row { align-items:flex-start !important; flex-wrap:wrap; }
 }
+
+
+.pricing-divider {
+  grid-column:1/-1;
+  margin-top:4px;
+  padding-top:12px;
+  border-top:1px solid #263238;
+
+  > span,
+  > small {
+    display:block;
+  }
+
+  > span {
+    color:$gold-soft;
+    font-size:8px;
+    font-weight:800;
+    letter-spacing:.08em;
+  }
+
+  > small {
+    margin-top:4px;
+    color:#718086;
+    font-size:7px;
+  }
+}
+
+.home-price-discount {
+  display:block;
+  margin-top:3px;
+  color:#67d49a;
+  font-size:7px;
+}
+
+.price-label {
+  min-width:34px;
+  color:#718086;
+  font-size:7px;
+  font-weight:800;
+  text-transform:uppercase;
+}
+
+.home-mobile-price {
+  margin-top:6px;
+  padding-top:7px;
+  border-top:1px solid #202b30;
+}
