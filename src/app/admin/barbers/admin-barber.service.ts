@@ -34,14 +34,17 @@ export class AdminBarberService {
   private barbers: AdminBarber[] = this.loadBarbers();
 
   get all(): AdminBarber[] {
+    this.normalizeExpiredLeave();
     return this.barbers;
   }
 
   get active(): AdminBarber[] {
+    this.normalizeExpiredLeave();
     return this.barbers.filter(item => item.accountStatus === 'Active');
   }
 
   get availableToday(): AdminBarber[] {
+    this.normalizeExpiredLeave();
     const today = this.todayKey();
     return this.active.filter(item => this.isAvailableOnDate(item.id, today));
   }
@@ -340,6 +343,28 @@ export class AdminBarberService {
     if (barber.availability === 'Vacation') return 'On Vacation';
     if (barber.availability === 'On Leave') return 'On Leave';
     return 'Not Available Today';
+  }
+
+  private normalizeExpiredLeave(): void {
+    const today = this.todayKey();
+    let changed = false;
+
+    this.barbers.forEach(barber => {
+      if (
+        barber.accountStatus === 'Active'
+        && (barber.availability === 'On Leave' || barber.availability === 'Vacation')
+        && barber.leaveTo
+        && barber.leaveTo < today
+      ) {
+        barber.availability = 'Available Today';
+        barber.leaveFrom = undefined;
+        barber.leaveTo = undefined;
+        barber.note = '';
+        changed = true;
+      }
+    });
+
+    if (changed) this.persist();
   }
 
   private loadBarbers(): AdminBarber[] {
