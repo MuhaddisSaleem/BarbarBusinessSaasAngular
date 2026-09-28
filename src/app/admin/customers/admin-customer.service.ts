@@ -78,8 +78,8 @@ export class AdminCustomerService {
 
     const upcoming = nonCancelled
       .filter(item =>
-        item.date > nowKey ||
-        (item.date === nowKey && item.status !== 'Completed')
+        (item.status === 'Pending' || item.status === 'Confirmed')
+        && item.date >= nowKey
       )
       .sort((a, b) =>
         a.date.localeCompare(b.date) || this.timeToMinutes(a.time) - this.timeToMinutes(b.time)
