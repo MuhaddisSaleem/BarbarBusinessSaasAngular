@@ -33,7 +33,7 @@
           <section id="service-section" class="booking-section service-section">
             <div class="section-heading">
               <h2>1. Choose a Service</h2>
-              <p>Select services for yourself or book people together.</p>
+              <p>Choose salon services or select Home Services below with separate home-service pricing.</p>
             </div>
 
             <div class="service-subheading d-flex align-items-center justify-content-between">
@@ -45,12 +45,12 @@
             </div>
 
             <div class="booking-for-toggle d-flex">
-              <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'single'" (click)="setBookingMode('single')">
+              <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'single'" (click)="setServiceLocation('salon'); setBookingMode('single')">
                 <span class="mode-icon d-flex align-items-center justify-content-center"><i class="bi bi-person-fill"></i></span>
                 <span><strong>Just Me</strong><small>One appointment</small></span>
               </button>
 
-              <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'group'" (click)="setBookingMode('group')">
+              <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'group'" (click)="setServiceLocation('salon'); setBookingMode('group')">
                 <span class="mode-icon people-mode d-flex align-items-center justify-content-center"><i class="bi bi-people-fill"></i></span>
                 <span><strong>Me + Someone Else</strong><small>Book more than one person</small></span>
               </button>
