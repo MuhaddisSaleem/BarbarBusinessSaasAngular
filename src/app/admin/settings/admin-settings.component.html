@@ -162,6 +162,125 @@
 
       <section class="settings-card full-width">
         <div class="card-head">
+          <span class="section-icon"><i class="bi bi-palette"></i></span>
+          <div>
+            <h3>Landing Page Branding</h3>
+            <p>Control the logo, hero banner/video and text shown on the public landing page.</p>
+          </div>
+        </div>
+
+        <div class="card-body branding-grid">
+          <div class="branding-fields">
+            <label>
+              <span>Header Subtitle</span>
+              <input
+                type="text"
+                maxlength="60"
+                [(ngModel)]="settings.brandSubtitle"
+                placeholder="LOOK GOOD · FEEL GREAT">
+            </label>
+
+            <label>
+              <span>Hero Small Text</span>
+              <input
+                type="text"
+                maxlength="60"
+                [(ngModel)]="settings.heroEyebrow"
+                placeholder="PREMIUM BARBERSHOP">
+            </label>
+
+            <label>
+              <span>Hero Headline</span>
+              <input
+                type="text"
+                maxlength="90"
+                [(ngModel)]="settings.heroHeadline"
+                placeholder="Leave empty to use business name">
+              <small class="field-help">If empty, the business name is used automatically.</small>
+            </label>
+
+            <label>
+              <span>Hero Tagline</span>
+              <textarea
+                maxlength="140"
+                [(ngModel)]="settings.heroTagline"
+                placeholder="Enter landing page banner text"></textarea>
+            </label>
+          </div>
+
+          <div class="branding-media-column">
+            <article class="media-setting">
+              <div class="media-setting-head">
+                <div>
+                  <strong>Business Logo</strong>
+                  <span>Used in the landing page header and admin branding.</span>
+                </div>
+                <button type="button" class="remove-media-btn" *ngIf="brandingMedia.logoUrl()" (click)="removeLogo()">
+                  Remove
+                </button>
+              </div>
+
+              <div class="media-preview logo-preview">
+                <img *ngIf="brandingMedia.logoUrl(); else logoEmpty" [src]="brandingMedia.logoUrl()" alt="Business logo preview">
+                <ng-template #logoEmpty>
+                  <span class="media-empty"><i class="bi bi-image"></i>No custom logo</span>
+                </ng-template>
+              </div>
+
+              <label class="media-upload-btn" [class.disabled]="brandingBusy">
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" [disabled]="brandingBusy" (change)="onLogoSelected($event)">
+                <i class="bi bi-cloud-arrow-up"></i>
+                {{ brandingMedia.logoUrl() ? 'Change Logo' : 'Upload Logo' }}
+              </label>
+              <small class="media-help">PNG, JPG, WebP or SVG · maximum 2 MB</small>
+            </article>
+
+            <article class="media-setting">
+              <div class="media-setting-head">
+                <div>
+                  <strong>Landing Page Hero</strong>
+                  <span>Upload an image banner or a lightweight looping video.</span>
+                </div>
+                <button type="button" class="remove-media-btn" *ngIf="brandingMedia.heroMediaUrl()" (click)="removeHeroMedia()">
+                  Remove
+                </button>
+              </div>
+
+              <div class="media-preview hero-media-preview">
+                <img
+                  *ngIf="brandingMedia.heroMediaType() === 'image'"
+                  [src]="brandingMedia.heroMediaUrl()"
+                  alt="Landing page hero preview">
+                <video
+                  *ngIf="brandingMedia.heroMediaType() === 'video'"
+                  [src]="brandingMedia.heroMediaUrl()"
+                  muted
+                  loop
+                  autoplay
+                  playsinline
+                  preload="metadata"></video>
+                <span class="media-empty" *ngIf="!brandingMedia.heroMediaUrl()">
+                  <i class="bi bi-card-image"></i>No custom hero media
+                </span>
+              </div>
+
+              <label class="media-upload-btn" [class.disabled]="brandingBusy">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
+                  [disabled]="brandingBusy"
+                  (change)="onHeroMediaSelected($event)">
+                <i class="bi bi-camera-reels"></i>
+                {{ brandingMedia.heroMediaUrl() ? 'Change Hero Media' : 'Upload Image / Video' }}
+              </label>
+              <small class="media-help">Image, MP4 or WebM · maximum 2 MB. Video plays muted and loops automatically.</small>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card full-width">
+        <div class="card-head">
           <span class="section-icon"><i class="bi bi-clock-history"></i></span>
           <div>
             <h3>Business Hours</h3>
