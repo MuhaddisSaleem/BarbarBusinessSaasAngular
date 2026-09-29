@@ -248,6 +248,16 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the booking status. Please try again.' };
     }
 
+    this.api?.updateStatus(id, status).subscribe({
+      next: response => {
+        if (response.booking) Object.assign(booking, this.normalizeBooking(response.booking));
+      },
+      error: error => {
+        booking.status = previousStatus;
+        this.notifyApiError('Could not update the booking status.', error);
+      }
+    });
+
     if (previousStatus !== status) {
       this.notificationService.add({
         type: status === 'Cancelled' ? 'cancelled' : 'booking',
@@ -292,6 +302,16 @@ export class AdminBookingService {
       booking.barber = previousBarber;
       return { success: false, message: 'Could not save the barber assignment. Please try again.' };
     }
+
+    this.api?.assignBarber(id, barber).subscribe({
+      next: response => {
+        if (response.booking) Object.assign(booking, this.normalizeBooking(response.booking));
+      },
+      error: error => {
+        booking.barber = previousBarber;
+        this.notifyApiError('Could not save the barber assignment.', error);
+      }
+    });
 
     if (previousBarber !== barber) {
       this.notificationService.add({
@@ -344,6 +364,17 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the new appointment schedule. Please try again.' };
     }
 
+    this.api?.reschedule(id, date, time).subscribe({
+      next: response => {
+        if (response.booking) Object.assign(booking, this.normalizeBooking(response.booking));
+      },
+      error: error => {
+        booking.date = previousDate;
+        booking.time = previousTime;
+        this.notifyApiError('Could not save the new appointment schedule.', error);
+      }
+    });
+
     if (previousDate !== date || previousTime !== time) {
       this.notificationService.add({
         type: 'rescheduled',
@@ -385,6 +416,17 @@ export class AdminBookingService {
       booking.amount = previousTotal;
       return { success: false, message: 'Could not save the custom service price.' };
     }
+
+    this.api?.updateSpecialServicePrice(id, booking.specialServiceAmount).subscribe({
+      next: response => {
+        if (response.booking) Object.assign(booking, this.normalizeBooking(response.booking));
+      },
+      error: error => {
+        booking.specialServiceAmount = previousSpecialAmount;
+        booking.amount = previousTotal;
+        this.notifyApiError('Could not save the custom service price.', error);
+      }
+    });
 
     this.notificationService.add({
       type: 'booking',
@@ -490,6 +532,14 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the booking. Please try again.' };
     }
 
+    this.api?.createOnline(staged).subscribe({
+      next: () => this.refreshFromApi(),
+      error: error => {
+        this.bookings = previousBookings;
+        this.notifyApiError('Could not save the online booking to SQL Server.', error);
+      }
+    });
+
     if (this.settingsService.current.notifyOwnerOnNewBooking) {
       const first = created[0];
       this.notificationService.add({
@@ -564,6 +614,14 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the walk-in booking. Please try again.' };
     }
 
+    this.api?.createWalkIn(input).subscribe({
+      next: () => this.refreshFromApi(),
+      error: error => {
+        this.bookings = previousBookings;
+        this.notifyApiError('Could not save the walk-in booking to SQL Server.', error);
+      }
+    });
+
     const created = this.bookings[0];
     this.notificationService.add({
       type: 'booking',
@@ -617,6 +675,14 @@ export class AdminBookingService {
       this.bookings = previousBookings;
       return { success: false, message: 'Could not save the booking. Please try again.' };
     }
+
+    this.api?.createAdmin(input).subscribe({
+      next: () => this.refreshFromApi(),
+      error: error => {
+        this.bookings = previousBookings;
+        this.notifyApiError('Could not save the admin booking to SQL Server.', error);
+      }
+    });
 
     const created = this.bookings[0];
     this.notificationService.add({
