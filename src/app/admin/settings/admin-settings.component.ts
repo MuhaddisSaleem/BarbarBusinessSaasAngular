@@ -29,17 +29,21 @@ export class AdminSettingsComponent {
   }
 
   saveSettings(): void {
-    const result = this.settingsService.save(this.settings);
-    this.feedbackType = result.success ? 'success' : 'error';
-    this.feedbackMessage = result.message;
+    const handle = (result: { success: boolean; message: string }) => {
+      this.feedbackType = result.success ? 'success' : 'error';
+      this.feedbackMessage = result.message;
 
-    if (result.success) {
-      this.settings = this.settingsService.current;
-    }
+      if (result.success) {
+        this.settings = this.settingsService.current;
+      }
 
-    window.setTimeout(() => {
-      if (this.feedbackMessage === result.message) this.feedbackMessage = '';
-    }, 3500);
+      window.setTimeout(() => {
+        if (this.feedbackMessage === result.message) this.feedbackMessage = '';
+      }, 3500);
+    };
+
+    if (this.settingsService.saveThroughApi(this.settings, handle)) return;
+    handle(this.settingsService.save(this.settings));
   }
 
   requestReset(): void {
@@ -51,27 +55,30 @@ export class AdminSettingsComponent {
   }
 
   async confirmReset(): Promise<void> {
-    const result = this.settingsService.reset();
+    const handle = async (result: { success: boolean; message: string }) => {
+      if (!result.success) {
+        this.resetConfirmOpen = false;
+        this.feedbackType = 'error';
+        this.feedbackMessage = result.message;
+        return;
+      }
 
-    if (!result.success) {
+      this.settings = this.settingsService.current;
+
+      try {
+        await this.brandingMedia.clearAll();
+        this.feedbackType = 'success';
+        this.feedbackMessage = 'Settings and landing page branding reset to defaults.';
+      } catch {
+        this.feedbackType = 'error';
+        this.feedbackMessage = 'Settings were reset, but the saved logo or hero media could not be cleared.';
+      }
+
       this.resetConfirmOpen = false;
-      this.feedbackType = 'error';
-      this.feedbackMessage = result.message;
-      return;
-    }
+    };
 
-    this.settings = this.settingsService.current;
-
-    try {
-      await this.brandingMedia.clearAll();
-      this.feedbackType = 'success';
-      this.feedbackMessage = 'Settings and landing page branding reset to defaults.';
-    } catch {
-      this.feedbackType = 'error';
-      this.feedbackMessage = 'Settings were reset, but the saved logo or hero media could not be cleared.';
-    }
-
-    this.resetConfirmOpen = false;
+    if (this.settingsService.resetThroughApi(result => { void handle(result); })) return;
+    await handle(this.settingsService.reset());
   }
 
   onPhoneInput(event: Event, field: 'businessPhone' | 'whatsappNumber'): void {
