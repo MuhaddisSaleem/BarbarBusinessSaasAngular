@@ -40,8 +40,7 @@ namespace BarberFlow.Api.Data.Migrations
                         .HasColumnType("nvarchar(160)");
 
                     b.Property<string>("ImageUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
