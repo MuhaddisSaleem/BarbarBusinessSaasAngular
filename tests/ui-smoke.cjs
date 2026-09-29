@@ -42,7 +42,7 @@ let browser, activePage;
       status:source==='Walk-in'?'Confirmed':(input.serviceLocation==='Home'&&input.specialService?'Pending':'Confirmed'),
       source
     });
-    await page.route('http://localhost:5080/api/bookings**',async route=>{
+    await page.route('**/api/bookings**',async route=>{
       const req=route.request();
       if(req.method()==='OPTIONS')return route.fulfill(apiResponse({}));
       const url=new URL(req.url());
