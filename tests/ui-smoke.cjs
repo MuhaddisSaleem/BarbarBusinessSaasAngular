@@ -47,11 +47,14 @@ let browser, activePage;
     // Customer's persisted booking is visible to admin and its overlap cannot be selected.
     await goto('/admin/bookings');await page.locator('.create-booking-btn').click();
     const form=page.locator('.create-modal'), selects=form.locator('select');
-    const barberSelect=selects.nth(0), timeSelect=selects.nth(1);assert.equal(await timeSelect.isDisabled(),true);
-    await form.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();await barberSelect.selectOption('Falak Shair');
-    const slots=await timeSelect.locator('option').allTextContents();assert.equal(slots.includes('5:00 PM'),false);assert.equal(slots.includes('5:30 PM'),false);assert.ok(slots.includes('6:00 PM'));
-    await form.getByPlaceholder('Enter full name').fill('Walk-in QA');await timeSelect.selectOption({label:'6:00 PM'});await form.locator('.submit-booking-btn').click();await form.waitFor({state:'hidden'});
-    assert.equal((await stored()).length,2);assert.equal((await stored())[0].source,'Walk-in');assert.equal((await stored())[0].phone,'');scenarios++;
+    assert.equal(await selects.count(),1,'Walk-in modal should not require a barber dropdown');
+    const timeSelect=selects.first();assert.equal(await timeSelect.isDisabled(),true);
+    await form.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();assert.equal(await timeSelect.isDisabled(),false);
+    const slots=await timeSelect.locator('option').allTextContents();assert.ok(slots.includes('5:00 PM'),'Another eligible barber should keep 5:00 PM available');
+    await form.getByPlaceholder('Enter full name').fill('Walk-in QA');await timeSelect.selectOption({label:'5:00 PM'});
+    await page.screenshot({path:`test-results/walk-in-${width}.png`,fullPage:true});
+    await form.locator('.submit-booking-btn').click();await form.waitFor({state:'hidden'});
+    assert.equal((await stored()).length,2);assert.equal((await stored())[0].source,'Walk-in');assert.equal((await stored())[0].phone,'');assert.equal((await stored())[0].barber,'Second Barber');scenarios++;
     // Specialist matching must select two different barbers for parallel Any Barber bookings.
     await goto();await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
     const group=(await stored()).slice(0,2);assert.equal(new Set(group.map(x=>x.barber)).size,2);assert.ok(group.every(x=>x.time==='7:00 PM'));scenarios++;
