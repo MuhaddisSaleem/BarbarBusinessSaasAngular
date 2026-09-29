@@ -289,19 +289,57 @@ export class AdminBookingsComponent implements OnInit {
 
   setStatus(status: BookingStatus): void {
     if (!this.selectedBooking) return;
+
+    if (this.bookingService.apiEnabled) {
+      void this.setStatusApi(status);
+      return;
+    }
+
     const result = this.bookingService.updateStatus(this.selectedBooking.id, status);
+    this.showFeedback(result.success, result.message);
+  }
+
+  private async setStatusApi(status: BookingStatus): Promise<void> {
+    if (!this.selectedBooking) return;
+    const id = this.selectedBooking.id;
+    const result = await this.bookingService.updateStatusAsync(id, status);
+    this.syncSelectedBooking(id);
     this.showFeedback(result.success, result.message);
   }
 
   saveBarber(): void {
     if (!this.selectedBooking || !this.editBarber) return;
+
+    if (this.bookingService.apiEnabled) {
+      void this.saveBarberApi();
+      return;
+    }
+
     const result = this.bookingService.assignBarber(this.selectedBooking.id, this.editBarber);
     this.showFeedback(result.success, result.message);
     if (!result.success) this.editBarber = this.selectedBooking.barber;
   }
 
+  private async saveBarberApi(): Promise<void> {
+    if (!this.selectedBooking || !this.editBarber) return;
+    const id = this.selectedBooking.id;
+    const result = await this.bookingService.assignBarberAsync(id, this.editBarber);
+    this.syncSelectedBooking(id);
+    this.showFeedback(result.success, result.message);
+
+    if (!result.success && this.selectedBooking) {
+      this.editBarber = this.selectedBooking.barber;
+    }
+  }
+
   saveSchedule(): void {
     if (!this.selectedBooking) return;
+
+    if (this.bookingService.apiEnabled) {
+      void this.saveScheduleApi();
+      return;
+    }
+
     const result = this.bookingService.reschedule(this.selectedBooking.id, this.editDate, this.editTime);
     this.showFeedback(result.success, result.message);
     if (!result.success) {
@@ -310,8 +348,26 @@ export class AdminBookingsComponent implements OnInit {
     }
   }
 
+  private async saveScheduleApi(): Promise<void> {
+    if (!this.selectedBooking) return;
+    const id = this.selectedBooking.id;
+    const result = await this.bookingService.rescheduleAsync(id, this.editDate, this.editTime);
+    this.syncSelectedBooking(id);
+    this.showFeedback(result.success, result.message);
+
+    if (!result.success && this.selectedBooking) {
+      this.editDate = this.selectedBooking.date;
+      this.editTime = this.selectedBooking.time;
+    }
+  }
+
   saveCustomServicePrice(): void {
     if (!this.selectedBooking) return;
+
+    if (this.bookingService.apiEnabled) {
+      void this.saveCustomServicePriceApi();
+      return;
+    }
 
     const result = this.bookingService.updateSpecialServiceAmount(
       this.selectedBooking.id,
@@ -327,13 +383,47 @@ export class AdminBookingsComponent implements OnInit {
     }
   }
 
+  private async saveCustomServicePriceApi(): Promise<void> {
+    if (!this.selectedBooking) return;
+    const id = this.selectedBooking.id;
+
+    const result = await this.bookingService.updateSpecialServiceAmountAsync(
+      id,
+      Number(this.customServiceAmount)
+    );
+
+    this.syncSelectedBooking(id);
+    this.showFeedback(result.success, result.message);
+
+    if (!result.success && this.selectedBooking) {
+      this.customServiceAmount = this.selectedBooking.specialServiceAmount
+        ? String(this.selectedBooking.specialServiceAmount)
+        : '';
+    }
+  }
+
   requestCancel(): void {
     if (this.selectedBooking) this.cancelDialogOpen = true;
   }
 
   confirmCancel(): void {
     if (!this.selectedBooking) return;
+
+    if (this.bookingService.apiEnabled) {
+      void this.confirmCancelApi();
+      return;
+    }
+
     const result = this.bookingService.cancel(this.selectedBooking.id);
+    this.cancelDialogOpen = false;
+    this.showFeedback(result.success, result.message);
+  }
+
+  private async confirmCancelApi(): Promise<void> {
+    if (!this.selectedBooking) return;
+    const id = this.selectedBooking.id;
+    const result = await this.bookingService.cancelAsync(id);
+    this.syncSelectedBooking(id);
     this.cancelDialogOpen = false;
     this.showFeedback(result.success, result.message);
   }
@@ -369,18 +459,40 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   createBooking(): void {
+    const input = this.buildWalkInInput();
+    if (!input) return;
+
+    if (this.bookingService.apiEnabled) {
+      void this.createBookingApi(input);
+      return;
+    }
+
+    const result = this.bookingService.addWalkInBooking(input);
+    this.showFeedback(result.success, result.message);
+    if (result.success) this.createModalOpen = false;
+  }
+
+  private async createBookingApi(
+    input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>
+  ): Promise<void> {
+    const result = await this.bookingService.addWalkInBookingAsync(input);
+    this.showFeedback(result.success, result.message);
+    if (result.success) this.createModalOpen = false;
+  }
+
+  private buildWalkInInput(): Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'> | null {
     const form = this.newBooking;
     const digits = form.phone.replace(/\D/g, '');
     const service = this.selectedWalkInService;
 
     if (!form.customerName.trim() || !service || !form.barber) {
       this.showFeedback(false, 'Enter the customer name and select a service and available barber.');
-      return;
+      return null;
     }
 
     if (digits && !/^3\d{9}$/.test(digits)) {
       this.showFeedback(false, 'Enter a valid Pakistan mobile number or leave the phone field empty.');
-      return;
+      return null;
     }
 
     const freshOptions = this.bookingService.availableBarbersForWalkIn(
@@ -395,12 +507,12 @@ export class AdminBookingsComponent implements OnInit {
     if (!selectedOption) {
       this.newBooking.barber = '';
       this.showFeedback(false, 'That barber is no longer available today. Please select another barber.');
-      return;
+      return null;
     }
 
     this.newBooking.time = selectedOption.startTime;
 
-    const result = this.bookingService.addWalkInBooking({
+    return {
       customerName: form.customerName.trim(),
       phone: digits ? '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3) : '',
       service: service.name,
@@ -412,10 +524,20 @@ export class AdminBookingsComponent implements OnInit {
       notes: '',
       groupSize: 1,
       serviceLocation: 'Salon'
-    });
+    };
+  }
 
-    this.showFeedback(result.success, result.message);
-    if (result.success) this.createModalOpen = false;
+  private syncSelectedBooking(id: number): void {
+    const latest = this.bookingService.getById(id);
+    if (!latest) return;
+
+    this.selectedBooking = latest;
+    this.editBarber = latest.barber;
+    this.editDate = latest.date;
+    this.editTime = latest.time;
+    this.customServiceAmount = latest.specialServiceAmount
+      ? String(latest.specialServiceAmount)
+      : '';
   }
 
   onPhoneInput(value: string): void {
