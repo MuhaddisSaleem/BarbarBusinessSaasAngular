@@ -334,10 +334,6 @@ export class AdminBarberService {
       return { success: false, message: 'Another barber already uses this mobile number.' };
     }
 
-    if (!changes.specialties.length) {
-      return { success: false, message: 'Select at least one specialty.' };
-    }
-
     if (!this.workingWindow(changes.workingHours)) {
       return { success: false, message: 'Enter working hours like 8:00 AM - 9:00 PM.' };
     }
