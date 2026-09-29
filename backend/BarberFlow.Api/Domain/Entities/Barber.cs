@@ -7,6 +7,7 @@ public sealed class Barber : BaseEntity
     public Guid SalonId { get; set; }
     public Salon Salon { get; set; } = null!;
 
+    public int PublicId { get; set; }
     public required string FullName { get; set; }
     public string? Phone { get; set; }
     public string? ImageUrl { get; set; }
@@ -58,5 +59,6 @@ public sealed class BarberLeave : BaseEntity
 
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
+    public string LeaveType { get; set; } = "On Leave";
     public string? Reason { get; set; }
 }
