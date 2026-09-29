@@ -207,6 +207,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.Property(x => x.SpecialService).HasMaxLength(1000);
             entity.Property(x => x.SpecialServiceAmount).HasPrecision(18, 2);
 
+            entity.HasIndex(x => new { x.SalonId, x.PublicId }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.BookingCode }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.AppointmentDate, x.Status });
             entity.HasIndex(x => new { x.SalonId, x.BarberId, x.AppointmentDate, x.StartTime });
