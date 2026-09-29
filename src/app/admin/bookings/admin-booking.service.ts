@@ -32,6 +32,13 @@ export interface BookingMutationResult {
   message: string;
 }
 
+export interface WalkInBarberOption {
+  name: string;
+  startTime: string;
+  waitMinutes: number;
+  availableNow: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminBookingService {
   constructor(
@@ -64,21 +71,59 @@ export class AdminBookingService {
       .map(barber => barber.name);
   }
 
-  availableBarbersForWalkIn(service: string, dateKey: string, time: string, duration: number): string[] {
-    const scheduleValidation = this.validateSchedule(dateKey, time, duration, true);
-    if (!scheduleValidation.success) return [];
+  availableBarbersForWalkIn(
+    service: string,
+    dateKey: string,
+    time: string,
+    duration: number,
+    maxWaitMinutes = 10
+  ): WalkInBarberOption[] {
+    const startMinutes = this.timeToMinutes(time);
+    if (!Number.isFinite(startMinutes)) return [];
 
     const services = this.serviceNames(service);
+    const eligible = this.barberService.active.filter(barber =>
+      this.barberService.isAvailableOnDate(barber.id, dateKey)
+      && this.barberService.supportsServices(barber.id, services)
+    );
 
-    return this.barberService.active
-      .filter(barber =>
-        this.barberService.isAvailableOnDate(barber.id, dateKey)
-        && this.barberService.supportsServices(barber.id, services)
-        && this.barberService.isWorkingAt(barber.id, time, duration)
-        && !this.hasConflict(barber.name, dateKey, time, duration)
+    const options: Array<WalkInBarberOption & { rating: number; id: number }> = [];
+
+    for (const barber of eligible) {
+      for (let waitMinutes = 0; waitMinutes <= maxWaitMinutes; waitMinutes++) {
+        const candidateTime = this.minutesToTime(startMinutes + waitMinutes);
+        const scheduleValidation = this.validateSchedule(dateKey, candidateTime, duration, true);
+
+        if (
+          scheduleValidation.success
+          && this.barberService.isWorkingAt(barber.id, candidateTime, duration)
+          && !this.hasConflict(barber.name, dateKey, candidateTime, duration)
+        ) {
+          options.push({
+            name: barber.name,
+            startTime: candidateTime,
+            waitMinutes,
+            availableNow: waitMinutes === 0,
+            rating: Number(barber.rating) || 0,
+            id: barber.id
+          });
+          break;
+        }
+      }
+    }
+
+    const availableNow = options.filter(option => option.availableNow);
+    const visible = availableNow.length
+      ? availableNow
+      : options.filter(option => option.waitMinutes > 0 && option.waitMinutes <= maxWaitMinutes);
+
+    return visible
+      .sort((a, b) =>
+        a.waitMinutes - b.waitMinutes
+        || b.rating - a.rating
+        || a.id - b.id
       )
-      .sort((a, b) => b.rating - a.rating || a.id - b.id)
-      .map(barber => barber.name);
+      .map(({ rating, id, ...option }) => option);
   }
 
   availableBarbersForBooking(booking: AdminBooking, dateKey: string): string[] {
@@ -740,6 +785,15 @@ export class AdminBookingService {
       .split(',')
       .map(name => name.trim())
       .filter(Boolean);
+  }
+
+  private minutesToTime(totalMinutes: number): string {
+    const safeMinutes = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60);
+    let hour = Math.floor(safeMinutes / 60);
+    const minute = safeMinutes % 60;
+    const period = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return hour + ':' + String(minute).padStart(2, '0') + ' ' + period;
   }
 
   private timeToMinutes(time: string): number {
