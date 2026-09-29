@@ -733,7 +733,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             barber.PublicId,
             barber.FullName,
             FormatPhone(barber.Phone),
-            barber.ExperienceYears.HasValue ? barber.ExperienceYears.Value + "+ years" : "New",
+            barber.ExperienceYears is > 0 ? barber.ExperienceYears.Value + "+ years" : "New",
             barber.Services.Select(x => x.Service.Name).OrderBy(x => x).ToList(),
             workingHours,
             barber.ImageUrl ?? "assets/images/barber-placeholder.svg",
