@@ -42,41 +42,50 @@ let browser, activePage;
       status:source==='Walk-in'?'Confirmed':(input.serviceLocation==='Home'&&input.specialService?'Pending':'Confirmed'),
       source
     });
+    const requestBody=req=>{
+      const raw=req.postData();
+      return raw ? JSON.parse(raw) : null;
+    };
     await page.route('**/api/bookings**',async route=>{
       const req=route.request();
-      if(req.method()==='OPTIONS')return route.fulfill(apiResponse({}));
-      const url=new URL(req.url());
-      const pathname=url.pathname;
-      if(req.method()==='GET'&&pathname==='/api/bookings')return route.fulfill(apiResponse(apiBookings));
-      if(req.method()==='POST'&&pathname==='/api/bookings/online'){
-        const items=req.postDataJSON();
-        const created=items.map(item=>normalizeBooking(item,'Online',nextBookingId++));
-        apiBookings=[...created.reverse(),...apiBookings];
-        return route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created[0]}));
+      try{
+        if(req.method()==='OPTIONS')return await route.fulfill(apiResponse({}));
+        const url=new URL(req.url());
+        const pathname=url.pathname;
+        if(req.method()==='GET'&&pathname==='/api/bookings')return await route.fulfill(apiResponse(apiBookings));
+        if(req.method()==='POST'&&pathname==='/api/bookings/online'){
+          const items=requestBody(req);
+          if(!Array.isArray(items))throw new Error('Online booking payload is not an array');
+          const created=items.map(item=>normalizeBooking(item,'Online',nextBookingId++));
+          apiBookings=[...created.slice().reverse(),...apiBookings];
+          return await route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created[0]}));
+        }
+        if(req.method()==='POST'&&pathname==='/api/bookings/walk-in'){
+          const created=normalizeBooking(requestBody(req),'Walk-in',nextBookingId++);
+          apiBookings=[created,...apiBookings];
+          return await route.fulfill(apiResponse({success:true,message:'Walk-in booked successfully.',booking:created}));
+        }
+        if(req.method()==='POST'&&pathname==='/api/bookings/admin'){
+          const created=normalizeBooking(requestBody(req),'Admin',nextBookingId++);
+          apiBookings=[created,...apiBookings];
+          return await route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created}));
+        }
+        const match=pathname.match(/^\/api\/bookings\/(\d+)(?:\/(status|barber|schedule|special-service-price))?$/);
+        if(match){
+          const id=Number(match[1]), action=match[2], booking=apiBookings.find(x=>x.id===id);
+          if(!booking)return await route.fulfill(apiResponse({success:false,message:'Booking not found.'},404));
+          if(req.method()==='DELETE'){booking.status='Cancelled';return await route.fulfill(apiResponse({success:true,message:'Cancelled.',booking}));}
+          const body=requestBody(req)||{};
+          if(action==='status')booking.status=body.status;
+          if(action==='barber')booking.barber=body.barber;
+          if(action==='schedule'){booking.date=body.date;booking.time=body.time;}
+          if(action==='special-service-price'){const prev=booking.specialServiceAmount||0;booking.specialServiceAmount=body.amount;booking.amount=booking.amount-prev+body.amount;}
+          return await route.fulfill(apiResponse({success:true,message:'Updated.',booking}));
+        }
+        return await route.fulfill(apiResponse({success:false,message:'Unhandled QA API route: '+req.method()+' '+pathname},404));
+      }catch(error){
+        return await route.fulfill(apiResponse({success:false,message:'QA API mock error: '+error.message},500));
       }
-      if(req.method()==='POST'&&pathname==='/api/bookings/walk-in'){
-        const created=normalizeBooking(req.postDataJSON(),'Walk-in',nextBookingId++);
-        apiBookings=[created,...apiBookings];
-        return route.fulfill(apiResponse({success:true,message:'Walk-in booked successfully.',booking:created}));
-      }
-      if(req.method()==='POST'&&pathname==='/api/bookings/admin'){
-        const created=normalizeBooking(req.postDataJSON(),'Admin',nextBookingId++);
-        apiBookings=[created,...apiBookings];
-        return route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created}));
-      }
-      const match=pathname.match(/^\/api\/bookings\/(\d+)(?:\/(status|barber|schedule|special-service-price))?$/);
-      if(match){
-        const id=Number(match[1]), action=match[2], booking=apiBookings.find(x=>x.id===id);
-        if(!booking)return route.fulfill(apiResponse({success:false,message:'Booking not found.'},404));
-        if(req.method()==='DELETE'){booking.status='Cancelled';return route.fulfill(apiResponse({success:true,message:'Cancelled.',booking}));}
-        const body=req.postDataJSON();
-        if(action==='status')booking.status=body.status;
-        if(action==='barber')booking.barber=body.barber;
-        if(action==='schedule'){booking.date=body.date;booking.time=body.time;}
-        if(action==='special-service-price'){const prev=booking.specialServiceAmount||0;booking.specialServiceAmount=body.amount;booking.amount=booking.amount-prev+body.amount;}
-        return route.fulfill(apiResponse({success:true,message:'Updated.',booking}));
-      }
-      return route.fulfill(apiResponse({success:false,message:'Unhandled QA API route.'},404));
     });
     await page.clock.install({time:new Date('2026-09-28T16:30:00Z')});
     await page.addInitScript(seed=>{
