@@ -542,14 +542,14 @@ export class AdminBookingService {
     }
 
     const today = new Date();
-    const todayKey = [
+    const walkInTodayKey = [
       today.getFullYear(),
       String(today.getMonth() + 1).padStart(2, '0'),
       String(today.getDate()).padStart(2, '0')
     ].join('-');
 
     if (allowWalkInSameDay) {
-      if (dateKey !== todayKey) {
+      if (dateKey !== walkInTodayKey) {
         return { success: false, message: 'Walk-in bookings can only be created for today.' };
       }
     } else if (!this.settingsService.isBookingDateAllowed(date)) {
