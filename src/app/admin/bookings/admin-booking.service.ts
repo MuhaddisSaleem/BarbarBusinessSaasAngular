@@ -205,6 +205,123 @@ export class AdminBookingService {
     return this.bookings.find(item => item.id === id);
   }
 
+
+  async updateStatusAsync(id: number, status: BookingStatus): Promise<BookingMutationResult> {
+    return this.sendMutation('PATCH', this.apiUrl + '/' + id + '/status', { status });
+  }
+
+  async assignBarberAsync(id: number, barber: string): Promise<BookingMutationResult> {
+    return this.sendMutation('PATCH', this.apiUrl + '/' + id + '/barber', { barber });
+  }
+
+  async rescheduleAsync(id: number, date: string, time: string): Promise<BookingMutationResult> {
+    return this.sendMutation('PATCH', this.apiUrl + '/' + id + '/schedule', { date, time });
+  }
+
+  async updateSpecialServiceAmountAsync(id: number, amount: number): Promise<BookingMutationResult> {
+    return this.sendMutation(
+      'PATCH',
+      this.apiUrl + '/' + id + '/special-service-price',
+      { amount }
+    );
+  }
+
+  async cancelAsync(id: number): Promise<BookingMutationResult> {
+    return this.updateStatusAsync(id, 'Cancelled');
+  }
+
+  async customerCancelAsync(id: number): Promise<BookingMutationResult> {
+    const booking = this.getById(id);
+    if (!booking) return { success: false, message: 'Booking not found.' };
+
+    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+      return { success: false, message: 'This booking can no longer be cancelled by the customer.' };
+    }
+
+    if (!this.settingsService.canCustomerCancel(booking.date, booking.time)) {
+      return {
+        success: false,
+        message: 'The cancellation window has closed. Please contact the salon for assistance.'
+      };
+    }
+
+    return this.cancelAsync(id);
+  }
+
+  async addOnlineBookingsAsync(
+    inputs: Array<Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>>
+  ): Promise<BookingMutationResult> {
+    const result = await this.sendMutation('POST', this.apiUrl, { bookings: inputs });
+
+    if (result.success && this.settingsService.current.notifyOwnerOnNewBooking) {
+      const created = this.lastMutationBookings;
+      const first = created[0];
+
+      if (first) {
+        this.notificationService.add({
+          type: 'booking',
+          title: created.length > 1 ? 'New group booking' : 'New online booking',
+          message: created.length > 1
+            ? first.customerName + ' booked ' + created.length + ' appointments for ' + first.date + '.'
+            : first.customerName + ' booked ' + first.service
+              + (first.serviceLocation === 'Home' ? ' as a home service' : '')
+              + ' with ' + first.barber + ' for ' + first.date + ' at ' + first.time + '.',
+          icon: 'bi-calendar2-plus',
+          url: '/admin/bookings?booking=' + first.id
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async addWalkInBookingAsync(
+    input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>
+  ): Promise<BookingMutationResult> {
+    const result = await this.sendMutation('POST', this.apiUrl + '/walk-in', input);
+    const created = this.lastMutationBookings[0];
+
+    if (result.success && created) {
+      this.notificationService.add({
+        type: 'booking',
+        title: 'Walk-in booking created',
+        message: created.customerName + ' booked ' + created.service
+          + ' with ' + created.barber + ' for ' + created.time + '.',
+        icon: 'bi-person-walking',
+        url: '/admin/bookings?booking=' + created.id
+      });
+    }
+
+    return result;
+  }
+
+  async getWalkInOptionsFromApi(
+    service: string,
+    date: string,
+    time: string,
+    duration: number,
+    preferredWaitMinutes = 10
+  ): Promise<WalkInBarberOption[]> {
+    if (!this.http) return this.availableBarbersForWalkIn(service, date, time, duration, preferredWaitMinutes);
+
+    try {
+      return await firstValueFrom(this.http.get<WalkInBarberOption[]>(
+        this.apiUrl + '/walk-in-options',
+        {
+          params: {
+            service,
+            date,
+            time,
+            duration,
+            preferredWaitMinutes
+          }
+        }
+      ));
+    } catch {
+      return [];
+    }
+  }
+
   isBarberSlotAvailable(
     barberName: string,
     dateKey: string,
@@ -735,66 +852,94 @@ export class AdminBookingService {
     });
   }
 
-  private loadBookings(): AdminBooking[] {
-    if (typeof window === 'undefined') return [];
+  private lastMutationBookings: AdminBooking[] = [];
+
+  private async sendMutation(
+    method: 'POST' | 'PATCH',
+    url: string,
+    body: unknown
+  ): Promise<BookingMutationResult> {
+    if (!this.http) {
+      return { success: false, message: 'Booking API is not available.' };
+    }
 
     try {
-      const raw = window.localStorage.getItem(this.storageKey);
-      if (!raw) {
-        window.localStorage.setItem(this.demoCleanupKey, '1');
-        return [];
+      const response = await firstValueFrom(
+        this.http.request<BookingApiMutationResponse>(method, url, { body })
+      );
+
+      const changed = this.normalizeApiBookings(
+        response.bookings?.length
+          ? response.bookings
+          : (response.booking ? [response.booking] : [])
+      );
+
+      this.lastMutationBookings = changed;
+
+      if (changed.length) {
+        const changedIds = new Set(changed.map(item => item.id));
+        this.bookings = [
+          ...changed,
+          ...this.bookings.filter(item => !changedIds.has(item.id))
+        ].sort((a, b) =>
+          b.date.localeCompare(a.date)
+          || this.timeToMinutes(b.time) - this.timeToMinutes(a.time)
+        );
       }
 
-      const parsed = JSON.parse(raw) as AdminBooking[];
-      if (!Array.isArray(parsed)) return [];
-
-      const needsCleanup = window.localStorage.getItem(this.demoCleanupKey) !== '1';
-      const demoCodes = new Set([
-        'RB-2601','RB-2602','RB-2603','RB-2604','RB-2605','RB-2606',
-        'RB-2607','RB-2608','RB-2609','RB-2610','RB-2611','RB-2612'
-      ]);
-
-      const cleaned: AdminBooking[] = parsed
-        .filter(item =>
-          item
-          && Number.isFinite(Number(item.id))
-          && (!needsCleanup || !demoCodes.has(String(item.code || '')))
-        )
-        .map((item): AdminBooking => ({
-          ...item,
-          id: Number(item.id),
-          duration: Number(item.duration) || 0,
-          amount: Number(item.amount) || 0,
-          groupSize: Number(item.groupSize) || 1,
-          status: this.isBookingStatus(item.status) ? item.status : 'Pending',
-          source: item.source === 'Walk-in' ? 'Walk-in' : (item.source === 'Admin' ? 'Admin' : 'Online'),
-          notes: item.notes || '',
-          serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
-          serviceAddress: item.serviceAddress || '',
-          specialService: item.specialService || '',
-          specialServiceAmount: Number(item.specialServiceAmount) || 0
-        }));
-
-      if (needsCleanup) {
-        window.localStorage.setItem(this.storageKey, JSON.stringify(cleaned));
-        window.localStorage.setItem(this.demoCleanupKey, '1');
-      }
-
-      return cleaned;
-    } catch {
-      return [];
+      return {
+        success: response.success,
+        message: response.message
+      };
+    } catch (error) {
+      this.lastMutationBookings = [];
+      return {
+        success: false,
+        message: this.apiErrorMessage(error)
+      };
     }
   }
 
-  private persist(): boolean {
-    if (typeof window === 'undefined') return true;
+  private apiErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      const apiMessage = error.error?.message;
+      if (typeof apiMessage === 'string' && apiMessage.trim()) return apiMessage;
 
-    try {
-      window.localStorage.setItem(this.storageKey, JSON.stringify(this.bookings));
-      return true;
-    } catch {
-      return false;
+      if (error.status === 0) {
+        return 'Could not reach the booking server. Please check that the API is running.';
+      }
     }
+
+    return 'Could not save the booking. Please try again.';
+  }
+
+  private normalizeApiBookings(items: AdminBooking[] | null | undefined): AdminBooking[] {
+    if (!Array.isArray(items)) return [];
+
+    return items
+      .filter(item => item && Number.isFinite(Number(item.id)))
+      .map((item): AdminBooking => ({
+        ...item,
+        id: Number(item.id),
+        duration: Number(item.duration) || 0,
+        amount: Number(item.amount) || 0,
+        groupSize: Number(item.groupSize) || 1,
+        status: this.isBookingStatus(item.status) ? item.status : 'Pending',
+        source: item.source === 'Walk-in'
+          ? 'Walk-in'
+          : (item.source === 'Admin' ? 'Admin' : 'Online'),
+        notes: item.notes || '',
+        serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
+        serviceAddress: item.serviceAddress || '',
+        specialService: item.specialService || '',
+        specialServiceAmount: Number(item.specialServiceAmount) || 0
+      }));
+  }
+
+  private persist(): boolean {
+    // Legacy synchronous mutation helpers remain for unit-level compatibility.
+    // Production components use the async API methods above; bookings are never written to localStorage.
+    return true;
   }
 
   private isBookingStatus(value: string): value is BookingStatus {
