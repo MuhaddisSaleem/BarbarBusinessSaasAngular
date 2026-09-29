@@ -5,6 +5,7 @@ import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 import { AdminServiceService } from '../admin/services/admin-service.service';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { AdminBookingService } from '../admin/bookings/admin-booking.service';
+import { CatalogApiService } from '../core/catalog-api.service';
 
 interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
@@ -88,16 +89,29 @@ export class BookingComponent implements OnInit {
     private readonly barberService: AdminBarberService,
     private readonly serviceService: AdminServiceService,
     private readonly settingsService: AdminSettingsService,
-    private readonly bookingService: AdminBookingService
+    private readonly bookingService: AdminBookingService,
+    private readonly catalogApi?: CatalogApiService
   ) {}
 
   ngOnInit(): void {
     this.buildCalendar();
+
+    this.catalogApi?.changes$.subscribe(() => {
+      queueMicrotask(() => this.reconcileAvailability());
+    });
   }
 
   @HostListener('window:storage', ['$event'])
   @HostListener('window:focus')
   refreshAvailability(event?: StorageEvent): void {
+    if (this.catalogApi) {
+      if (event) return;
+
+      this.bookingService.refreshFromApi();
+      void this.catalogApi.refreshAllAndNotify();
+      return;
+    }
+
     if (event && event.storageArea !== window.localStorage) return;
     const keys = ['royal-barbers.admin-barbers.v1', 'royal-barbers.admin-services.v1',
       'royal-barbers.admin-settings.v1', 'royal-barbers.admin-bookings.v1'];
@@ -107,6 +121,10 @@ export class BookingComponent implements OnInit {
     this.serviceService.refreshFromStorage();
     this.settingsService.refreshFromStorage();
     this.bookingService.refreshFromStorage();
+    this.reconcileAvailability();
+  }
+
+  private reconcileAvailability(): void {
     if (this.bookingConfirmed) return;
 
     const services = new Map(this.services.map(service => [service.id, service]));
@@ -114,13 +132,18 @@ export class BookingComponent implements OnInit {
       person.selectedServices = person.selectedServices
         .map(service => services.get(service.id))
         .filter((service): service is Service => !!service);
+
       if (person.selectedBarber && person.selectedBarber !== 'any') {
-        person.selectedBarber = this.barbers.find(barber => barber.id === (person.selectedBarber as Barber).id) || null;
+        person.selectedBarber = this.barbers.find(
+          barber => barber.id === (person.selectedBarber as Barber).id
+        ) || null;
+
         if (person.selectedBarber && !this.barberSupportsPerson(person.selectedBarber, person)) {
           person.selectedBarber = null;
         }
       }
     }
+
     this.generateAvailableTimes();
   }
 
