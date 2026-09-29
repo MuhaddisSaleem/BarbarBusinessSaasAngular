@@ -15,7 +15,10 @@ public static class DevelopmentDataSeeder
             Name = "Royal Barbers",
             Slug = "royal-barbers",
             Phone = "+923001234567",
+            WhatsAppNumber = "+923001234567",
             Email = "owner@royalbarbers.local",
+            Address = "",
+            City = "",
             TimeZone = "Asia/Karachi",
             CurrencyCode = "PKR",
             Settings = new SalonSettings
@@ -25,7 +28,16 @@ public static class DevelopmentDataSeeder
                 AllowSameDayBooking = true,
                 AutoConfirmBookings = true,
                 CancellationHours = 2,
-                LateArrivalMinutes = 10
+                LateArrivalMinutes = 10,
+                BrandSubtitle = "LOOK GOOD · FEEL GREAT",
+                HeroEyebrow = "PREMIUM BARBERSHOP",
+                HeroHeadline = "",
+                HeroTagline = "More Than a Haircut. It's a Lifestyle.",
+                SendWhatsappConfirmation = true,
+                SendSmsFallback = false,
+                SendAppointmentReminder = true,
+                ReminderHoursBefore = 2,
+                NotifyOwnerOnNewBooking = true
             }
         };
 
@@ -42,18 +54,19 @@ public static class DevelopmentDataSeeder
 
         var services = new[]
         {
-            new Service { Salon = salon, Name = "Haircut", DurationMinutes = 40, OriginalPrice = 600, HomeServiceEnabled = true, HomeOriginalPrice = 900, ImageUrl = "assets/images/services/haircut.webp" },
-            new Service { Salon = salon, Name = "Beard Trim", DurationMinutes = 25, OriginalPrice = 400, HomeServiceEnabled = true, HomeOriginalPrice = 650, ImageUrl = "assets/images/services/beard-trim.webp" },
-            new Service { Salon = salon, Name = "Hair + Beard + Free Hair Massage", DurationMinutes = 60, OriginalPrice = 1100, HomeServiceEnabled = true, HomeOriginalPrice = 1500, ImageUrl = "assets/images/services/hair-beard-massage.webp" },
-            new Service { Salon = salon, Name = "Kids Haircut", DurationMinutes = 30, OriginalPrice = 500, HomeServiceEnabled = true, HomeOriginalPrice = 800, ImageUrl = "assets/images/services/kids-haircut.webp" },
-            new Service { Salon = salon, Name = "Hair Wash", DurationMinutes = 20, OriginalPrice = 300, HomeServiceEnabled = true, HomeOriginalPrice = 500, ImageUrl = "assets/images/services/hair-wash.webp" },
-            new Service { Salon = salon, Name = "Hair Coloring", DurationMinutes = 75, OriginalPrice = 1800, HomeServiceEnabled = true, HomeOriginalPrice = 2300, ImageUrl = "assets/images/services/hair-color.webp" },
-            new Service { Salon = salon, Name = "6 Step Face Massage", DurationMinutes = 45, OriginalPrice = 1200, HomeServiceEnabled = true, HomeOriginalPrice = 1600, ImageUrl = "assets/images/services/face-massage.webp" }
+            new Service { Salon = salon, PublicId = 1, Name = "Haircut", DurationMinutes = 40, OriginalPrice = 600, HomeServiceEnabled = true, HomeOriginalPrice = 900, ImageUrl = "assets/images/services/haircut.webp" },
+            new Service { Salon = salon, PublicId = 2, Name = "Beard Trim", DurationMinutes = 25, OriginalPrice = 400, HomeServiceEnabled = true, HomeOriginalPrice = 650, ImageUrl = "assets/images/services/beard-trim.webp" },
+            new Service { Salon = salon, PublicId = 3, Name = "Hair + Beard + Free Hair Massage", DurationMinutes = 60, OriginalPrice = 1100, HomeServiceEnabled = true, HomeOriginalPrice = 1500, ImageUrl = "assets/images/services/hair-beard-massage.webp" },
+            new Service { Salon = salon, PublicId = 4, Name = "Kids Haircut", DurationMinutes = 30, OriginalPrice = 500, HomeServiceEnabled = true, HomeOriginalPrice = 800, ImageUrl = "assets/images/services/kids-haircut.webp" },
+            new Service { Salon = salon, PublicId = 5, Name = "Hair Wash", DurationMinutes = 20, OriginalPrice = 300, HomeServiceEnabled = true, HomeOriginalPrice = 500, ImageUrl = "assets/images/services/hair-wash.webp" },
+            new Service { Salon = salon, PublicId = 6, Name = "Hair Coloring", DurationMinutes = 75, OriginalPrice = 1800, HomeServiceEnabled = true, HomeOriginalPrice = 2300, ImageUrl = "assets/images/services/hair-color.webp" },
+            new Service { Salon = salon, PublicId = 7, Name = "6 Step Face Massage", DurationMinutes = 45, OriginalPrice = 1200, HomeServiceEnabled = true, HomeOriginalPrice = 1600, ImageUrl = "assets/images/services/face-massage.webp" }
         };
 
         var falak = new Barber
         {
             Salon = salon,
+            PublicId = 1,
             FullName = "Falak Shair",
             Phone = "+923001111111",
             Rating = 4.9m,
@@ -64,6 +77,7 @@ public static class DevelopmentDataSeeder
         var second = new Barber
         {
             Salon = salon,
+            PublicId = 2,
             FullName = "Second Barber",
             Phone = "+923002222222",
             Rating = 4.7m,
