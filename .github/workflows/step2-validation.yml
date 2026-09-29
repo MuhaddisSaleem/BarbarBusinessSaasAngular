@@ -1,0 +1,78 @@
+name: Step 2 full validation
+
+on:
+  push:
+    branches:
+      - codex/bookings-api-integration
+    paths:
+      - ".github/workflows/step2-validation.yml"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run test:qa
+      - run: npm run build
+      - run: npm install --no-save --package-lock=false playwright@1.51.1
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: "Developer"
+          MSSQL_SA_PASSWORD: "CiSqlServer123!"
+        ports:
+          - 1433:1433
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet tool restore
+      - run: dotnet restore backend/BarberFlow.Api/BarberFlow.Api.csproj
+      - run: dotnet build backend/BarberFlow.Api/BarberFlow.Api.csproj --configuration Release --no-restore
+      - name: Validate migration snapshot
+        env:
+          BARBERFLOW_DB_CONNECTION: "Server=localhost,1433;Database=BarberFlow;User Id=sa;Password=CiSqlServer123!;Encrypt=False;TrustServerCertificate=True"
+        run: dotnet ef migrations has-pending-model-changes --project backend/BarberFlow.Api --startup-project backend/BarberFlow.Api --configuration Release --no-build
+      - name: Start API and verify database-backed booking
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: "http://127.0.0.1:5080"
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=BarberFlow;User Id=sa;Password=CiSqlServer123!;Encrypt=False;TrustServerCertificate=True"
+        run: |
+          dotnet run --project backend/BarberFlow.Api --configuration Release --no-build > /tmp/barberflow-api.log 2>&1 &
+          API_PID=$!
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:5080/health > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://127.0.0.1:5080/health
+          curl -fsS http://127.0.0.1:5080/api/system/database
+
+          BOOKING_DATE=$(date -u -d '+1 day' +%F)
+          curl -fsS -X POST http://127.0.0.1:5080/api/bookings \
+            -H 'Content-Type: application/json' \
+            -d "{\"bookings\":[{\"customerName\":\"CI Customer\",\"phone\":\"+92 300 1111111\",\"service\":\"Haircut\",\"duration\":40,\"barber\":\"Falak Shair\",\"date\":\"$BOOKING_DATE\",\"time\":\"10:00 AM\",\"amount\":600,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Salon\",\"serviceAddress\":\"\",\"specialService\":\"\"}]}"
+
+          BOOKINGS=$(curl -fsS http://127.0.0.1:5080/api/bookings)
+          echo "$BOOKINGS"
+          echo "$BOOKINGS" | grep -q '"customerName":"CI Customer"'
+
+          kill $API_PID
