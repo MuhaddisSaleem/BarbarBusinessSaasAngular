@@ -46,7 +46,7 @@ let browser, activePage;
       const raw=req.postData();
       return raw ? JSON.parse(raw) : null;
     };
-    await page.route('**/api/bookings**',async route=>{
+    await page.route(/\/api\/bookings(?:\/[^?#]*)?(?:\?[^#]*)?$/,async route=>{
       const req=route.request();
       try{
         if(req.method()==='OPTIONS')return await route.fulfill(apiResponse({}));
