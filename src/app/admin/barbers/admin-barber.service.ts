@@ -33,6 +33,10 @@ export class AdminBarberService {
   private readonly demoCleanupKey = 'royal-barbers.admin-barbers.demo-cleaned.v1';
   private barbers: AdminBarber[] = this.loadBarbers();
 
+  refreshFromStorage(): void {
+    this.barbers = this.loadBarbers();
+  }
+
   get all(): AdminBarber[] {
     this.normalizeExpiredLeave();
     return this.barbers;
@@ -579,20 +583,37 @@ export class AdminBarberService {
   private workingWindow(value: string): { start: number; end: number } | null {
     const normalized = String(value || '')
       .replace(/[–—]/g, '-')
+      .replace(/\b([ap])\s*\.\s*m\.?/gi, '$1m')
       .replace(/\s+to\s+/i, ' - ')
       .trim();
 
-    const match = normalized.match(
-      /^(\d{1,2}:\d{2}\s*(?:AM|PM))\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM))$/i
-    );
+    // Older profiles may omit a personal shift; salon hours still bound bookings.
+    if (!normalized) return { start: 0, end: 24 * 60 };
+
+    const match = normalized.match(/^(.+?)\s*-\s*(.+)$/);
 
     if (!match) return null;
 
-    const start = this.timeToMinutes(match[1]);
-    const end = this.timeToMinutes(match[2]);
+    const start = this.shiftTimeToMinutes(match[1]);
+    const end = this.shiftTimeToMinutes(match[2]);
 
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
     return { start, end };
+  }
+
+  private shiftTimeToMinutes(value: string): number {
+    const match = value.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (!match) return Number.NaN;
+    let hour = Number(match[1]);
+    const minute = Number(match[2] || 0);
+    const period = match[3]?.toUpperCase();
+    // Bare hours without AM/PM are ambiguous; 24-hour input requires minutes.
+    if (minute > 59 || (!period && !match[2])) return Number.NaN;
+    if (period) {
+      if (hour < 1 || hour > 12) return Number.NaN;
+      hour = hour % 12 + (period === 'PM' ? 12 : 0);
+    } else if (hour > 23) return Number.NaN;
+    return hour * 60 + minute;
   }
 
   private timeToMinutes(value: string): number {

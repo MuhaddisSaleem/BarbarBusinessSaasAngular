@@ -201,6 +201,22 @@ button,input,select,textarea { font:inherit; }
 
 .contact-actions { margin-top:13px; }
 
+.no-phone-contact {
+  min-height:34px;
+  margin-top:13px;
+  padding:8px 10px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  border:1px solid #303c41;
+  border-radius:7px;
+  background:#0d1417;
+  color:#7f8b90;
+  font-size:8px;
+}
+
+.no-phone-contact i { color:#e9ad45; }
+
 .contact-btn {
   min-height:34px; display:flex; align-items:center; justify-content:center; gap:6px;
   border:1px solid #303c41; border-radius:7px;

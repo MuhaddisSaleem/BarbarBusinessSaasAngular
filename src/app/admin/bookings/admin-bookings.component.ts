@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
-import { AdminBooking, AdminBookingService, BookingStatus } from './admin-booking.service';
+import { AdminBooking, AdminBookingService, BookingStatus, WalkInBarberOption } from './admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 
 type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
@@ -105,18 +105,17 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   get createTimeSlots(): string[] {
-    const service = this.bookingService.services.find(item => item.name === this.newBooking.service);
-    const duration = service?.duration ?? 30;
-    const slots = this.slotsForDuration(duration, this.newBooking.date);
+    const service = this.selectedWalkInService;
+    if (!service || !this.newBooking.barber) return [];
 
-    if (!this.newBooking.barber) return slots;
+    const slots = this.slotsForDuration(service.duration, this.todayKey, true);
 
     return slots.filter(time =>
       this.bookingService.isBarberSlotAvailable(
         this.newBooking.barber,
-        this.newBooking.date,
+        this.todayKey,
         time,
-        duration
+        service.duration
       )
     );
   }
@@ -125,11 +124,11 @@ export class AdminBookingsComponent implements OnInit {
     const duration = this.selectedBooking?.duration ?? 30;
     const slots = this.slotsForDuration(duration, this.editDate);
 
-    if (!this.selectedBooking || !this.editBarber) return slots;
+    if (!this.selectedBooking) return [];
 
     return slots.filter(time =>
       this.bookingService.isBarberSlotAvailable(
-        this.editBarber,
+        this.selectedBooking!.barber,
         this.editDate,
         time,
         duration,
@@ -138,14 +137,47 @@ export class AdminBookingsComponent implements OnInit {
     );
   }
 
+  get selectedWalkInService() {
+    return this.bookingService.services.find(service => service.name === this.newBooking.service);
+  }
+
+  get currentWalkInTime(): string {
+    const now = new Date();
+    return this.minutesToTime(now.getHours() * 60 + now.getMinutes());
+  }
+
+  get walkInBarberOptions(): WalkInBarberOption[] {
+    const service = this.selectedWalkInService;
+    if (!service) return [];
+
+    return this.bookingService.availableBarbersForWalkIn(
+      service.name,
+      this.todayKey,
+      this.currentWalkInTime,
+      service.duration,
+      10
+    );
+  }
+
   get createBarbers(): string[] {
-    if (!this.newBooking.service) return [];
-    return this.bookingService.availableBarbersForService(this.newBooking.service, this.newBooking.date);
+    return this.walkInBarberOptions.map(option => option.name);
+  }
+
+  get selectedWalkInBarberOption(): WalkInBarberOption | undefined {
+    return this.walkInBarberOptions.find(option => option.name === this.newBooking.barber);
+  }
+
+  get walkInDuration(): number {
+    return this.selectedWalkInService?.duration ?? 0;
+  }
+
+  get walkInAmount(): number {
+    return this.selectedWalkInService?.amount ?? 0;
   }
 
   get editBarbers(): string[] {
     if (!this.selectedBooking) return [];
-    return this.bookingService.availableBarbersForBooking(this.selectedBooking, this.editDate);
+    return this.bookingService.availableBarbersForBooking(this.selectedBooking, this.selectedBooking.date);
   }
 
   get selectedBookingPastGrace(): boolean {
@@ -166,25 +198,20 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   onCreateServiceOrDateChange(): void {
-    if (!this.createBarbers.includes(this.newBooking.barber)) {
-      this.newBooking.barber = '';
-    }
-    this.newBooking.time = '';
+    this.newBooking.barber = '';
+    this.newBooking.time = this.currentWalkInTime;
   }
 
   onEditDateChange(): void {
-    if (!this.editBarbers.includes(this.editBarber)) {
-      this.editBarber = '';
-    }
     this.editTime = '';
   }
 
   onCreateBarberChange(): void {
-    this.newBooking.time = '';
+    this.newBooking.time = this.selectedWalkInBarberOption?.startTime || this.currentWalkInTime;
   }
 
   onEditBarberChange(): void {
-    this.editTime = '';
+    // Assignment is saved separately; rescheduling continues to use the saved barber.
   }
 
   get bookings(): AdminBooking[] {
@@ -320,7 +347,7 @@ export class AdminBookingsComponent implements OnInit {
       service: '',
       barber: '',
       date: this.todayKey,
-      time: '',
+      time: this.currentWalkInTime,
       notes: ''
     };
   }
@@ -329,27 +356,62 @@ export class AdminBookingsComponent implements OnInit {
     this.createModalOpen = false;
   }
 
+  get canCreateWalkIn(): boolean {
+    const digits = this.newBooking.phone.replace(/\D/g, '');
+
+    return !!(
+      this.newBooking.customerName.trim()
+      && this.selectedWalkInService
+      && this.newBooking.barber
+      && this.selectedWalkInBarberOption
+      && (!digits || /^3\d{9}$/.test(digits))
+    );
+  }
+
   createBooking(): void {
     const form = this.newBooking;
     const digits = form.phone.replace(/\D/g, '');
-    const service = this.bookingService.services.find(item => item.name === form.service);
+    const service = this.selectedWalkInService;
 
-    if (!form.customerName.trim() || !/^3\d{9}$/.test(digits) || !service || !form.barber || !form.date || !form.time) {
-      this.showFeedback(false, 'Complete all required fields and enter a valid Pakistan mobile number.');
+    if (!form.customerName.trim() || !service || !form.barber) {
+      this.showFeedback(false, 'Enter the customer name and select a service and available barber.');
       return;
     }
 
-    const result = this.bookingService.addBooking({
+    if (digits && !/^3\d{9}$/.test(digits)) {
+      this.showFeedback(false, 'Enter a valid Pakistan mobile number or leave the phone field empty.');
+      return;
+    }
+
+    const freshOptions = this.bookingService.availableBarbersForWalkIn(
+      service.name,
+      this.todayKey,
+      this.currentWalkInTime,
+      service.duration,
+      10
+    );
+    const selectedOption = freshOptions.find(option => option.name === form.barber);
+
+    if (!selectedOption) {
+      this.newBooking.barber = '';
+      this.showFeedback(false, 'That barber is no longer available today. Please select another barber.');
+      return;
+    }
+
+    this.newBooking.time = selectedOption.startTime;
+
+    const result = this.bookingService.addWalkInBooking({
       customerName: form.customerName.trim(),
-      phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
+      phone: digits ? '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3) : '',
       service: service.name,
       duration: service.duration,
       barber: form.barber,
-      date: form.date,
-      time: form.time,
+      date: this.todayKey,
+      time: selectedOption.startTime,
       amount: service.amount,
-      notes: form.notes.trim(),
-      groupSize: 1
+      notes: '',
+      groupSize: 1,
+      serviceLocation: 'Salon'
     });
 
     this.showFeedback(result.success, result.message);
@@ -383,11 +445,16 @@ export class AdminBookingsComponent implements OnInit {
     ].join('-');
   }
 
-  private slotsForDuration(duration: number, dateKey: string): string[] {
+  private slotsForDuration(duration: number, dateKey: string, allowWalkInSameDay = false): string[] {
     if (!dateKey) return [];
 
     const date = new Date(dateKey + 'T12:00:00');
-    if (!this.settingsService.isBookingDateAllowed(date)) return [];
+
+    if (allowWalkInSameDay) {
+      if (dateKey !== this.todayKey) return [];
+    } else if (!this.settingsService.isBookingDateAllowed(date)) {
+      return [];
+    }
 
     const hours = this.settingsService.hoursForDate(date);
     if (!hours) return [];

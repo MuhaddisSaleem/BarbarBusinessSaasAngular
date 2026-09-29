@@ -29,7 +29,7 @@ export class AdminCustomerService {
     const groups = new Map<string, AdminBooking[]>();
 
     for (const booking of this.bookingService.all) {
-      const key = this.normalizePhone(booking.phone);
+      const key = this.customerKey(booking);
       const current = groups.get(key) || [];
       current.push(booking);
       groups.set(key, current);
@@ -48,7 +48,7 @@ export class AdminCustomerService {
 
   bookingsForCustomer(customer: AdminCustomer): AdminBooking[] {
     return this.bookingService.all
-      .filter(item => this.normalizePhone(item.phone) === customer.id)
+      .filter(item => this.customerKey(item) === customer.id)
       .sort((a, b) =>
         b.date.localeCompare(a.date) || this.timeToMinutes(b.time) - this.timeToMinutes(a.time)
       );
@@ -120,6 +120,11 @@ export class AdminCustomerService {
       lastBookingDate: latest?.date || '',
       notes: note
     };
+  }
+
+  private customerKey(booking: AdminBooking): string {
+    const phone = this.normalizePhone(booking.phone);
+    return phone || 'walkin-' + booking.id;
   }
 
   private normalizePhone(phone: string): string {

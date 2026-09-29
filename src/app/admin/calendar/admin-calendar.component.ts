@@ -170,6 +170,7 @@ export class AdminCalendarComponent {
     const key = this.toDateKey(date);
     return this.bookingService.all
       .filter(item => item.date === key && item.status !== 'Cancelled')
+      .filter(item => this.selectedStatus === 'All' || item.status === this.selectedStatus)
       .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
       .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time));
   }
@@ -221,6 +222,8 @@ export class AdminCalendarComponent {
 
     const hours = this.settingsService.hoursForDate(this.selectedDate);
     if (!hours) return 'Closed';
+    if (!this.settingsService.isBookingDateAllowed(this.selectedDate)) return 'Booking unavailable';
+    if (!this.barberService.workingWindowFor(barber.id)) return 'Check working hours';
 
     const interval = this.settingsService.bookingInterval;
     let candidate = hours.start;
@@ -228,7 +231,7 @@ export class AdminCalendarComponent {
     if (this.selectedDateKey === this.toDateKey(new Date())) {
       const now = new Date();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      candidate = Math.max(candidate, Math.ceil(nowMinutes / interval) * interval);
+      candidate = hours.start + Math.max(0, Math.ceil((nowMinutes + 1 - hours.start) / interval)) * interval;
     }
 
     while (candidate + interval <= hours.end) {

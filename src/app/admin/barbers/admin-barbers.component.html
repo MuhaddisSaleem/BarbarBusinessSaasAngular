@@ -130,7 +130,7 @@
                 </small>
               </td>
 
-              <td>{{ barber.workingHours }}</td>
+              <td>{{ barber.workingHours || 'Salon business hours' }}</td>
 
               <td>
                 <span class="account-status" [class.inactive]="barber.accountStatus === 'Inactive'">
@@ -213,7 +213,7 @@
 
             <div>
               <small>Working Hours</small>
-              <strong>{{ barber.workingHours }}</strong>
+              <strong>{{ barber.workingHours || 'Salon business hours' }}</strong>
             </div>
           </div>
 
@@ -285,7 +285,7 @@
   </div>
 
   <div class="modal-backdrop" *ngIf="addModalOpen" (click)="closeAddModal()"></div>
-  <section class="barber-modal" *ngIf="addModalOpen">
+  <section class="barber-modal add-modal" *ngIf="addModalOpen">
     <div class="modal-header d-flex align-items-start justify-content-between">
       <div>
         <span class="eyebrow">TEAM MEMBER</span>
@@ -353,40 +353,6 @@
           </label>
         </label>
 
-        <label class="full">
-          <span>Barber Photo</span>
-          <div class="photo-upload-row d-flex align-items-center gap-3">
-            <img class="photo-preview" [src]="editBarber.image || 'assets/images/barber-placeholder.svg'" alt="Barber preview">
-            <label class="photo-upload-btn">
-              <input type="file" accept="image/*" (change)="onEditImageSelected($event)">
-              <i class="bi bi-camera"></i>
-              Change Photo
-            </label>
-            <small>JPG, PNG or WebP · max 2 MB</small>
-          </div>
-
-          <div class="face-check"
-            *ngIf="editImageValidationState !== 'idle'"
-            [class.checking]="editImageValidationState === 'checking'"
-            [class.valid]="editImageValidationState === 'valid'"
-            [class.invalid]="editImageValidationState === 'invalid'"
-            [class.unsupported]="editImageValidationState === 'unsupported'">
-            <i class="bi"
-              [ngClass]="{
-                'bi-hourglass-split': editImageValidationState === 'checking',
-                'bi-person-check': editImageValidationState === 'valid',
-                'bi-person-x': editImageValidationState === 'invalid',
-                'bi-exclamation-triangle': editImageValidationState === 'unsupported'
-              }"></i>
-            <span>{{ editImageValidationMessage }}</span>
-          </div>
-
-          <label class="manual-face-confirm d-flex align-items-start gap-2"
-            *ngIf="editImageValidationState === 'unsupported'">
-            <input type="checkbox" [(ngModel)]="editManualFaceConfirmed">
-            <span>I confirm this image contains one clear photo of the barber.</span>
-          </label>
-        </label>
 
         <label>
           <span>Years of Experience</span>
@@ -401,7 +367,7 @@
 
         <label>
           <span>Working Hours</span>
-          <input type="text" [(ngModel)]="newBarber.workingHours" placeholder="Enter working hours">
+          <input type="text" [(ngModel)]="newBarber.workingHours" placeholder="9 AM - 9 PM, or blank for salon hours">
         </label>
 
         <label class="full">
@@ -475,6 +441,42 @@
           </div>
         </label>
 
+        <label class="full">
+          <span>Barber Photo</span>
+          <div class="photo-upload-row d-flex align-items-center gap-3">
+            <img class="photo-preview" [src]="editBarber.image || 'assets/images/barber-placeholder.svg'" alt="Barber preview">
+            <label class="photo-upload-btn">
+              <input type="file" accept="image/*" (change)="onEditImageSelected($event)">
+              <i class="bi bi-camera"></i>
+              Change Photo
+            </label>
+            <small>JPG, PNG or WebP · max 2 MB</small>
+          </div>
+
+          <div class="face-check"
+            *ngIf="editImageValidationState !== 'idle'"
+            [class.checking]="editImageValidationState === 'checking'"
+            [class.valid]="editImageValidationState === 'valid'"
+            [class.invalid]="editImageValidationState === 'invalid'"
+            [class.unsupported]="editImageValidationState === 'unsupported'">
+            <i class="bi"
+              [ngClass]="{
+                'bi-hourglass-split': editImageValidationState === 'checking',
+                'bi-person-check': editImageValidationState === 'valid',
+                'bi-person-x': editImageValidationState === 'invalid',
+                'bi-exclamation-triangle': editImageValidationState === 'unsupported'
+              }"></i>
+            <span>{{ editImageValidationMessage }}</span>
+          </div>
+
+          <label class="manual-face-confirm d-flex align-items-start gap-2"
+            *ngIf="editImageValidationState === 'unsupported'">
+            <input type="checkbox" [(ngModel)]="editManualFaceConfirmed">
+            <span>I confirm this image contains one clear photo of the barber.</span>
+          </label>
+        </label>
+
+
         <label>
           <span>Years of Experience</span>
           <div class="experience-field d-flex align-items-center">
@@ -488,7 +490,7 @@
 
         <label>
           <span>Working Hours</span>
-          <input type="text" [(ngModel)]="editBarber.workingHours" placeholder="Enter working hours">
+          <input type="text" [(ngModel)]="editBarber.workingHours" placeholder="9 AM - 9 PM, or blank for salon hours">
         </label>
 
         <label class="full">

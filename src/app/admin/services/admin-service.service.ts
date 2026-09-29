@@ -33,6 +33,10 @@ export class AdminServiceService {
   private readonly demoCleanupKey = 'royal-barbers.admin-services.demo-cleaned.v1';
   private services: AdminService[] = this.loadServices();
 
+  refreshFromStorage(): void {
+    this.services = this.loadServices();
+  }
+
   get all(): AdminService[] {
     return this.services;
   }

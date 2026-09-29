@@ -18,7 +18,7 @@ export interface AdminBooking {
   time: string;
   amount: number;
   status: BookingStatus;
-  source: 'Online' | 'Admin';
+  source: 'Online' | 'Admin' | 'Walk-in';
   notes?: string;
   groupSize?: number;
   serviceLocation?: 'Salon' | 'Home';
@@ -30,6 +30,13 @@ export interface AdminBooking {
 export interface BookingMutationResult {
   success: boolean;
   message: string;
+}
+
+export interface WalkInBarberOption {
+  name: string;
+  startTime: string;
+  waitMinutes: number;
+  availableNow: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -64,6 +71,80 @@ export class AdminBookingService {
       .map(barber => barber.name);
   }
 
+  availableBarbersForWalkIn(
+    service: string,
+    dateKey: string,
+    time: string,
+    duration: number,
+    preferredWaitMinutes = 10
+  ): WalkInBarberOption[] {
+    const startMinutes = this.timeToMinutes(time);
+    if (!Number.isFinite(startMinutes)) return [];
+
+    const date = new Date(dateKey + 'T12:00:00');
+    const salonHours = this.settingsService.hoursForDate(date);
+    if (!salonHours) return [];
+
+    const latestStart = salonHours.end - duration;
+    if (startMinutes > latestStart) return [];
+
+    const services = this.serviceNames(service);
+    const eligible = this.barberService.active.filter(barber =>
+      this.barberService.isAvailableOnDate(barber.id, dateKey)
+      && this.barberService.supportsServices(barber.id, services)
+    );
+
+    const options: Array<WalkInBarberOption & { rating: number; id: number }> = [];
+
+    for (const barber of eligible) {
+      const maxWait = Math.max(0, latestStart - startMinutes);
+
+      for (let waitMinutes = 0; waitMinutes <= maxWait; waitMinutes++) {
+        const candidateTime = this.minutesToTime(startMinutes + waitMinutes);
+        const scheduleValidation = this.validateSchedule(dateKey, candidateTime, duration, true);
+
+        if (
+          scheduleValidation.success
+          && this.barberService.isWorkingAt(barber.id, candidateTime, duration)
+          && !this.hasConflict(barber.name, dateKey, candidateTime, duration)
+        ) {
+          options.push({
+            name: barber.name,
+            startTime: candidateTime,
+            waitMinutes,
+            availableNow: waitMinutes === 0,
+            rating: Number(barber.rating) || 0,
+            id: barber.id
+          });
+          break;
+        }
+      }
+    }
+
+    const availableNow = options.filter(option => option.availableNow);
+    if (availableNow.length) {
+      return availableNow
+        .sort((a, b) => b.rating - a.rating || a.id - b.id)
+        .map(({ rating, id, ...option }) => option);
+    }
+
+    const shortWait = options.filter(option =>
+      option.waitMinutes > 0 && option.waitMinutes <= preferredWaitMinutes
+    );
+
+    const visible = shortWait.length
+      ? shortWait
+      : options.filter(option => option.waitMinutes > 0);
+
+    return visible
+      .sort((a, b) =>
+        a.waitMinutes - b.waitMinutes
+        || b.rating - a.rating
+        || a.id - b.id
+      )
+      .map(({ rating, id, ...option }) => option);
+  }
+
   availableBarbersForBooking(booking: AdminBooking, dateKey: string): string[] {
     const services = this.bookingServiceNames(booking);
 
@@ -79,6 +160,10 @@ export class AdminBookingService {
   private readonly storageKey = 'royal-barbers.admin-bookings.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-bookings.demo-cleaned.v1';
   private bookings: AdminBooking[] = this.loadBookings();
+
+  refreshFromStorage(): void {
+    this.bookings = this.loadBookings();
+  }
 
   get all(): AdminBooking[] {
     return this.bookings;
@@ -249,13 +334,17 @@ export class AdminBookingService {
     const booking = this.getById(id);
     if (!booking) return { success: false, message: 'Booking not found.' };
 
+    if (booking.status === 'Completed' || booking.status === 'Cancelled') {
+      return { success: false, message: 'Closed bookings cannot be repriced.' };
+    }
+
     if (booking.serviceLocation !== 'Home' || !booking.specialService?.trim()) {
       return { success: false, message: 'This booking does not contain a custom home-service request.' };
     }
 
     const nextAmount = Number(amount);
-    if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
-      return { success: false, message: 'Enter a valid custom service amount greater than 0.' };
+    if (!Number.isInteger(nextAmount) || nextAmount <= 0) {
+      return { success: false, message: 'Enter a whole-rupee custom service amount greater than 0.' };
     }
 
     const previousSpecialAmount = Number(booking.specialServiceAmount) || 0;
@@ -397,6 +486,72 @@ export class AdminBookingService {
     };
   }
 
+  addWalkInBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
+    const now = new Date();
+    const todayKey = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0')
+    ].join('-');
+
+    if (input.date !== todayKey) {
+      return { success: false, message: 'Walk-in bookings can only be created for today.' };
+    }
+
+    const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration, true);
+    if (!scheduleValidation.success) return scheduleValidation;
+
+    const barberId = this.barberIdByName(input.barber);
+    if (!barberId || !this.barberService.isAvailableOnDate(barberId, input.date)) {
+      return { success: false, message: input.barber + ' is not available today.' };
+    }
+
+    if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(input))) {
+      return { success: false, message: input.barber + ' does not provide the selected service.' };
+    }
+
+    if (!this.barberService.isWorkingAt(barberId, input.time, input.duration)) {
+      return { success: false, message: input.barber + ' is outside their configured working hours at this time.' };
+    }
+
+    if (this.hasConflict(input.barber, input.date, input.time, input.duration)) {
+      return { success: false, message: input.barber + ' already has an overlapping appointment at this time.' };
+    }
+
+    const nextId = Math.max(0, ...this.bookings.map(item => item.id)) + 1;
+    const previousBookings = this.bookings;
+    this.bookings = [
+      {
+        ...input,
+        id: nextId,
+        code: this.bookingCode(nextId),
+        status: 'Confirmed',
+        source: 'Walk-in',
+        serviceLocation: 'Salon'
+      },
+      ...this.bookings
+    ];
+
+    if (!this.persist()) {
+      this.bookings = previousBookings;
+      return { success: false, message: 'Could not save the walk-in booking. Please try again.' };
+    }
+
+    const created = this.bookings[0];
+    this.notificationService.add({
+      type: 'booking',
+      title: 'Walk-in booking created',
+      message: created.customerName + ' booked ' + created.service + ' with ' + created.barber + ' for ' + created.time + '.',
+      icon: 'bi-person-walking',
+      url: '/admin/bookings?booking=' + created.id
+    });
+
+    return {
+      success: true,
+      message: 'Walk-in booked with ' + created.barber + ' at ' + created.time + '.'
+    };
+  }
+
   addBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
     const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration);
     if (!scheduleValidation.success) return scheduleValidation;
@@ -448,7 +603,7 @@ export class AdminBookingService {
     return { success: true, message: 'Booking created successfully.' };
   }
 
-  private validateSchedule(dateKey: string, time: string, duration: number): BookingMutationResult {
+  private validateSchedule(dateKey: string, time: string, duration: number, allowWalkInSameDay = false): BookingMutationResult {
     const dateMatch = String(dateKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!dateMatch) {
       return { success: false, message: 'Select a valid appointment date.' };
@@ -464,7 +619,24 @@ export class AdminBookingService {
       0
     );
 
-    if (!this.settingsService.isBookingDateAllowed(date)) {
+    if (date.getFullYear() !== Number(dateMatch[1])
+      || date.getMonth() !== Number(dateMatch[2]) - 1
+      || date.getDate() !== Number(dateMatch[3])) {
+      return { success: false, message: 'Select a valid appointment date.' };
+    }
+
+    const today = new Date();
+    const walkInTodayKey = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0')
+    ].join('-');
+
+    if (allowWalkInSameDay) {
+      if (dateKey !== walkInTodayKey) {
+        return { success: false, message: 'Walk-in bookings can only be created for today.' };
+      }
+    } else if (!this.settingsService.isBookingDateAllowed(date)) {
       return { success: false, message: 'This date is outside the current booking window or the salon is closed.' };
     }
 
@@ -493,7 +665,8 @@ export class AdminBookingService {
 
     if (dateKey === todayKey) {
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      if (start <= nowMinutes) {
+      const isPast = allowWalkInSameDay ? start < nowMinutes : start <= nowMinutes;
+      if (isPast) {
         return { success: false, message: 'The selected appointment time has already passed.' };
       }
     }
@@ -562,7 +735,7 @@ export class AdminBookingService {
           amount: Number(item.amount) || 0,
           groupSize: Number(item.groupSize) || 1,
           status: this.isBookingStatus(item.status) ? item.status : 'Pending',
-          source: item.source === 'Admin' ? 'Admin' : 'Online',
+          source: item.source === 'Walk-in' ? 'Walk-in' : (item.source === 'Admin' ? 'Admin' : 'Online'),
           notes: item.notes || '',
           serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
           serviceAddress: item.serviceAddress || '',
@@ -633,12 +806,22 @@ export class AdminBookingService {
       .filter(Boolean);
   }
 
+  private minutesToTime(totalMinutes: number): string {
+    const safeMinutes = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60);
+    let hour = Math.floor(safeMinutes / 60);
+    const minute = safeMinutes % 60;
+    const period = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return hour + ':' + String(minute).padStart(2, '0') + ' ' + period;
+  }
+
   private timeToMinutes(time: string): number {
     const match = time.match(/^(\d{1,2}):(\d{2})\s(AM|PM)$/i);
     if (!match) return Number.NaN;
     let hour = Number(match[1]);
     const minute = Number(match[2]);
     const period = match[3].toUpperCase();
+    if (hour < 1 || hour > 12 || minute > 59) return Number.NaN;
     if (period === 'PM' && hour !== 12) hour += 12;
     if (period === 'AM' && hour === 12) hour = 0;
     return hour * 60 + minute;
