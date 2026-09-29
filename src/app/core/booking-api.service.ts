@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AdminBooking, BookingMutationResult } from '../admin/bookings/admin-booking.service';
+import type { AdminBooking, BookingMutationResult } from '../admin/bookings/admin-booking.service';
 
 export interface BookingApiMutationResult extends BookingMutationResult {
   booking?: AdminBooking;
