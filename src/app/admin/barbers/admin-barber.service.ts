@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { NotificationService } from '../notifications/notification.service';
+import { CatalogApiService } from '../../core/catalog-api.service';
 
 export type BarberAvailability = 'Available Today' | 'Not Available Today' | 'On Leave' | 'Vacation';
 export type BarberAccountStatus = 'Active' | 'Inactive';
@@ -27,14 +28,48 @@ export interface BarberMutationResult {
 
 @Injectable({ providedIn: 'root' })
 export class AdminBarberService {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly notificationService: NotificationService,
+    private readonly api?: CatalogApiService
+  ) {
+    this.barbers = this.api
+      ? this.normalizeBarbers(this.api.barberSnapshot)
+      : this.loadBarbers();
+
+    if (this.api && typeof window !== 'undefined') {
+      window.localStorage.removeItem(this.storageKey);
+      window.localStorage.removeItem(this.demoCleanupKey);
+    }
+  }
 
   private readonly storageKey = 'royal-barbers.admin-barbers.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-barbers.demo-cleaned.v1';
-  private barbers: AdminBarber[] = this.loadBarbers();
+  private barbers: AdminBarber[] = [];
 
   refreshFromStorage(): void {
+    if (this.api) {
+      this.refreshFromApi();
+      return;
+    }
     this.barbers = this.loadBarbers();
+  }
+
+  refreshFromApi(): void {
+    if (!this.api) return;
+
+    this.api.getBarbers().subscribe({
+      next: barbers => {
+        this.barbers = this.normalizeBarbers(barbers);
+        this.api!.barberSnapshot = this.barbers.map(item => ({
+          ...item,
+          specialties: [...item.specialties]
+        }));
+      }
+    });
+  }
+
+  get apiEnabled(): boolean {
+    return !!this.api;
   }
 
   get all(): AdminBarber[] {
@@ -55,6 +90,146 @@ export class AdminBarberService {
 
   getById(id: number): AdminBarber | undefined {
     return this.barbers.find(item => item.id === id);
+  }
+
+  addBarberThroughApi(
+    input: Omit<AdminBarber, 'id'>,
+    done: (result: BarberMutationResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.addBarber(input).subscribe({
+      next: response => {
+        if (response.item) {
+          const item = this.normalizeBarber(response.item);
+          this.barbers = [...this.barbers.filter(existing => existing.id !== item.id), item]
+            .sort((a, b) => a.id - b.id);
+          this.syncApiSnapshot();
+          this.notificationService.add({
+            type: 'system',
+            title: 'Barber added',
+            message: item.name + ' was added to the barber team.',
+            icon: 'bi-person-plus',
+            url: '/admin/barbers'
+          });
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save the barber.') })
+    });
+
+    return true;
+  }
+
+  updateBarberThroughApi(
+    id: number,
+    changes: Pick<AdminBarber, 'name' | 'phone' | 'experience' | 'specialties' | 'workingHours' | 'image'>,
+    done: (result: BarberMutationResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.barberSnapshot = this.barbers.map(item => ({ ...item, specialties: [...item.specialties] }));
+    this.api.updateBarber(id, changes).subscribe({
+      next: response => {
+        if (response.item) {
+          const item = this.normalizeBarber(response.item);
+          const index = this.barbers.findIndex(barber => barber.id === id);
+          if (index >= 0) this.barbers[index] = item;
+          this.syncApiSnapshot();
+          this.notificationService.add({
+            type: 'system',
+            title: 'Barber profile updated',
+            message: item.name + ' profile details were updated.',
+            icon: 'bi-person-gear',
+            url: '/admin/barbers'
+          });
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save the barber changes.') })
+    });
+
+    return true;
+  }
+
+  deleteBarberThroughApi(id: number, done: (result: BarberMutationResult) => void): boolean {
+    if (!this.api) return false;
+    const barber = this.getById(id);
+
+    this.api.deleteBarber(id).subscribe({
+      next: response => {
+        if (response.success) {
+          this.barbers = this.barbers.filter(item => item.id !== id);
+          this.syncApiSnapshot();
+          if (barber) {
+            this.notificationService.add({
+              type: 'system',
+              title: 'Barber removed',
+              message: barber.name + ' was removed from the barber team.',
+              icon: 'bi-person-dash',
+              url: '/admin/barbers'
+            });
+          }
+        }
+        done(response);
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not remove the barber.') })
+    });
+
+    return true;
+  }
+
+  updateAvailabilityThroughApi(
+    id: number,
+    availability: BarberAvailability,
+    done: (result: BarberMutationResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.updateBarberAvailability(id, availability).subscribe({
+      next: response => {
+        if (response.item) this.replaceBarber(response.item);
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save the barber availability.') })
+    });
+
+    return true;
+  }
+
+  updateLeaveThroughApi(
+    id: number,
+    availability: 'On Leave' | 'Vacation',
+    leaveFrom: string,
+    leaveTo: string,
+    note: string,
+    done: (result: BarberMutationResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.updateBarberLeave(id, availability, leaveFrom, leaveTo, note).subscribe({
+      next: response => {
+        if (response.item) this.replaceBarber(response.item);
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save the leave information.') })
+    });
+
+    return true;
+  }
+
+  toggleAccountStatusThroughApi(id: number, done: (result: BarberMutationResult) => void): boolean {
+    if (!this.api) return false;
+
+    this.api.toggleBarberStatus(id).subscribe({
+      next: response => {
+        if (response.item) this.replaceBarber(response.item);
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save the barber status.') })
+    });
+
+    return true;
   }
 
   addBarber(input: Omit<AdminBarber, 'id'>): BarberMutationResult {
@@ -632,6 +807,7 @@ export class AdminBarberService {
   }
 
   private persist(): boolean {
+    if (this.api) return true;
     if (typeof window === 'undefined') return true;
 
     try {
@@ -640,6 +816,47 @@ export class AdminBarberService {
     } catch {
       return false;
     }
+  }
+
+  private normalizeBarbers(barbers: AdminBarber[]): AdminBarber[] {
+    return (Array.isArray(barbers) ? barbers : []).map(barber => this.normalizeBarber(barber));
+  }
+
+  private normalizeBarber(barber: AdminBarber): AdminBarber {
+    return {
+      ...barber,
+      id: Number(barber.id),
+      image: barber.image || 'assets/images/barber-placeholder.svg',
+      rating: this.normalizeRating(barber.rating),
+      experience: this.normalizeExperience(barber.experience),
+      specialties: Array.isArray(barber.specialties) ? barber.specialties.filter(Boolean) : [],
+      workingHours: String(barber.workingHours || '').trim(),
+      availability: this.normalizeAvailability(barber.availability),
+      accountStatus: barber.accountStatus === 'Inactive' ? 'Inactive' : 'Active',
+      leaveFrom: barber.leaveFrom || undefined,
+      leaveTo: barber.leaveTo || undefined,
+      note: String(barber.note || '')
+    };
+  }
+
+  private replaceBarber(barber: AdminBarber): void {
+    const item = this.normalizeBarber(barber);
+    const index = this.barbers.findIndex(existing => existing.id === item.id);
+    if (index >= 0) this.barbers[index] = item;
+    else this.barbers.push(item);
+    this.syncApiSnapshot();
+  }
+
+  private syncApiSnapshot(): void {
+    if (!this.api) return;
+    this.api.barberSnapshot = this.barbers.map(item => ({
+      ...item,
+      specialties: [...item.specialties]
+    }));
+  }
+
+  private apiError(error: unknown, fallback: string): string {
+    return (error as any)?.error?.message || fallback;
   }
 
   private todayKey(): string {
