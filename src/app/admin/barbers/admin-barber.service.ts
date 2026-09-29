@@ -505,6 +505,35 @@ export class AdminBarberService {
     };
   }
 
+  addSpecialty(serviceName: string): BarberMutationResult {
+    const specialty = serviceName.trim();
+    if (!specialty) return { success: true, message: '' };
+
+    const snapshots = this.barbers.map(barber => ({
+      id: barber.id,
+      specialties: [...barber.specialties]
+    }));
+
+    let changed = false;
+
+    this.barbers.forEach(barber => {
+      if (!barber.specialties.some(item => item.trim().toLowerCase() === specialty.toLowerCase())) {
+        barber.specialties = [...barber.specialties, specialty];
+        changed = true;
+      }
+    });
+
+    if (changed && !this.persist()) {
+      snapshots.forEach(snapshot => {
+        const barber = this.getById(snapshot.id);
+        if (barber) barber.specialties = snapshot.specialties;
+      });
+      return { success: false, message: 'Could not assign the new service to all barbers.' };
+    }
+
+    return { success: true, message: '' };
+  }
+
   renameSpecialty(previousName: string, nextName: string): BarberMutationResult {
     const from = previousName.trim();
     const to = nextName.trim();
