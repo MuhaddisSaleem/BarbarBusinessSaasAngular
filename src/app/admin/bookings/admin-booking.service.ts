@@ -192,6 +192,59 @@ export class AdminBookingService {
     });
   }
 
+  get apiEnabled(): boolean {
+    return !!this.api;
+  }
+
+  createOnlineBookingsThroughApi(
+    bookings: Array<Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>>,
+    onSuccess: (result: BookingMutationResult) => void,
+    onError: (message: string) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.createOnline(bookings).subscribe({
+      next: response => this.reloadAfterMutation(response, onSuccess, onError),
+      error: error => onError(this.apiErrorMessage(error, 'Could not save the booking. Please try again.'))
+    });
+
+    return true;
+  }
+
+  createWalkInThroughApi(
+    booking: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>,
+    onSuccess: (result: BookingMutationResult) => void,
+    onError: (message: string) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.createWalkIn(booking).subscribe({
+      next: response => this.reloadAfterMutation(response, onSuccess, onError),
+      error: error => onError(this.apiErrorMessage(error, 'Could not save the walk-in booking. Please try again.'))
+    });
+
+    return true;
+  }
+
+  private reloadAfterMutation(
+    response: BookingMutationResult,
+    onSuccess: (result: BookingMutationResult) => void,
+    onError: (message: string) => void
+  ): void {
+    if (!this.api) {
+      onSuccess(response);
+      return;
+    }
+
+    this.api.getAll().subscribe({
+      next: bookings => {
+        this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+        onSuccess(response);
+      },
+      error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but the booking list could not be refreshed.'))
+    });
+  }
+
   get all(): AdminBooking[] {
     return this.bookings;
   }
@@ -532,14 +585,6 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the booking. Please try again.' };
     }
 
-    this.api?.createOnline(staged).subscribe({
-      next: () => this.refreshFromApi(),
-      error: error => {
-        this.bookings = previousBookings;
-        this.notifyApiError('Could not save the online booking to SQL Server.', error);
-      }
-    });
-
     if (this.settingsService.current.notifyOwnerOnNewBooking) {
       const first = created[0];
       this.notificationService.add({
@@ -613,14 +658,6 @@ export class AdminBookingService {
       this.bookings = previousBookings;
       return { success: false, message: 'Could not save the walk-in booking. Please try again.' };
     }
-
-    this.api?.createWalkIn(input).subscribe({
-      next: () => this.refreshFromApi(),
-      error: error => {
-        this.bookings = previousBookings;
-        this.notifyApiError('Could not save the walk-in booking to SQL Server.', error);
-      }
-    });
 
     const created = this.bookings[0];
     this.notificationService.add({
@@ -874,6 +911,10 @@ export class AdminBookingService {
       specialService: item.specialService || '',
       specialServiceAmount: Number(item.specialServiceAmount) || 0
     };
+  }
+
+  private apiErrorMessage(error: unknown, fallback: string): string {
+    return (error as any)?.error?.message || fallback;
   }
 
   private notifyApiError(message: string, error: unknown): void {
