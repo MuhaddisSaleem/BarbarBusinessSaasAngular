@@ -60,7 +60,7 @@ jobs:
           BARBERFLOW_DB_CONNECTION: "Server=localhost,1433;Database=BarberFlow;User Id=sa;Password=CiDesignTime123!;Encrypt=False;TrustServerCertificate=True"
         run: dotnet ef migrations script --idempotent --project backend/BarberFlow.Api --startup-project backend/BarberFlow.Api --configuration Release --no-build --output /tmp/barberflow.sql
 
-      - name: Smoke test Booking API against SQL Server
+      - name: Smoke test SQL-backed APIs
         env:
           ASPNETCORE_ENVIRONMENT: "Development"
           ASPNETCORE_URLS: "http://127.0.0.1:5080"
@@ -93,3 +93,25 @@ jobs:
             http://127.0.0.1:5080/api/bookings/online | grep '"success":true'
 
           curl --fail --silent http://127.0.0.1:5080/api/bookings | grep '"customerName":"CI Customer"'
+
+          curl --fail --silent http://127.0.0.1:5080/api/services | grep '"name":"Haircut"'
+          curl --fail --silent \
+            -H "Content-Type: application/json" \
+            -d '{"name":"CI Service","duration":25,"originalPrice":450,"discountPrice":null,"homeServiceEnabled":true,"homeOriginalPrice":650,"homeDiscountPrice":null,"image":"assets/images/service-placeholder.svg","status":"Active"}' \
+            http://127.0.0.1:5080/api/services | grep '"success":true'
+          curl --fail --silent http://127.0.0.1:5080/api/services | grep '"name":"CI Service"'
+
+          curl --fail --silent http://127.0.0.1:5080/api/barbers | grep '"name":"Falak Shair"'
+          curl --fail --silent \
+            -H "Content-Type: application/json" \
+            -d '{"name":"CI Barber","phone":"+92 300 7654321","experience":"3 years","specialties":["Haircut"],"workingHours":"9:00 AM - 8:00 PM","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
+            http://127.0.0.1:5080/api/barbers | grep '"success":true'
+          curl --fail --silent http://127.0.0.1:5080/api/barbers | grep '"name":"CI Barber"'
+
+          curl --fail --silent http://127.0.0.1:5080/api/settings | grep '"businessName":"Royal Barbers"'
+          curl --fail --silent \
+            -X PUT \
+            -H "Content-Type: application/json" \
+            -d '{"businessName":"Royal Barbers CI","businessPhone":"+92 300 1234567","whatsappNumber":"+92 300 1234567","email":"owner@royalbarbers.local","address":"CI Address","city":"Bahawalpur","currency":"PKR","timezone":"Asia/Karachi","brandSubtitle":"LOOK GOOD · FEEL GREAT","heroEyebrow":"PREMIUM BARBERSHOP","heroHeadline":"","heroTagline":"More Than a Haircut. It is a Lifestyle.","bookingInterval":30,"maxAdvanceDays":30,"cancellationHours":2,"lateArrivalMinutes":10,"allowSameDayBooking":true,"autoConfirmBookings":true,"sendWhatsappConfirmation":true,"sendSmsFallback":false,"sendAppointmentReminder":true,"reminderHoursBefore":2,"notifyOwnerOnNewBooking":true,"businessHours":[{"key":"monday","label":"Monday","enabled":true,"open":"08:00","close":"21:00"},{"key":"tuesday","label":"Tuesday","enabled":true,"open":"08:00","close":"21:00"},{"key":"wednesday","label":"Wednesday","enabled":true,"open":"08:00","close":"21:00"},{"key":"thursday","label":"Thursday","enabled":true,"open":"08:00","close":"21:00"},{"key":"friday","label":"Friday","enabled":true,"open":"08:00","close":"21:00"},{"key":"saturday","label":"Saturday","enabled":true,"open":"08:00","close":"21:00"},{"key":"sunday","label":"Sunday","enabled":true,"open":"08:00","close":"21:00"}]}' \
+            http://127.0.0.1:5080/api/settings | grep '"success":true'
+          curl --fail --silent http://127.0.0.1:5080/api/settings | grep '"businessName":"Royal Barbers CI"'
