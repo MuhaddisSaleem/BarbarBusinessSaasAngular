@@ -44,11 +44,11 @@ let browser, activePage;
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();await details();
     await page.screenshot({path:`test-results/customer-${width}.png`,fullPage:true});await finish();
     assert.equal((await stored()).length,1);assert.equal((await stored())[0].status,'Confirmed');scenarios++;
-    // Customer's persisted booking overlaps Falak. Make Second Barber busy until 4:40 PM too,
-    // so all eligible barbers are busy and the ten-minute waiting fallback is exercised.
+    // Customer's persisted booking overlaps Falak. Make Second Barber busy until 4:55 PM too,
+    // so all eligible barbers are busy for more than ten minutes and the next-available fallback is exercised.
     await page.evaluate(()=>{
       const bookings=JSON.parse(localStorage.getItem('royal-barbers.admin-bookings.v1'));
-      bookings.push({id:900,code:'RB-WAIT',customerName:'Existing Customer',phone:'+92 300 0000000',barber:'Second Barber',service:'Haircut',duration:40,date:'2026-09-28',time:'4:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
+      bookings.push({id:900,code:'RB-WAIT',customerName:'Existing Customer',phone:'+92 300 0000000',barber:'Second Barber',service:'Haircut',duration:55,date:'2026-09-28',time:'4:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
       localStorage.setItem('royal-barbers.admin-bookings.v1',JSON.stringify(bookings));
     });
     await goto('/admin/bookings');await page.locator('.create-booking-btn').click();
@@ -59,14 +59,13 @@ let browser, activePage;
     assert.equal(await barberSelect.isDisabled(),true);
     await serviceSelect.selectOption('Haircut');assert.equal(await barberSelect.isDisabled(),false);
     const barbers=await barberSelect.locator('option').allTextContents();
-    assert.equal(barbers.some(x=>x.includes('Falak Shair')),false,'Falak is not free within the ten-minute window');
-    assert.ok(barbers.some(x=>x.includes('Second Barber')&&x.includes('Available in 10 min')),'Second Barber should be suggested after a ten-minute wait');
+    assert.ok(barbers.some(x=>x.includes('Second Barber')&&x.includes('Available in 25 min')),'Second Barber should remain bookable even when the wait is longer than ten minutes');
     await barberSelect.selectOption('Second Barber');
     await form.locator('.walkin-waiting-hint').filter({hasText:'waiting area'}).waitFor();
     await form.getByPlaceholder('Enter full name').fill('Walk-in QA');
     await page.screenshot({path:`test-results/walk-in-${width}.png`,fullPage:true});
     await form.locator('.submit-booking-btn').click();await form.waitFor({state:'hidden'});
-    assert.equal((await stored()).length,3);assert.equal((await stored())[0].source,'Walk-in');assert.equal((await stored())[0].phone,'');assert.equal((await stored())[0].barber,'Second Barber');assert.equal((await stored())[0].time,'4:40 PM');assert.equal((await stored())[0].notes,'');scenarios++;
+    assert.equal((await stored()).length,3);assert.equal((await stored())[0].source,'Walk-in');assert.equal((await stored())[0].phone,'');assert.equal((await stored())[0].barber,'Second Barber');assert.equal((await stored())[0].time,'4:55 PM');assert.equal((await stored())[0].notes,'');scenarios++;
     // Specialist matching must select two different barbers for parallel Any Barber bookings.
     await goto();await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
     const group=(await stored()).slice(0,2);assert.equal(new Set(group.map(x=>x.barber)).size,2);assert.ok(group.every(x=>x.time==='7:00 PM'));scenarios++;
