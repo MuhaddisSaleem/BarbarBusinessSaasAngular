@@ -12,6 +12,16 @@ namespace BarberFlow.Api.Data.Migrations
         {
             migrationBuilder.AlterColumn<string>(
                 name: "ImageUrl",
+                table: "Barbers",
+                type: "nvarchar(max)",
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "nvarchar(1000)",
+                oldMaxLength: 1000,
+                oldNullable: true);
+
+            migrationBuilder.AlterColumn<string>(
+                name: "ImageUrl",
                 table: "Services",
                 type: "nvarchar(max)",
                 nullable: true,
@@ -170,6 +180,16 @@ namespace BarberFlow.Api.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterColumn<string>(
+                name: "ImageUrl",
+                table: "Barbers",
+                type: "nvarchar(1000)",
+                maxLength: 1000,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "nvarchar(max)",
+                oldNullable: true);
+
             migrationBuilder.DropIndex(
                 name: "IX_Services_SalonId_PublicId",
                 table: "Services");
