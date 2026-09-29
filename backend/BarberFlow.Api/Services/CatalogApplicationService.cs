@@ -406,33 +406,19 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
         await strategy.ExecuteAsync(async () =>
         {
-            var salon = await GetSalonAsync(cancellationToken, includeSettings: true);
-
-            if (await db.Bookings.AnyAsync(x => x.SalonId == salon.Id, cancellationToken))
-            {
-                outcome = new LegacyImportResponse(
-                    false,
-                    false,
-                    "Legacy catalog import was skipped because SQL Server already contains bookings.");
-                return;
-            }
-
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
+                var salon = await GetSalonAsync(cancellationToken, includeSettings: true);
+
                 if (request.Services is { Count: > 0 })
                 {
-                    var existingLinks = await db.BarberServices
-                        .Where(x => x.Barber.SalonId == salon.Id)
-                        .ToListAsync(cancellationToken);
-                    db.BarberServices.RemoveRange(existingLinks);
-
                     var existingServices = await db.Services
                         .Where(x => x.SalonId == salon.Id)
                         .ToListAsync(cancellationToken);
-                    db.Services.RemoveRange(existingServices);
-                    await db.SaveChangesAsync(cancellationToken);
+
+                    var importedServiceIds = new HashSet<Guid>();
 
                     foreach (var dto in request.Services.OrderBy(x => x.Id))
                     {
@@ -451,7 +437,28 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
                         if (validation is not null)
                             throw new InvalidOperationException(validation);
 
-                        db.Services.Add(BuildService(salon.Id, dto.Id, upsert));
+                        var service = existingServices.FirstOrDefault(x => x.PublicId == dto.Id)
+                            ?? existingServices.FirstOrDefault(
+                                x => x.Name.Equals(dto.Name, StringComparison.OrdinalIgnoreCase));
+
+                        if (service is null)
+                        {
+                            service = BuildService(salon.Id, dto.Id, upsert);
+                            db.Services.Add(service);
+                            existingServices.Add(service);
+                        }
+                        else
+                        {
+                            service.PublicId = dto.Id;
+                            ApplyService(service, upsert);
+                        }
+
+                        importedServiceIds.Add(service.Id);
+                    }
+
+                    foreach (var stale in existingServices.Where(x => !importedServiceIds.Contains(x.Id)))
+                    {
+                        stale.IsActive = false;
                     }
 
                     await db.SaveChangesAsync(cancellationToken);
@@ -459,7 +466,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
                 if (request.Barbers is { Count: > 0 })
                 {
-                    var oldBarbers = await db.Barbers
+                    var existingBarbers = await db.Barbers
                         .Where(x => x.SalonId == salon.Id)
                         .Include(x => x.Services)
                         .Include(x => x.WorkingHours)
@@ -467,34 +474,55 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
                         .Include(x => x.Leaves)
                         .ToListAsync(cancellationToken);
 
-                    foreach (var old in oldBarbers)
-                    {
-                        db.BarberServices.RemoveRange(old.Services);
-                        db.BarberWorkingHours.RemoveRange(old.WorkingHours);
-                        db.BarberScheduleOverrides.RemoveRange(old.ScheduleOverrides);
-                        db.BarberLeaves.RemoveRange(old.Leaves);
-                    }
-
-                    db.Barbers.RemoveRange(oldBarbers);
-                    await db.SaveChangesAsync(cancellationToken);
-
+                    var importedBarberIds = new HashSet<Guid>();
                     var today = DateOnly.FromDateTime(GetSalonNow(salon).DateTime);
 
                     foreach (var dto in request.Barbers.OrderBy(x => x.Id))
                     {
-                        var barber = new Barber
-                        {
-                            SalonId = salon.Id,
-                            PublicId = dto.Id,
-                            FullName = dto.Name.Trim(),
-                            Phone = NormalizePhone(dto.Phone),
-                            ExperienceYears = ExperienceYears(dto.Experience),
-                            ImageUrl = dto.Image,
-                            Rating = NormalizeRating(dto.Rating),
-                            IsActive = !dto.AccountStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
-                        };
+                        var normalizedPhone = NormalizePhone(dto.Phone);
+                        var barber = existingBarbers.FirstOrDefault(x => x.PublicId == dto.Id)
+                            ?? existingBarbers.FirstOrDefault(
+                                x => string.Equals(x.Phone, normalizedPhone, StringComparison.OrdinalIgnoreCase))
+                            ?? existingBarbers.FirstOrDefault(
+                                x => x.FullName.Equals(dto.Name, StringComparison.OrdinalIgnoreCase));
 
-                        db.Barbers.Add(barber);
+                        if (barber is null)
+                        {
+                            barber = new Barber
+                            {
+                                SalonId = salon.Id,
+                                PublicId = dto.Id,
+                                FullName = dto.Name.Trim(),
+                                Phone = normalizedPhone,
+                                ExperienceYears = ExperienceYears(dto.Experience),
+                                ImageUrl = dto.Image,
+                                Rating = NormalizeRating(dto.Rating),
+                                IsActive = !dto.AccountStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
+                            };
+
+                            db.Barbers.Add(barber);
+                            existingBarbers.Add(barber);
+                        }
+                        else
+                        {
+                            barber.PublicId = dto.Id;
+                            barber.FullName = dto.Name.Trim();
+                            barber.Phone = normalizedPhone;
+                            barber.ExperienceYears = ExperienceYears(dto.Experience);
+                            barber.ImageUrl = dto.Image;
+                            barber.Rating = NormalizeRating(dto.Rating);
+                            barber.IsActive = !dto.AccountStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase);
+
+                            db.BarberServices.RemoveRange(barber.Services);
+                            barber.Services.Clear();
+                            db.BarberWorkingHours.RemoveRange(barber.WorkingHours);
+                            barber.WorkingHours.Clear();
+                            db.BarberScheduleOverrides.RemoveRange(barber.ScheduleOverrides);
+                            barber.ScheduleOverrides.Clear();
+                            db.BarberLeaves.RemoveRange(barber.Leaves);
+                            barber.Leaves.Clear();
+                        }
+
                         await ApplyBarberServicesAsync(barber, dto.Specialties, cancellationToken);
                         ApplyWorkingHours(barber, dto.WorkingHours);
                         ApplyImportedAvailability(
@@ -513,6 +541,13 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
                                 dto.LeaveTo,
                                 dto.Note),
                             today);
+
+                        importedBarberIds.Add(barber.Id);
+                    }
+
+                    foreach (var stale in existingBarbers.Where(x => !importedBarberIds.Contains(x.Id)))
+                    {
+                        stale.IsActive = false;
                     }
 
                     await db.SaveChangesAsync(cancellationToken);
@@ -538,7 +573,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
                 outcome = new LegacyImportResponse(
                     true,
                     true,
-                    "Legacy Services and Barbers were migrated to SQL Server." + settingsMessage);
+                    "Legacy Services, Barbers and Settings were migrated to SQL Server." + settingsMessage);
             }
             catch (Exception ex)
             {
