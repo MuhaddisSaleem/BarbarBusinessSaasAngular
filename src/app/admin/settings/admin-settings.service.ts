@@ -103,7 +103,9 @@ export class AdminSettingsService {
 
 
     this.api?.changes$.subscribe(changed => {
-      if (changed === 'settings') this.refreshFromApi();
+      if (changed === 'settings' && this.api?.settingsSnapshot) {
+        this.settings = this.normalizeSettings(this.api.settingsSnapshot);
+      }
     });  }
 
   private readonly storageKey = 'royal-barbers.admin-settings.v1';
