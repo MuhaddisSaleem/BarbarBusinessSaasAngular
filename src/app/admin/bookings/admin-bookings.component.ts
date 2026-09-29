@@ -106,13 +106,13 @@ export class AdminBookingsComponent implements OnInit {
 
   get createTimeSlots(): string[] {
     const duration = this.walkInDuration;
-    if (!duration || !this.newBooking.barber) return [];
+    if (!duration || !this.newBooking.service) return [];
 
     const slots = this.slotsForDuration(duration, this.todayKey, true);
 
     return slots.filter(time =>
-      this.bookingService.isBarberSlotAvailable(
-        this.newBooking.barber,
+      this.bookingService.isWalkInSlotAvailable(
+        this.newBooking.service,
         this.todayKey,
         time,
         duration
@@ -135,11 +135,6 @@ export class AdminBookingsComponent implements OnInit {
         this.selectedBooking?.id
       )
     );
-  }
-
-  get createBarbers(): string[] {
-    if (!this.newBooking.service) return [];
-    return this.bookingService.availableBarbersForService(this.newBooking.service, this.todayKey);
   }
 
   get selectedWalkInServices() {
@@ -202,9 +197,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   onCreateServiceOrDateChange(): void {
-    if (!this.createBarbers.includes(this.newBooking.barber)) {
-      this.newBooking.barber = '';
-    }
+    this.newBooking.barber = '';
     this.newBooking.time = '';
   }
 
@@ -362,13 +355,24 @@ export class AdminBookingsComponent implements OnInit {
     this.createModalOpen = false;
   }
 
+  get canCreateWalkIn(): boolean {
+    const digits = this.newBooking.phone.replace(/\D/g, '');
+
+    return !!(
+      this.newBooking.customerName.trim()
+      && this.selectedWalkInServices.length
+      && this.newBooking.time
+      && (!digits || /^3\d{9}$/.test(digits))
+    );
+  }
+
   createBooking(): void {
     const form = this.newBooking;
     const digits = form.phone.replace(/\D/g, '');
     const services = this.selectedWalkInServices;
 
-    if (!form.customerName.trim() || !services.length || !form.barber || !form.time) {
-      this.showFeedback(false, 'Enter the customer name, select at least one service, a barber and a time.');
+    if (!form.customerName.trim() || !services.length || !form.time) {
+      this.showFeedback(false, 'Enter the customer name, select at least one service and choose an available time.');
       return;
     }
 
@@ -382,7 +386,7 @@ export class AdminBookingsComponent implements OnInit {
       phone: digits ? '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3) : '',
       service: services.map(service => service.name).join(', '),
       duration: this.walkInDuration,
-      barber: form.barber,
+      barber: '',
       date: this.todayKey,
       time: form.time,
       amount: this.walkInAmount,
