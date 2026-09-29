@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { firstValueFrom, forkJoin, Observable } from 'rxjs';
+import { firstValueFrom, forkJoin, Observable, Subject, tap } from 'rxjs';
 import type { AdminService, ServiceMutationResult } from '../admin/services/admin-service.service';
 import type { AdminBarber, BarberMutationResult } from '../admin/barbers/admin-barber.service';
 import type { AdminSettings, SettingsSaveResult } from '../admin/settings/admin-settings.service';
@@ -28,26 +28,46 @@ export class CatalogApiService {
   barberSnapshot: AdminBarber[] = [];
   settingsSnapshot: AdminSettings | null = null;
 
-  constructor(private readonly http: HttpClient) {}
+  private readonly changeSubject = new Subject<'services' | 'barbers' | 'settings'>();
+  readonly changes$ = this.changeSubject.asObservable();
+  private readonly channel =
+    typeof BroadcastChannel !== 'undefined'
+      ? new BroadcastChannel('barberflow-catalog-sync')
+      : null;
+
+  constructor(private readonly http: HttpClient) {
+    if (this.channel) {
+      this.channel.onmessage = event => {
+        const scope = event.data as 'services' | 'barbers' | 'settings';
+        if (scope === 'services' || scope === 'barbers' || scope === 'settings') {
+          this.changeSubject.next(scope);
+        }
+      };
+    }
+  }
 
   getServices(): Observable<AdminService[]> {
     return this.http.get<AdminService[]>(this.servicesUrl);
   }
 
   addService(service: Omit<AdminService, 'id'>): Observable<ApiMutationResult<AdminService>> {
-    return this.http.post<ApiMutationResult<AdminService>>(this.servicesUrl, service);
+    return this.http.post<ApiMutationResult<AdminService>>(this.servicesUrl, service)
+      .pipe(tap(result => { if (result.success) this.announce('services'); }));
   }
 
   updateService(id: number, service: Omit<AdminService, 'id'>): Observable<ApiMutationResult<AdminService>> {
-    return this.http.put<ApiMutationResult<AdminService>>(this.servicesUrl + '/' + id, service);
+    return this.http.put<ApiMutationResult<AdminService>>(this.servicesUrl + '/' + id, service)
+      .pipe(tap(result => { if (result.success) this.announce('services'); }));
   }
 
   toggleServiceStatus(id: number): Observable<ApiMutationResult<AdminService>> {
-    return this.http.patch<ApiMutationResult<AdminService>>(this.servicesUrl + '/' + id + '/status', {});
+    return this.http.patch<ApiMutationResult<AdminService>>(this.servicesUrl + '/' + id + '/status', {})
+      .pipe(tap(result => { if (result.success) this.announce('services'); }));
   }
 
   deleteService(id: number): Observable<ServiceMutationResult> {
-    return this.http.delete<ServiceMutationResult>(this.servicesUrl + '/' + id);
+    return this.http.delete<ServiceMutationResult>(this.servicesUrl + '/' + id)
+      .pipe(tap(result => { if (result.success) this.announce('services'); }));
   }
 
   getBarbers(): Observable<AdminBarber[]> {
@@ -55,7 +75,8 @@ export class CatalogApiService {
   }
 
   addBarber(barber: Omit<AdminBarber, 'id'>): Observable<ApiMutationResult<AdminBarber>> {
-    return this.http.post<ApiMutationResult<AdminBarber>>(this.barbersUrl, barber);
+    return this.http.post<ApiMutationResult<AdminBarber>>(this.barbersUrl, barber)
+      .pipe(tap(result => { if (result.success) this.announce('barbers'); }));
   }
 
   updateBarber(
@@ -72,14 +93,14 @@ export class CatalogApiService {
       leaveFrom: current?.leaveFrom ?? null,
       leaveTo: current?.leaveTo ?? null,
       note: current?.note ?? ''
-    });
+    }).pipe(tap(result => { if (result.success) this.announce('barbers'); }));
   }
 
   updateBarberAvailability(id: number, availability: string): Observable<ApiMutationResult<AdminBarber>> {
     return this.http.patch<ApiMutationResult<AdminBarber>>(
       this.barbersUrl + '/' + id + '/availability',
       { availability }
-    );
+    ).pipe(tap(result => { if (result.success) this.announce('barbers'); }));
   }
 
   updateBarberLeave(
@@ -94,15 +115,17 @@ export class CatalogApiService {
       leaveFrom,
       leaveTo,
       note
-    });
+    }).pipe(tap(result => { if (result.success) this.announce('barbers'); }));
   }
 
   toggleBarberStatus(id: number): Observable<ApiMutationResult<AdminBarber>> {
-    return this.http.patch<ApiMutationResult<AdminBarber>>(this.barbersUrl + '/' + id + '/status', {});
+    return this.http.patch<ApiMutationResult<AdminBarber>>(this.barbersUrl + '/' + id + '/status', {})
+      .pipe(tap(result => { if (result.success) this.announce('barbers'); }));
   }
 
   deleteBarber(id: number): Observable<BarberMutationResult> {
-    return this.http.delete<BarberMutationResult>(this.barbersUrl + '/' + id);
+    return this.http.delete<BarberMutationResult>(this.barbersUrl + '/' + id)
+      .pipe(tap(result => { if (result.success) this.announce('barbers'); }));
   }
 
   getSettings(): Observable<AdminSettings> {
@@ -110,11 +133,13 @@ export class CatalogApiService {
   }
 
   saveSettings(settings: AdminSettings): Observable<ApiMutationResult<AdminSettings>> {
-    return this.http.put<ApiMutationResult<AdminSettings>>(this.settingsUrl, settings);
+    return this.http.put<ApiMutationResult<AdminSettings>>(this.settingsUrl, settings)
+      .pipe(tap(result => { if (result.success) this.announce('settings'); }));
   }
 
   resetSettings(): Observable<ApiMutationResult<AdminSettings>> {
-    return this.http.post<ApiMutationResult<AdminSettings>>(this.settingsUrl + '/reset', {});
+    return this.http.post<ApiMutationResult<AdminSettings>>(this.settingsUrl + '/reset', {})
+      .pipe(tap(result => { if (result.success) this.announce('settings'); }));
   }
 
   importLegacyCatalog(payload: {
@@ -135,5 +160,9 @@ export class CatalogApiService {
     this.serviceSnapshot = state.services;
     this.barberSnapshot = state.barbers;
     this.settingsSnapshot = state.settings;
+  }
+
+  private announce(scope: 'services' | 'barbers' | 'settings'): void {
+    this.channel?.postMessage(scope);
   }
 }
