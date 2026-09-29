@@ -246,7 +246,7 @@ let browser, activePage;
 
     const barberContainerSelector=width>=768?'.barbers-table tbody tr':'.mobile-barber-card';
     const modalBarber=()=>page.locator(barberContainerSelector).filter({hasText:'Modal QA Barber'});
-    await modalBarber().getByRole('button',{name:'Edit'}).click();
+    await modalBarber().locator('.edit-action').click();
     const edit=page.locator('.edit-modal');
     assert.equal(await edit.locator('input[type=file]').count(),1,'Edit Barber must contain Change Photo');
     await edit.locator('input[type=file]').setInputFiles({name:'qa-replacement.png',mimeType:'image/png',buffer:await photo('#aa5522')});
@@ -262,7 +262,7 @@ let browser, activePage;
     await modalBarber().locator('.account-status').filter({hasText:'Active'}).waitFor();
     assert.equal(apiBarbers.find(x=>x.name==='Modal QA Barber')?.accountStatus,'Active');scenarios++;
 
-    await modalBarber().getByRole('button',{name:'Delete'}).click();
+    await modalBarber().locator('.delete-action').click();
     const deleteDialog=page.locator('.delete-dialog');
     await deleteDialog.waitFor();
     await deleteDialog.getByRole('button',{name:'Delete Barber'}).click();
