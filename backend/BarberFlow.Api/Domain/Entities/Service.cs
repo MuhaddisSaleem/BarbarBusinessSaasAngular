@@ -7,6 +7,7 @@ public sealed class Service : BaseEntity
     public Guid SalonId { get; set; }
     public Salon Salon { get; set; } = null!;
 
+    public int PublicId { get; set; }
     public required string Name { get; set; }
     public string? Description { get; set; }
     public int DurationMinutes { get; set; }
