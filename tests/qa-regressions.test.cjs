@@ -119,10 +119,10 @@ test('invalid calendar dates and 12-hour times cannot roll into valid bookings',
 
 test('walk-ins start at the current time without a time selection', () => {
   const f=fixture(),b=f.barber(),s=f.service();f.settings.settings.allowSameDayBooking=false;
-  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.notes='Front desk walk-in';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
-  assert.equal(f.admin.currentWalkInTime,'4:30 PM');equal(f.admin.createBarbers,[b.name]);
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  assert.equal(f.admin.currentWalkInTime,'4:30 PM');equal(f.admin.createBarbers,[b.name]);assert.equal(f.admin.walkInBarberOptions[0].availableNow,true);
   f.admin.newBooking.barber=b.name;f.admin.createBooking();
-  assert.equal(f.bookings.all.length,1);assert.equal(f.bookings.all[0].source,'Walk-in');assert.equal(f.bookings.all[0].status,'Confirmed');assert.equal(f.bookings.all[0].phone,'');assert.equal(f.bookings.all[0].barber,b.name);assert.equal(f.bookings.all[0].time,'4:30 PM');assert.equal(f.bookings.all[0].notes,'Front desk walk-in');
+  assert.equal(f.bookings.all.length,1);assert.equal(f.bookings.all[0].source,'Walk-in');assert.equal(f.bookings.all[0].status,'Confirmed');assert.equal(f.bookings.all[0].phone,'');assert.equal(f.bookings.all[0].barber,b.name);assert.equal(f.bookings.all[0].time,'4:30 PM');assert.equal(f.bookings.all[0].notes,'');
 });
 
 test('walk-in service selection carries correct duration and amount', () => {
@@ -133,10 +133,28 @@ test('walk-in service selection carries correct duration and amount', () => {
   const created=f.bookings.all[0];assert.equal(created.service,'Haircut');assert.equal(created.duration,40);assert.equal(created.amount,600);assert.equal(created.time,'4:30 PM');
 });
 
-test('walk-in barber select only shows eligible barbers available right now', () => {
+test('walk-in barber select prefers barbers available now over short-wait barbers', () => {
   const f=fixture(),busy=f.barber({specialties:['Haircut']}),free=f.barber({specialties:['Haircut']}),beard=f.barber({specialties:['Beard']}),s=f.service({name:'Haircut',duration:40});
-  f.booking({barber:busy.name,time:'5:00 PM',duration:40});f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  f.booking({barber:busy.name,time:'4:00 PM',duration:35});f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   equal(f.admin.createBarbers,[free.name]);assert.equal(f.admin.createBarbers.includes(busy.name),false);assert.equal(f.admin.createBarbers.includes(beard.name),false);
+});
+
+test('when all eligible barbers are busy, walk-in suggests the shortest wait within ten minutes', () => {
+  const f=fixture(),tenMin=f.barber(),tooLong=f.barber(),s=f.service({duration:20});
+  f.booking({barber:tenMin.name,time:'4:00 PM',duration:40});
+  f.booking({barber:tooLong.name,time:'4:00 PM',duration:41});
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Waiting Customer';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  equal(f.admin.createBarbers,[tenMin.name]);
+  assert.equal(f.admin.walkInBarberOptions[0].waitMinutes,10);assert.equal(f.admin.walkInBarberOptions[0].startTime,'4:40 PM');assert.equal(f.admin.walkInBarberOptions[0].availableNow,false);
+  f.admin.newBooking.barber=tenMin.name;f.admin.onCreateBarberChange();assert.equal(f.admin.newBooking.time,'4:40 PM');f.admin.createBooking();
+  assert.equal(f.bookings.all[0].barber,tenMin.name);assert.equal(f.bookings.all[0].time,'4:40 PM');
+});
+
+test('walk-in shows no barber when every eligible barber remains busy beyond ten minutes', () => {
+  const f=fixture(),b=f.barber(),s=f.service({duration:20});
+  f.booking({barber:b.name,time:'4:00 PM',duration:41});
+  f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  assert.equal(f.admin.walkInBarberOptions.length,0);assert.equal(f.admin.createBarbers.length,0);
 });
 
 test('walk-in barber select respects current working hours and leave', () => {
