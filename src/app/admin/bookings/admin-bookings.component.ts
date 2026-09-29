@@ -6,12 +6,14 @@ import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus } from './admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 
+import { WalkInBookingComponent } from './walk-in-booking.component';
+
 type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
 
 @Component({
   selector: 'app-admin-bookings',
   standalone: true,
-  imports: [CommonModule, FormsModule, AdminShellComponent],
+  imports: [CommonModule, FormsModule, AdminShellComponent, WalkInBookingComponent],
   templateUrl: './admin-bookings.component.html',
   styleUrl: './admin-bookings.component.scss'
 })
@@ -25,6 +27,7 @@ export class AdminBookingsComponent implements OnInit {
   selectedBooking: AdminBooking | null = null;
   drawerOpen = false;
   createModalOpen = false;
+  walkInModalOpen = false;
   cancelDialogOpen = false;
   feedbackMessage = '';
   feedbackType: 'success' | 'error' = 'success';
@@ -306,6 +309,17 @@ export class AdminBookingsComponent implements OnInit {
     const result = this.bookingService.cancel(this.selectedBooking.id);
     this.cancelDialogOpen = false;
     this.showFeedback(result.success, result.message);
+  }
+
+  onWalkInSaved(booking: AdminBooking): void {
+    this.walkInModalOpen = false;
+    this.activeTab = 'today';
+    this.searchTerm = '';
+    this.selectedBarber = 'All';
+    this.selectedService = 'All';
+    this.selectedDate = '';
+    this.openBooking(booking);
+    this.showFeedback(true, 'Walk-in booking created.');
   }
 
   openCreateModal(): void {

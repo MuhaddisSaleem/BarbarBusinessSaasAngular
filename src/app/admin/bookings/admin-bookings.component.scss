@@ -13,7 +13,7 @@ button,input,select,textarea { font:inherit; }
 .page-heading p { margin:6px 0 0; color:#929da1; font-size:11px; }
 .eyebrow { color:#a98547; font-size:8px; font-weight:800; letter-spacing:1.7px; }
 
-.create-booking-btn {
+.create-booking-btn, .walk-in-btn {
   min-height:40px; display:inline-flex; align-items:center; gap:7px; padding:0 14px;
   border:1px solid #d6a849; border-radius:8px; background:linear-gradient(145deg,#ffd879,#e9ad45);
   color:#111; font-size:10px; font-weight:800; cursor:pointer;
@@ -209,7 +209,7 @@ button,input,select,textarea { font:inherit; }
 @media (max-width:575.98px) {
   .bookings-page { padding:20px 10px 35px; }
   .page-heading h2 { font-size:24px; }
-  .create-booking-btn { width:100%; justify-content:center; }
+  .create-booking-btn, .walk-in-btn { width:100%; justify-content:center; }
   .booking-tabs { padding:0 8px; }
   .booking-tabs button { padding:0 9px; }
   .filter-bar { padding:12px 10px; }

@@ -1,0 +1,43 @@
+<div class="walk-in-backdrop" (click)="close()"></div>
+<section class="walk-in-modal" role="dialog" aria-modal="true" aria-labelledby="walk-in-title">
+  <header>
+    <div><span class="eyebrow">AT THE SALON · {{ todayLabel }}</span><h2 id="walk-in-title">Walk-in customer</h2></div>
+    <button type="button" class="close-button" aria-label="Close walk-in booking" (click)="close()">×</button>
+  </header>
+  <form (ngSubmit)="submit()" novalidate>
+    <p class="intro">Choose services and a barber. We’ll find the earliest time that fits.</p>
+    <div class="customer-fields">
+      <label>Customer name <span>*</span>
+        <input name="walkInName" [(ngModel)]="customerName" autocomplete="name" placeholder="Enter customer name" maxlength="100" required>
+      </label>
+      <label>Pakistan mobile <small>(optional)</small>
+        <input name="walkInPhone" [(ngModel)]="phone" type="tel" autocomplete="tel" placeholder="0300 1234567" maxlength="24">
+      </label>
+    </div>
+    <fieldset>
+      <legend>Services <span>*</span></legend>
+      <div class="service-options">
+        <label class="service-option" *ngFor="let service of bookingService.walkInServices; trackBy: trackService" [class.selected]="serviceIds.includes(service.id)">
+          <input type="checkbox" [checked]="serviceIds.includes(service.id)" (change)="toggleService(service.id)">
+          <span><strong>{{ service.name }}</strong><small>{{ service.duration }} min · Rs. {{ service.amount | number }}</small></span>
+        </label>
+      </div>
+      <p class="empty" *ngIf="!bookingService.walkInServices.length">Add an active service before creating a walk-in booking.</p>
+    </fieldset>
+    <div class="availability-heading"><h3>Next available with each barber</h3><button type="button" class="refresh-button" (click)="refresh()">Refresh</button></div>
+    <div class="slot-options" *ngIf="summary">
+      <button type="button" class="walk-in-slot" *ngFor="let slot of slots" (click)="chooseSlot(slot)"
+        [class.selected]="selectedSlot === slot" [attr.aria-pressed]="selectedSlot === slot">
+        <span><strong>{{ slot.barber }}</strong><small>Today · {{ slot.time }} – {{ slot.endTime }}</small></span>
+        <i class="bi" [ngClass]="selectedSlot === slot ? 'bi-check-circle-fill' : 'bi-circle'" aria-hidden="true"></i>
+      </button>
+    </div>
+    <p class="empty" *ngIf="!summary">Select one or more services to see available barbers.</p>
+    <p class="empty" *ngIf="summary && !slots.length">No eligible barber has enough free time today within salon and working hours. Check shifts, leave and existing appointments, or use New Booking for another date.</p>
+    <label class="notes-label">Notes <small>(optional)</small><textarea name="walkInNotes" [(ngModel)]="notes" rows="2" maxlength="500" placeholder="Customer preferences or requests"></textarea></label>
+    <div class="walk-in-summary" *ngIf="summary"><span>{{ summary.duration }} minutes</span><strong>Rs. {{ summary.amount | number }}</strong></div>
+    <p class="confirmation-note">Saved as a confirmed salon booking. Mark it completed after the service.</p>
+    <p class="walk-in-error" role="alert" *ngIf="error">{{ error }}</p>
+    <button type="submit" class="submit-walk-in" [disabled]="saving || !selectedSlot || !customerName.trim()">{{ saving ? 'Saving…' : 'Create walk-in booking' }}</button>
+  </form>
+</section>

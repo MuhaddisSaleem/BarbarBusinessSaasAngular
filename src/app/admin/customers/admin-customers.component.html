@@ -85,7 +85,7 @@
                   <span class="customer-avatar">{{ customer.name.slice(0,1) }}</span>
                   <div>
                     <strong>{{ customer.name }}</strong>
-                    <small>{{ customer.phone }}</small>
+                    <small>{{ customer.phone || 'No phone provided' }}</small>
                   </div>
                 </div>
               </td>
@@ -126,7 +126,7 @@
               <div class="d-flex align-items-start justify-content-between gap-2">
                 <div>
                   <strong>{{ customer.name }}</strong>
-                  <small>{{ customer.phone }}</small>
+                  <small>{{ customer.phone || 'No phone provided' }}</small>
                 </div>
 
                 <span class="type-pill" [class.returning]="customer.customerType === 'Returning'">
@@ -176,11 +176,11 @@
           <span class="customer-avatar large">{{ selectedCustomer.name.slice(0,1) }}</span>
           <div>
             <strong>{{ selectedCustomer.name }}</strong>
-            <span>{{ selectedCustomer.phone }}</span>
+            <span>{{ selectedCustomer.phone || 'No phone provided' }}</span>
           </div>
         </div>
 
-        <div class="contact-actions d-flex gap-2">
+        <div class="contact-actions d-flex gap-2" *ngIf="selectedCustomer.phone">
           <a class="contact-btn flex-fill" [href]="whatsappLink(selectedCustomer.phone)" target="_blank" rel="noopener">
             <i class="bi bi-whatsapp"></i> WhatsApp
           </a>
