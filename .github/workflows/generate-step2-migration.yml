@@ -1,0 +1,44 @@
+name: Generate Step 2 booking migration
+
+on:
+  push:
+    branches:
+      - codex/bookings-api-integration
+    paths:
+      - ".github/workflows/generate-step2-migration.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/bookings-api-integration
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - run: dotnet tool restore
+      - run: dotnet restore backend/BarberFlow.Api/BarberFlow.Api.csproj
+
+      - name: Generate booking API migration
+        run: |
+          if ls backend/BarberFlow.Api/Data/Migrations/*_BookingApiPersistence.cs 1> /dev/null 2>&1; then
+            echo "BookingApiPersistence migration already exists."
+            exit 0
+          fi
+
+          dotnet ef migrations add BookingApiPersistence \
+            --project backend/BarberFlow.Api \
+            --startup-project backend/BarberFlow.Api \
+            --output-dir Data/Migrations
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/BarberFlow.Api/Data/Migrations
+          git commit -m "feat: add booking API persistence migration"
+          git push origin HEAD:codex/bookings-api-integration
