@@ -138,6 +138,7 @@ export class AdminServiceService {
           this.services = [...this.services.filter(existing => existing.id !== item.id), item]
             .sort((a, b) => a.id - b.id);
           this.api!.serviceSnapshot = this.services.map(service => ({ ...service }));
+          this.barberService.refreshFromStorage();
           this.notificationService.add({
             type: 'system',
             title: 'Service added',
@@ -265,6 +266,13 @@ export class AdminServiceService {
     if (!this.persist()) {
       this.services = this.services.filter(item => item.id !== nextId);
       return { success: false, message: 'Could not save this service locally. Try a smaller image.' };
+    }
+
+    const specialtyResult = this.barberService.addSpecialty(next.name);
+    if (!specialtyResult.success) {
+      this.services = this.services.filter(item => item.id !== nextId);
+      this.persist();
+      return specialtyResult;
     }
 
     this.notificationService.add({
