@@ -1,5 +1,5 @@
 name: Step 2 full validation
-# SQL Server schema corrected; rerun full integration validation.
+# SQL Server schema and transaction strategy corrected; rerun full integration validation.
 
 on:
   push:
