@@ -120,7 +120,7 @@ test('invalid calendar dates and 12-hour times cannot roll into valid bookings',
 test('walk-ins can book today with explicit service barber and time selection', () => {
   const f=fixture(),b=f.barber(),s=f.service();f.settings.settings.allowSameDayBooking=false;
   f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
-  assert.deepEqual(f.admin.createBarbers,[b.name]);assert.equal(f.admin.createTimeSlots.length,0);
+  equal(f.admin.createBarbers,[b.name]);assert.equal(f.admin.createTimeSlots.length,0);
   f.admin.newBooking.barber=b.name;f.admin.onCreateBarberChange();assert.ok(f.admin.createTimeSlots.includes('5:00 PM'));
   f.admin.newBooking.time='5:00 PM';f.admin.createBooking();
   assert.equal(f.bookings.all.length,1);assert.equal(f.bookings.all[0].source,'Walk-in');assert.equal(f.bookings.all[0].status,'Confirmed');assert.equal(f.bookings.all[0].phone,'');assert.equal(f.bookings.all[0].barber,b.name);
@@ -137,7 +137,7 @@ test('walk-in service selection carries correct duration and amount', () => {
 test('walk-in barber select only shows eligible barbers for the selected service', () => {
   const f=fixture(),hair=f.barber({specialties:['Haircut']}),beard=f.barber({specialties:['Beard']});
   f.service({name:'Haircut'});f.service({name:'Beard'});f.admin.openCreateModal();f.admin.newBooking.service='Haircut';f.admin.onCreateServiceOrDateChange();
-  assert.deepEqual(f.admin.createBarbers,[hair.name]);assert.equal(f.admin.createBarbers.includes(beard.name),false);
+  equal(f.admin.createBarbers,[hair.name]);assert.equal(f.admin.createBarbers.includes(beard.name),false);
 });
 
 test('walk-in time select excludes overlaps for the selected barber', () => {
