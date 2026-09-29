@@ -40,7 +40,7 @@ export class CatalogApiService {
       this.channel.onmessage = event => {
         const scope = event.data as 'services' | 'barbers' | 'settings';
         if (scope === 'services' || scope === 'barbers' || scope === 'settings') {
-          this.changeSubject.next(scope);
+          void this.refreshScope(scope);
         }
       };
     }
@@ -160,6 +160,25 @@ export class CatalogApiService {
     this.serviceSnapshot = state.services;
     this.barberSnapshot = state.barbers;
     this.settingsSnapshot = state.settings;
+  }
+
+  async refreshAllAndNotify(): Promise<void> {
+    await this.preload();
+    this.changeSubject.next('services');
+    this.changeSubject.next('barbers');
+    this.changeSubject.next('settings');
+  }
+
+  private async refreshScope(scope: 'services' | 'barbers' | 'settings'): Promise<void> {
+    if (scope === 'services') {
+      this.serviceSnapshot = await firstValueFrom(this.getServices());
+    } else if (scope === 'barbers') {
+      this.barberSnapshot = await firstValueFrom(this.getBarbers());
+    } else {
+      this.settingsSnapshot = await firstValueFrom(this.getSettings());
+    }
+
+    this.changeSubject.next(scope);
   }
 
   private announce(scope: 'services' | 'barbers' | 'settings'): void {
