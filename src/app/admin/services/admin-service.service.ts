@@ -38,7 +38,11 @@ export class AdminServiceService {
       window.localStorage.removeItem(this.storageKey);
       window.localStorage.removeItem(this.demoCleanupKey);
     }
-  }
+
+
+    this.api?.changes$.subscribe(changed => {
+      if (changed === 'services') this.refreshFromApi();
+    });  }
 
   private readonly storageKey = 'royal-barbers.admin-services.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-services.demo-cleaned.v1';
