@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using BarberFlow.Api.Contracts.Bookings;
 using BarberFlow.Api.Data;
 using BarberFlow.Api.Domain.Entities;
@@ -238,6 +239,9 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
             .Select(x => x.Id)
             .ToListAsync(cancellationToken);
 
+        if (serviceNames.Count > 0 && serviceIds.Count != serviceNames.Count)
+            return new(false, "One or more selected services are not available.", []);
+
         var candidates = await db.Barbers
             .Where(x => x.SalonId == salon.Id && x.IsActive
                 && (string.IsNullOrWhiteSpace(request.Barber) || x.FullName == request.Barber))
@@ -337,8 +341,10 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
 
         if (!string.IsNullOrWhiteSpace(normalizedPhone))
         {
-            customer = await db.Customers.FirstOrDefaultAsync(
-                x => x.SalonId == salon.Id && x.Phone == normalizedPhone, cancellationToken);
+            customer = db.Customers.Local.FirstOrDefault(
+                x => x.SalonId == salon.Id && x.Phone == normalizedPhone)
+                ?? await db.Customers.FirstOrDefaultAsync(
+                    x => x.SalonId == salon.Id && x.Phone == normalizedPhone, cancellationToken);
 
             if (customer is null)
             {
@@ -431,7 +437,8 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
         bool allowWalkInCurrentMinute,
         CancellationToken cancellationToken)
     {
-        var today = DateOnly.FromDateTime(DateTime.Now);
+        var salonNow = GetSalonNow(salon);
+        var today = DateOnly.FromDateTime(salonNow.DateTime);
         if (date < today)
             return (false, "The selected appointment date has already passed.");
 
@@ -454,7 +461,7 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
 
         if (date == today)
         {
-            var now = TimeOnly.FromDateTime(DateTime.Now);
+            var now = TimeOnly.FromDateTime(salonNow.DateTime);
             if (allowWalkInCurrentMinute ? time < now : time <= now)
                 return (false, "The selected appointment time has already passed.");
         }
@@ -537,7 +544,29 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
         => value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
 
     private static bool TryParseTime(string value, out TimeOnly time)
-        => TimeOnly.TryParseExact(value, ["h:mm tt", "hh:mm tt"], out time);
+        => TimeOnly.TryParseExact(
+            value,
+            ["h:mm tt", "hh:mm tt"],
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out time);
+
+    private static DateTimeOffset GetSalonNow(Salon salon)
+    {
+        try
+        {
+            var zone = TimeZoneInfo.FindSystemTimeZoneById(salon.TimeZone);
+            return TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return DateTimeOffset.UtcNow;
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return DateTimeOffset.UtcNow;
+        }
+    }
 
     private static string NormalizePhone(string? value)
     {
