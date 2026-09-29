@@ -243,14 +243,32 @@ let browser, activePage;
     await page.screenshot({path:`test-results/add-barber-${width}.png`,fullPage:true});
     await add.locator('.submit-btn').click();await add.waitFor({state:'hidden'});
     assert.equal(apiBarbers.length,3);scenarios++;
-    await page.locator('.edit-action:visible').first().click();
+
+    const barberContainerSelector=width>=768?'.barbers-table tbody tr':'.mobile-barber-card';
+    const modalBarber=()=>page.locator(barberContainerSelector).filter({hasText:'Modal QA Barber'});
+    await modalBarber().getByRole('button',{name:'Edit'}).click();
     const edit=page.locator('.edit-modal');
     assert.equal(await edit.locator('input[type=file]').count(),1,'Edit Barber must contain Change Photo');
     await edit.locator('input[type=file]').setInputFiles({name:'qa-replacement.png',mimeType:'image/png',buffer:await photo('#aa5522')});
     await edit.locator('.manual-face-confirm input').check();
     await page.screenshot({path:`test-results/edit-barber-${width}.png`,fullPage:true});
     await edit.locator('.submit-btn').click();await edit.waitFor({state:'hidden'});
-    assert.ok(apiBarbers[0].image.startsWith('data:image/'));scenarios++;
+    assert.ok(apiBarbers.find(x=>x.name==='Modal QA Barber')?.image.startsWith('data:image/'));scenarios++;
+
+    await modalBarber().getByRole('button',{name:'Deactivate'}).click();
+    await modalBarber().locator('.account-status').filter({hasText:'Inactive'}).waitFor();
+    assert.equal(apiBarbers.find(x=>x.name==='Modal QA Barber')?.accountStatus,'Inactive');
+    await modalBarber().getByRole('button',{name:'Activate'}).click();
+    await modalBarber().locator('.account-status').filter({hasText:'Active'}).waitFor();
+    assert.equal(apiBarbers.find(x=>x.name==='Modal QA Barber')?.accountStatus,'Active');scenarios++;
+
+    await modalBarber().getByRole('button',{name:'Delete'}).click();
+    const deleteDialog=page.locator('.delete-dialog');
+    await deleteDialog.waitFor();
+    await deleteDialog.getByRole('button',{name:'Delete Barber'}).click();
+    await deleteDialog.waitFor({state:'hidden'});
+    assert.equal(apiBarbers.some(x=>x.name==='Modal QA Barber'),false);scenarios++;
+
     // Isolated fixture: public tab starts with a short shift and no bookings.
     apiBarbers[0].workingHours='9 AM - 5 PM';
     apiBookings=[];
