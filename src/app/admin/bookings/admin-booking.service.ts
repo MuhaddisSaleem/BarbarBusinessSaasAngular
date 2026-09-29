@@ -64,6 +64,14 @@ export class AdminBookingService {
       .map(barber => barber.name);
   }
 
+  availableWalkInBarbers(service: string, dateKey: string, time: string, duration: number): string[] {
+    return this.walkInBarberCandidates(service, dateKey, time, duration).map(barber => barber.name);
+  }
+
+  isWalkInSlotAvailable(service: string, dateKey: string, time: string, duration: number): boolean {
+    return this.walkInBarberCandidates(service, dateKey, time, duration).length > 0;
+  }
+
   availableBarbersForBooking(booking: AdminBooking, dateKey: string): string[] {
     const services = this.bookingServiceNames(booking);
 
@@ -420,21 +428,17 @@ export class AdminBookingService {
     const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration, true);
     if (!scheduleValidation.success) return scheduleValidation;
 
-    const barberId = this.barberIdByName(input.barber);
-    if (!barberId || !this.barberService.isAvailableOnDate(barberId, input.date)) {
-      return { success: false, message: input.barber + ' is not available today.' };
-    }
+    // Resolve the barber at confirmation time so the admin does not have to make
+    // a redundant manual choice. This also protects against a slot being taken
+    // by another booking after the modal was opened.
+    const candidates = this.walkInBarberCandidates(input.service, input.date, input.time, input.duration);
+    const assignedBarber = candidates[0];
 
-    if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(input))) {
-      return { success: false, message: input.barber + ' does not provide all selected services.' };
-    }
-
-    if (!this.barberService.isWorkingAt(barberId, input.time, input.duration)) {
-      return { success: false, message: input.barber + ' is outside their configured working hours at this time.' };
-    }
-
-    if (this.hasConflict(input.barber, input.date, input.time, input.duration)) {
-      return { success: false, message: input.barber + ' already has an overlapping appointment at this time.' };
+    if (!assignedBarber) {
+      return {
+        success: false,
+        message: 'No eligible barber is available for all selected services at this time.'
+      };
     }
 
     const nextId = Math.max(0, ...this.bookings.map(item => item.id)) + 1;
@@ -442,6 +446,7 @@ export class AdminBookingService {
     this.bookings = [
       {
         ...input,
+        barber: assignedBarber.name,
         id: nextId,
         code: this.bookingCode(nextId),
         status: 'Confirmed',
@@ -465,7 +470,10 @@ export class AdminBookingService {
       url: '/admin/bookings?booking=' + created.id
     });
 
-    return { success: true, message: 'Walk-in customer booked successfully.' };
+    return {
+      success: true,
+      message: 'Walk-in booked with ' + created.barber + ' at ' + created.time + '.'
+    };
   }
 
   addBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
@@ -587,6 +595,33 @@ export class AdminBookingService {
     }
 
     return { success: true, message: '' };
+  }
+
+  private walkInBarberCandidates(service: string, dateKey: string, time: string, duration: number) {
+    const services = this.serviceNames(service);
+
+    return this.barberService.active
+      .filter(barber =>
+        this.barberService.isAvailableOnDate(barber.id, dateKey)
+        && this.barberService.supportsServices(barber.id, services)
+        && this.barberService.isWorkingAt(barber.id, time, duration)
+        && !this.hasConflict(barber.name, dateKey, time, duration)
+      )
+      .sort((a, b) => {
+        const aLoad = this.bookings.filter(item =>
+          item.status !== 'Cancelled' && item.barber === a.name && item.date === dateKey
+        ).length;
+        const bLoad = this.bookings.filter(item =>
+          item.status !== 'Cancelled' && item.barber === b.name && item.date === dateKey
+        ).length;
+
+        if (aLoad !== bLoad) return aLoad - bLoad;
+
+        const ratingDifference = (Number(b.rating) || 0) - (Number(a.rating) || 0);
+        if (ratingDifference) return ratingDifference;
+
+        return a.id - b.id;
+      });
   }
 
   private barberIdByName(name: string): number {
