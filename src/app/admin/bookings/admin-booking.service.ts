@@ -3,6 +3,7 @@ import { AdminBarberService } from '../barbers/admin-barber.service';
 import { AdminServiceService } from '../services/admin-service.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 import { NotificationService } from '../notifications/notification.service';
+import { BookingApiService } from '../../core/booking-api.service';
 
 export type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
 
@@ -45,8 +46,19 @@ export class AdminBookingService {
     private readonly barberService: AdminBarberService,
     private readonly serviceService: AdminServiceService,
     private readonly settingsService: AdminSettingsService,
-    private readonly notificationService: NotificationService
-  ) {}
+    private readonly notificationService: NotificationService,
+    private readonly api?: BookingApiService
+  ) {
+    if (this.api) {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(this.storageKey);
+        window.localStorage.removeItem(this.demoCleanupKey);
+      }
+      this.refreshFromApi();
+    } else {
+      this.bookings = this.loadBookings();
+    }
+  }
 
   get barbers(): string[] {
     return this.barberService.active.map(barber => barber.name);
@@ -159,10 +171,25 @@ export class AdminBookingService {
 
   private readonly storageKey = 'royal-barbers.admin-bookings.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-bookings.demo-cleaned.v1';
-  private bookings: AdminBooking[] = this.loadBookings();
+  private bookings: AdminBooking[] = [];
 
   refreshFromStorage(): void {
+    if (this.api) {
+      this.refreshFromApi();
+      return;
+    }
     this.bookings = this.loadBookings();
+  }
+
+  refreshFromApi(): void {
+    if (!this.api) return;
+
+    this.api.getAll().subscribe({
+      next: bookings => {
+        this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+      },
+      error: error => this.notifyApiError('Could not load bookings from the API.', error)
+    });
   }
 
   get all(): AdminBooking[] {
@@ -755,6 +782,7 @@ export class AdminBookingService {
   }
 
   private persist(): boolean {
+    if (this.api) return true;
     if (typeof window === 'undefined') return true;
 
     try {
@@ -763,6 +791,34 @@ export class AdminBookingService {
     } catch {
       return false;
     }
+  }
+
+  private normalizeBooking(item: AdminBooking): AdminBooking {
+    return {
+      ...item,
+      id: Number(item.id),
+      duration: Number(item.duration) || 0,
+      amount: Number(item.amount) || 0,
+      groupSize: Number(item.groupSize) || 1,
+      status: this.isBookingStatus(item.status) ? item.status : 'Pending',
+      source: item.source === 'Walk-in' ? 'Walk-in' : (item.source === 'Admin' ? 'Admin' : 'Online'),
+      notes: item.notes || '',
+      serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
+      serviceAddress: item.serviceAddress || '',
+      specialService: item.specialService || '',
+      specialServiceAmount: Number(item.specialServiceAmount) || 0
+    };
+  }
+
+  private notifyApiError(message: string, error: unknown): void {
+    const apiMessage = (error as any)?.error?.message;
+    this.notificationService.add({
+      type: 'system',
+      title: 'Database sync failed',
+      message: apiMessage ? message + ' ' + apiMessage : message,
+      icon: 'bi-cloud-slash',
+      url: '/admin/bookings'
+    });
   }
 
   private isBookingStatus(value: string): value is BookingStatus {
