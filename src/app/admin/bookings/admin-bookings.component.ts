@@ -105,17 +105,17 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   get createTimeSlots(): string[] {
-    const duration = this.walkInDuration;
-    if (!duration || !this.newBooking.service) return [];
+    const service = this.selectedWalkInService;
+    if (!service || !this.newBooking.barber) return [];
 
-    const slots = this.slotsForDuration(duration, this.todayKey, true);
+    const slots = this.slotsForDuration(service.duration, this.todayKey, true);
 
     return slots.filter(time =>
-      this.bookingService.isWalkInSlotAvailable(
-        this.newBooking.service,
+      this.bookingService.isBarberSlotAvailable(
+        this.newBooking.barber,
         this.todayKey,
         time,
-        duration
+        service.duration
       )
     );
   }
@@ -137,41 +137,21 @@ export class AdminBookingsComponent implements OnInit {
     );
   }
 
-  get selectedWalkInServices() {
-    const selected = new Set(
-      this.newBooking.service
-        .split(',')
-        .map(name => name.trim())
-        .filter(Boolean)
-    );
+  get selectedWalkInService() {
+    return this.bookingService.services.find(service => service.name === this.newBooking.service);
+  }
 
-    return this.bookingService.services.filter(service => selected.has(service.name));
+  get createBarbers(): string[] {
+    if (!this.newBooking.service) return [];
+    return this.bookingService.availableBarbersForService(this.newBooking.service, this.todayKey);
   }
 
   get walkInDuration(): number {
-    return this.selectedWalkInServices.reduce((total, service) => total + service.duration, 0);
+    return this.selectedWalkInService?.duration ?? 0;
   }
 
   get walkInAmount(): number {
-    return this.selectedWalkInServices.reduce((total, service) => total + service.amount, 0);
-  }
-
-  isWalkInServiceSelected(serviceName: string): boolean {
-    return this.selectedWalkInServices.some(service => service.name === serviceName);
-  }
-
-  toggleWalkInService(serviceName: string): void {
-    const selected = new Set(this.selectedWalkInServices.map(service => service.name));
-
-    if (selected.has(serviceName)) selected.delete(serviceName);
-    else selected.add(serviceName);
-
-    this.newBooking.service = this.bookingService.services
-      .filter(service => selected.has(service.name))
-      .map(service => service.name)
-      .join(', ');
-
-    this.onCreateServiceOrDateChange();
+    return this.selectedWalkInService?.amount ?? 0;
   }
 
   get editBarbers(): string[] {
@@ -360,7 +340,8 @@ export class AdminBookingsComponent implements OnInit {
 
     return !!(
       this.newBooking.customerName.trim()
-      && this.selectedWalkInServices.length
+      && this.selectedWalkInService
+      && this.newBooking.barber
       && this.newBooking.time
       && (!digits || /^3\d{9}$/.test(digits))
     );
@@ -369,10 +350,10 @@ export class AdminBookingsComponent implements OnInit {
   createBooking(): void {
     const form = this.newBooking;
     const digits = form.phone.replace(/\D/g, '');
-    const services = this.selectedWalkInServices;
+    const service = this.selectedWalkInService;
 
-    if (!form.customerName.trim() || !services.length || !form.time) {
-      this.showFeedback(false, 'Enter the customer name, select at least one service and choose an available time.');
+    if (!form.customerName.trim() || !service || !form.barber || !form.time) {
+      this.showFeedback(false, 'Enter the customer name and select a service, barber and available time.');
       return;
     }
 
@@ -384,12 +365,12 @@ export class AdminBookingsComponent implements OnInit {
     const result = this.bookingService.addWalkInBooking({
       customerName: form.customerName.trim(),
       phone: digits ? '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3) : '',
-      service: services.map(service => service.name).join(', '),
-      duration: this.walkInDuration,
-      barber: '',
+      service: service.name,
+      duration: service.duration,
+      barber: form.barber,
       date: this.todayKey,
       time: form.time,
-      amount: this.walkInAmount,
+      amount: service.amount,
       notes: form.notes.trim(),
       groupSize: 1,
       serviceLocation: 'Salon'
