@@ -47,10 +47,13 @@ let browser, activePage;
     // Customer's persisted booking is visible to admin and its overlap cannot be selected.
     await goto('/admin/bookings');await page.locator('.create-booking-btn').click();
     const form=page.locator('.create-modal'), selects=form.locator('select');
-    assert.equal(await selects.count(),1,'Walk-in modal should not require a barber dropdown');
-    const timeSelect=selects.first();assert.equal(await timeSelect.isDisabled(),true);
-    await form.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();assert.equal(await timeSelect.isDisabled(),false);
-    const slots=await timeSelect.locator('option').allTextContents();assert.ok(slots.includes('5:00 PM'),'Another eligible barber should keep 5:00 PM available');
+    assert.equal(await selects.count(),3,'Walk-in modal should contain service, barber and time selects');
+    const serviceSelect=selects.nth(0), barberSelect=selects.nth(1), timeSelect=selects.nth(2);
+    assert.equal(await barberSelect.isDisabled(),true);assert.equal(await timeSelect.isDisabled(),true);
+    await serviceSelect.selectOption('Haircut');assert.equal(await barberSelect.isDisabled(),false);
+    const barbers=await barberSelect.locator('option').allTextContents();assert.ok(barbers.includes('Falak Shair'));assert.ok(barbers.includes('Second Barber'));
+    await barberSelect.selectOption('Second Barber');assert.equal(await timeSelect.isDisabled(),false);
+    const slots=await timeSelect.locator('option').allTextContents();assert.ok(slots.includes('5:00 PM'));
     await form.getByPlaceholder('Enter full name').fill('Walk-in QA');await timeSelect.selectOption({label:'5:00 PM'});
     await page.screenshot({path:`test-results/walk-in-${width}.png`,fullPage:true});
     await form.locator('.submit-booking-btn').click();await form.waitFor({state:'hidden'});
