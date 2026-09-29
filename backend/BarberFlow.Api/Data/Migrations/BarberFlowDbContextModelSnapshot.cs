@@ -630,7 +630,7 @@ namespace BarberFlow.Api.Data.Migrations
                     b.HasOne("BarberFlow.Api.Domain.Entities.Service", "Service")
                         .WithMany("Barbers")
                         .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Barber");
