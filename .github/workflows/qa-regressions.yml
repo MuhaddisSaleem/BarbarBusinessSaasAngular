@@ -1,7 +1,7 @@
 name: Booking regression QA
 on:
   pull_request:
-    branches: [main]
+    branches: [main, codex/qa-booking-compatibility]
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,16 +11,22 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preserve approved booking and barber baseline
+        run: git diff --exit-code f3d1d012f7e8551c29ca098ccd2cb63a7c2ad973 -- src/app/booking src/app/admin/barbers tests/qa-regressions.test.cjs tests/harness.cjs tests/ui-smoke.cjs
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm install
       - run: npm run test:qa
+      - run: npm run test:walk-in
       - run: npm run build
       - name: Install browser test runtime
         run: npm install --no-save --package-lock=false playwright@1.51.1
       - run: npx playwright install --with-deps chromium
       - run: npm run test:ui
+      - run: npm run test:walk-in:ui
       - uses: actions/upload-artifact@v4
         if: always()
         with:
