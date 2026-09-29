@@ -5,6 +5,8 @@ namespace BarberFlow.Api.Domain.Entities;
 
 public sealed class Booking : BaseEntity
 {
+    public long PublicId { get; set; }
+
     public Guid SalonId { get; set; }
     public Salon Salon { get; set; } = null!;
 
