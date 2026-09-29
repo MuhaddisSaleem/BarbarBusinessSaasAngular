@@ -317,7 +317,7 @@
       <div>
         <span class="eyebrow">WALK-IN BOOKING</span>
         <h3>Add Walk-in Customer</h3>
-        <p class="modal-help">Select a service and barber. Available barbers are shown first; if everyone is busy, we suggest barbers becoming free within 10 minutes.</p>
+        <p class="modal-help">Select a service and barber. Available barbers are shown first; if everyone is busy, the next available barbers are shown with their wait time.</p>
       </div>
       <button type="button" class="icon-btn" (click)="closeCreateModal()"><i class="bi bi-x-lg"></i></button>
     </div>
@@ -351,7 +351,7 @@
           <span>Barber *</span>
           <select [(ngModel)]="newBooking.barber" (ngModelChange)="onCreateBarberChange()" [disabled]="!newBooking.service">
             <option value="">
-              {{ !newBooking.service ? 'Select service first' : (walkInBarberOptions.length ? 'Select barber' : 'No barber available within 10 min') }}
+              {{ !newBooking.service ? 'Select service first' : (walkInBarberOptions.length ? 'Select barber' : 'No barber available today') }}
             </option>
             <option *ngFor="let option of walkInBarberOptions" [value]="option.name">
               {{ option.name }} · {{ option.availableNow ? 'Available now' : ('Available in ' + option.waitMinutes + ' min') }}
@@ -379,14 +379,14 @@
       <div class="walkin-waiting-hint" *ngIf="selectedWalkInBarberOption && !selectedWalkInBarberOption.availableNow">
         <i class="bi bi-hourglass-split"></i>
         <div>
-          <strong>Short wait</strong>
-          <span>Ask the customer to sit in the waiting area. {{ selectedWalkInBarberOption.name }} will be free in {{ selectedWalkInBarberOption.waitMinutes }} minutes.</span>
+          <strong>{{ selectedWalkInBarberOption.waitMinutes <= 10 ? 'Short wait' : 'Waiting required' }}</strong>
+          <span>Ask the customer to sit in the waiting area. {{ selectedWalkInBarberOption.name }} will be free in {{ selectedWalkInBarberOption.waitMinutes }} minutes at {{ selectedWalkInBarberOption.startTime }}.</span>
         </div>
       </div>
 
       <div class="walkin-unavailable-hint" *ngIf="selectedWalkInService && !walkInBarberOptions.length">
         <i class="bi bi-exclamation-circle"></i>
-        <span>All eligible barbers are busy for more than 10 minutes.</span>
+        <span>No eligible barber has enough available time left today for this service.</span>
       </div>
 
       <button type="button" class="submit-booking-btn" [disabled]="!canCreateWalkIn" (click)="createBooking()">
