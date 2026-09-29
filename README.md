@@ -83,17 +83,36 @@ Useful endpoints:
 
 See `docs/database-architecture.md` for the schema, relationships, tenant boundaries and the mapping from the current Angular/localStorage model to SQL Server.
 
-## Current migration plan
+## Booking API integration
 
-The Angular UI remains unchanged while backend persistence is introduced module by module.
+Bookings are the first Angular module being moved from browser persistence to SQL Server.
 
-The initial EF Core migration is committed under `backend/BarberFlow.Api/Data/Migrations`.
+When the ASP.NET API is available:
 
-The next backend module is **Bookings**:
+- Angular loads bookings from `GET /api/bookings`;
+- the booking service removes the old booking localStorage key;
+- online, admin and walk-in booking creates are sent to the API;
+- status updates, barber reassignment, rescheduling, cancellation and custom home-service pricing are sent to the API;
+- the API revalidates salon hours, barber working hours, leave, specialties and overlapping appointments before writing to SQL Server.
 
-1. seed a development salon/services/barbers dataset;
-2. expose availability and booking APIs;
-3. move overlap validation into a database-backed transaction;
-4. replace Angular booking localStorage persistence with API calls.
+Barbers, services and settings are still using their existing frontend stores during this migration stage. Development seed data creates matching catalog records in SQL Server so the Booking API can validate the current demo flow.
+
+### Booking endpoints
+
+```text
+GET    /api/bookings
+GET    /api/bookings/{id}
+POST   /api/bookings/online
+POST   /api/bookings/walk-in
+POST   /api/bookings/admin
+POST   /api/bookings/availability
+PATCH  /api/bookings/{id}/status
+PATCH  /api/bookings/{id}/barber
+PATCH  /api/bookings/{id}/schedule
+PATCH  /api/bookings/{id}/special-service-price
+DELETE /api/bookings/{id}
+```
+
+The next migration step after bookings is to move **Services, Barbers and Settings** to APIs so the entire availability catalog comes from SQL Server instead of browser storage.
 
 The approved frontend behavior remains the functional specification while this migration happens.
