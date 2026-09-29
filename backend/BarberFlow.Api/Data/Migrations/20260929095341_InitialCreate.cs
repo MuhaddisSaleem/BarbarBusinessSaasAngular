@@ -261,6 +261,8 @@ namespace BarberFlow.Api.Data.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PublicId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     SalonId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CustomerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     BarberId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -326,7 +328,7 @@ namespace BarberFlow.Api.Data.Migrations
                         column: x => x.ServiceId,
                         principalTable: "Services",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -411,6 +413,12 @@ namespace BarberFlow.Api.Data.Migrations
                 name: "IX_Bookings_SalonId_BookingCode",
                 table: "Bookings",
                 columns: new[] { "SalonId", "BookingCode" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bookings_SalonId_PublicId",
+                table: "Bookings",
+                columns: new[] { "SalonId", "PublicId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(

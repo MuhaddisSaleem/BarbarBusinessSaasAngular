@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BarberFlow.Api.Data.Migrations
 {
     [DbContext(typeof(BarberFlowDbContext))]
-    [Migration("20260929084614_InitialCreate")]
+    [Migration("20260929095341_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -224,6 +224,12 @@ namespace BarberFlow.Api.Data.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<long>("PublicId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("PublicId"));
+
                     b.Property<Guid>("SalonId")
                         .HasColumnType("uniqueidentifier");
 
@@ -268,6 +274,9 @@ namespace BarberFlow.Api.Data.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("SalonId", "BookingCode")
+                        .IsUnique();
+
+                    b.HasIndex("SalonId", "PublicId")
                         .IsUnique();
 
                     b.HasIndex("SalonId", "AppointmentDate", "Status");
@@ -633,7 +642,7 @@ namespace BarberFlow.Api.Data.Migrations
                     b.HasOne("BarberFlow.Api.Domain.Entities.Service", "Service")
                         .WithMany("Barbers")
                         .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Barber");
