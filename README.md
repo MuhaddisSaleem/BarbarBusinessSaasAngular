@@ -6,7 +6,7 @@ Angular frontend plus an ASP.NET Core / SQL Server backend foundation for the Ba
 
 The Angular application currently contains the approved customer booking flow, admin booking management, walk-ins, barbers, services, customers, settings, calendar and reporting UI.
 
-Run it locally:
+Run the API first on `http://localhost:5080`, then start Angular:
 
 ```bash
 npm install
@@ -14,6 +14,14 @@ npm start
 ```
 
 Open `http://localhost:4200`.
+
+For the existing port-4300 workflow:
+
+```bash
+npm run start:4300
+```
+
+The Angular dev-server proxy is configured in `angular.json`, so `/api/*` is forwarded to `http://localhost:5080` whether you use `npm start`, `npm run start:4300`, or `ng serve --port 4300`.
 
 ## Backend foundation
 
@@ -95,7 +103,7 @@ When the ASP.NET API is available:
 - status updates, barber reassignment, rescheduling, cancellation and custom home-service pricing are sent to the API;
 - the API revalidates salon hours, barber working hours, leave, specialties and overlapping appointments before writing to SQL Server.
 
-Barbers, services and settings are still using their existing frontend stores during this migration stage. Development seed data creates matching catalog records in SQL Server so the Booking API can validate the current demo flow.
+Bookings, Services, Barbers and Settings are now API/SQL-backed. Existing browser Services/Barbers/Settings data is imported once into SQL Server and the legacy localStorage persistence keys are removed after a successful migration.
 
 ### Booking endpoints
 
@@ -113,6 +121,6 @@ PATCH  /api/bookings/{id}/special-service-price
 DELETE /api/bookings/{id}
 ```
 
-The next migration step after bookings is to move **Services, Barbers and Settings** to APIs so the entire availability catalog comes from SQL Server instead of browser storage.
+Services, Barbers and Settings now come from SQL Server through the ASP.NET Core API, so availability and admin catalog changes use the same persisted data source as bookings.
 
 The approved frontend behavior remains the functional specification while this migration happens.
