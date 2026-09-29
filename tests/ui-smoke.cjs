@@ -15,8 +15,7 @@ const barber=(id,name,specialties,rating)=>({id,name,specialties,rating,phone:'+
 const service=(id,name)=>({id,name,duration:40,originalPrice:600,discountPrice:null,homeServiceEnabled:true,homeOriginalPrice:900,homeDiscountPrice:null,status:'Active',image:'assets/images/service-placeholder.svg'});
 const seed={
   'royal-barbers.admin-barbers.v1':[barber(1,'Falak Shair',['Haircut','Beard'],5),barber(2,'Second Barber',['Haircut'],4)],
-  'royal-barbers.admin-services.v1':[service(1,'Haircut'),service(2,'Beard')],
-  'royal-barbers.admin-bookings.v1':[]
+  'royal-barbers.admin-services.v1':[service(1,'Haircut'),service(2,'Beard')]
 };
 let browser, activePage;
 (async()=>{
@@ -27,30 +26,80 @@ let browser, activePage;
     const context=await browser.newContext({viewport:{width,height:1000},timezoneId:'UTC'});
     const page=await context.newPage();activePage=page;page.setDefaultTimeout(15000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
+
+    let apiBookings=[];
+    let nextBookingId=1;
+    const apiResponse=(body,status=200)=>({
+      status,
+      contentType:'application/json',
+      headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,PATCH,DELETE,OPTIONS'},
+      body:JSON.stringify(body)
+    });
+    const normalizeBooking=(input,source,id)=>({
+      ...input,
+      id,
+      code:'RB-'+String(2600+id),
+      status:source==='Walk-in'?'Confirmed':(input.serviceLocation==='Home'&&input.specialService?'Pending':'Confirmed'),
+      source
+    });
+    await page.route('http://localhost:5080/api/bookings**',async route=>{
+      const req=route.request();
+      if(req.method()==='OPTIONS')return route.fulfill(apiResponse({}));
+      const url=new URL(req.url());
+      const pathname=url.pathname;
+      if(req.method()==='GET'&&pathname==='/api/bookings')return route.fulfill(apiResponse(apiBookings));
+      if(req.method()==='POST'&&pathname==='/api/bookings/online'){
+        const items=req.postDataJSON();
+        const created=items.map(item=>normalizeBooking(item,'Online',nextBookingId++));
+        apiBookings=[...created.reverse(),...apiBookings];
+        return route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created[0]}));
+      }
+      if(req.method()==='POST'&&pathname==='/api/bookings/walk-in'){
+        const created=normalizeBooking(req.postDataJSON(),'Walk-in',nextBookingId++);
+        apiBookings=[created,...apiBookings];
+        return route.fulfill(apiResponse({success:true,message:'Walk-in booked successfully.',booking:created}));
+      }
+      if(req.method()==='POST'&&pathname==='/api/bookings/admin'){
+        const created=normalizeBooking(req.postDataJSON(),'Admin',nextBookingId++);
+        apiBookings=[created,...apiBookings];
+        return route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created}));
+      }
+      const match=pathname.match(/^\/api\/bookings\/(\d+)(?:\/(status|barber|schedule|special-service-price))?$/);
+      if(match){
+        const id=Number(match[1]), action=match[2], booking=apiBookings.find(x=>x.id===id);
+        if(!booking)return route.fulfill(apiResponse({success:false,message:'Booking not found.'},404));
+        if(req.method()==='DELETE'){booking.status='Cancelled';return route.fulfill(apiResponse({success:true,message:'Cancelled.',booking}));}
+        const body=req.postDataJSON();
+        if(action==='status')booking.status=body.status;
+        if(action==='barber')booking.barber=body.barber;
+        if(action==='schedule'){booking.date=body.date;booking.time=body.time;}
+        if(action==='special-service-price'){const prev=booking.specialServiceAmount||0;booking.specialServiceAmount=body.amount;booking.amount=booking.amount-prev+body.amount;}
+        return route.fulfill(apiResponse({success:true,message:'Updated.',booking}));
+      }
+      return route.fulfill(apiResponse({success:false,message:'Unhandled QA API route.'},404));
+    });
     await page.clock.install({time:new Date('2026-09-28T16:30:00Z')});
     await page.addInitScript(seed=>{
       if(localStorage.getItem('qa-seeded'))return;
       for(const [key,value] of Object.entries(seed))localStorage.setItem(key,JSON.stringify(value));
-      for(const type of ['barbers','services','bookings'])localStorage.setItem('royal-barbers.admin-'+type+'.demo-cleaned.v1','1');
+      for(const type of ['barbers','services'])localStorage.setItem('royal-barbers.admin-'+type+'.demo-cleaned.v1','1');
       localStorage.setItem('qa-seeded','1');
     },seed);
     const goto=async(route='/')=>{await page.goto('http://127.0.0.1:4173'+route);await page.locator(route==='/'?'app-booking':'app-admin-shell').waitFor();};
     const day=()=>page.locator('.calendar-days button').filter({hasText:/^28$/}).click();
-    const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('royal-barbers.admin-bookings.v1')));
+    const stored=async()=>apiBookings.map(item=>({...item}));
     const details=async()=>{await page.locator('#customer-name-input').fill('QA Customer');await page.locator('#customer-phone-input').fill('3001234567');};
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
     await goto();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
     assert.ok(await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).count());
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();await details();
     await page.screenshot({path:`test-results/customer-${width}.png`,fullPage:true});await finish();
-    assert.equal((await stored()).length,1);assert.equal((await stored())[0].status,'Confirmed');scenarios++;
+    assert.equal((await stored()).length,1);assert.equal((await stored())[0].status,'Confirmed');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-bookings.v1')),null,'Bookings must not be persisted to localStorage when API mode is active');scenarios++;
     // Customer's persisted booking overlaps Falak. Make Second Barber busy until 4:55 PM too,
     // so all eligible barbers are busy for more than ten minutes and the next-available fallback is exercised.
-    await page.evaluate(()=>{
-      const bookings=JSON.parse(localStorage.getItem('royal-barbers.admin-bookings.v1'));
-      bookings.push({id:900,code:'RB-WAIT',customerName:'Existing Customer',phone:'+92 300 0000000',barber:'Second Barber',service:'Haircut',duration:55,date:'2026-09-28',time:'4:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
-      localStorage.setItem('royal-barbers.admin-bookings.v1',JSON.stringify(bookings));
-    });
+    apiBookings.push({id:900,code:'RB-WAIT',customerName:'Existing Customer',phone:'+92 300 0000000',barber:'Second Barber',service:'Haircut',duration:55,date:'2026-09-28',time:'4:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
+    nextBookingId=Math.max(nextBookingId,901);
     await goto('/admin/bookings');await page.locator('.create-booking-btn').click();
     const form=page.locator('.create-modal'), selects=form.locator('select');
     assert.equal(await selects.count(),2,'Walk-in modal should contain only service and barber selects');
