@@ -150,9 +150,18 @@ test('when all eligible barbers are busy, walk-in suggests the shortest wait wit
   assert.equal(f.bookings.all[0].barber,tenMin.name);assert.equal(f.bookings.all[0].time,'4:40 PM');
 });
 
-test('walk-in shows no barber when every eligible barber remains busy beyond ten minutes', () => {
+test('walk-in remains bookable when the next eligible barber is more than ten minutes away', () => {
   const f=fixture(),b=f.barber(),s=f.service({duration:20});
   f.booking({barber:b.name,time:'4:00 PM',duration:41});
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Long Wait Customer';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  equal(f.admin.createBarbers,[b.name]);assert.equal(f.admin.walkInBarberOptions[0].waitMinutes,11);assert.equal(f.admin.walkInBarberOptions[0].startTime,'4:41 PM');
+  f.admin.newBooking.barber=b.name;f.admin.onCreateBarberChange();f.admin.createBooking();
+  assert.equal(f.bookings.all[0].barber,b.name);assert.equal(f.bookings.all[0].time,'4:41 PM');
+});
+
+test('walk-in only becomes unavailable when no eligible barber has time left today', () => {
+  const f=fixture(),b=f.barber(),s=f.service({duration:20});
+  f.booking({barber:b.name,time:'4:00 PM',duration:300});
   f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   assert.equal(f.admin.walkInBarberOptions.length,0);assert.equal(f.admin.createBarbers.length,0);
 });
