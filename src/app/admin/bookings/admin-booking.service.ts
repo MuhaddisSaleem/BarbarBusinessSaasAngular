@@ -18,7 +18,7 @@ export interface AdminBooking {
   time: string;
   amount: number;
   status: BookingStatus;
-  source: 'Online' | 'Admin';
+  source: 'Online' | 'Admin' | 'Walk-in';
   notes?: string;
   groupSize?: number;
   serviceLocation?: 'Salon' | 'Home';
@@ -405,6 +405,69 @@ export class AdminBookingService {
     };
   }
 
+  addWalkInBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
+    const now = new Date();
+    const todayKey = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0')
+    ].join('-');
+
+    if (input.date !== todayKey) {
+      return { success: false, message: 'Walk-in bookings can only be created for today.' };
+    }
+
+    const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration, true);
+    if (!scheduleValidation.success) return scheduleValidation;
+
+    const barberId = this.barberIdByName(input.barber);
+    if (!barberId || !this.barberService.isAvailableOnDate(barberId, input.date)) {
+      return { success: false, message: input.barber + ' is not available today.' };
+    }
+
+    if (!this.barberService.supportsServices(barberId, this.bookingServiceNames(input))) {
+      return { success: false, message: input.barber + ' does not provide all selected services.' };
+    }
+
+    if (!this.barberService.isWorkingAt(barberId, input.time, input.duration)) {
+      return { success: false, message: input.barber + ' is outside their configured working hours at this time.' };
+    }
+
+    if (this.hasConflict(input.barber, input.date, input.time, input.duration)) {
+      return { success: false, message: input.barber + ' already has an overlapping appointment at this time.' };
+    }
+
+    const nextId = Math.max(0, ...this.bookings.map(item => item.id)) + 1;
+    const previousBookings = this.bookings;
+    this.bookings = [
+      {
+        ...input,
+        id: nextId,
+        code: this.bookingCode(nextId),
+        status: 'Confirmed',
+        source: 'Walk-in',
+        serviceLocation: 'Salon'
+      },
+      ...this.bookings
+    ];
+
+    if (!this.persist()) {
+      this.bookings = previousBookings;
+      return { success: false, message: 'Could not save the walk-in booking. Please try again.' };
+    }
+
+    const created = this.bookings[0];
+    this.notificationService.add({
+      type: 'booking',
+      title: 'Walk-in booking created',
+      message: created.customerName + ' booked ' + created.service + ' with ' + created.barber + ' for ' + created.time + '.',
+      icon: 'bi-person-walking',
+      url: '/admin/bookings?booking=' + created.id
+    });
+
+    return { success: true, message: 'Walk-in customer booked successfully.' };
+  }
+
   addBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
     const scheduleValidation = this.validateSchedule(input.date, input.time, input.duration);
     if (!scheduleValidation.success) return scheduleValidation;
@@ -456,7 +519,7 @@ export class AdminBookingService {
     return { success: true, message: 'Booking created successfully.' };
   }
 
-  private validateSchedule(dateKey: string, time: string, duration: number): BookingMutationResult {
+  private validateSchedule(dateKey: string, time: string, duration: number, allowWalkInSameDay = false): BookingMutationResult {
     const dateMatch = String(dateKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!dateMatch) {
       return { success: false, message: 'Select a valid appointment date.' };
@@ -478,7 +541,18 @@ export class AdminBookingService {
       return { success: false, message: 'Select a valid appointment date.' };
     }
 
-    if (!this.settingsService.isBookingDateAllowed(date)) {
+    const today = new Date();
+    const todayKey = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0')
+    ].join('-');
+
+    if (allowWalkInSameDay) {
+      if (dateKey !== todayKey) {
+        return { success: false, message: 'Walk-in bookings can only be created for today.' };
+      }
+    } else if (!this.settingsService.isBookingDateAllowed(date)) {
       return { success: false, message: 'This date is outside the current booking window or the salon is closed.' };
     }
 
@@ -576,7 +650,7 @@ export class AdminBookingService {
           amount: Number(item.amount) || 0,
           groupSize: Number(item.groupSize) || 1,
           status: this.isBookingStatus(item.status) ? item.status : 'Pending',
-          source: item.source === 'Admin' ? 'Admin' : 'Online',
+          source: item.source === 'Walk-in' ? 'Walk-in' : (item.source === 'Admin' ? 'Admin' : 'Online'),
           notes: item.notes || '',
           serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
           serviceAddress: item.serviceAddress || '',
