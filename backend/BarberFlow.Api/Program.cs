@@ -1,4 +1,5 @@
 using BarberFlow.Api.Data;
+using BarberFlow.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +8,7 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+builder.Services.AddScoped<BookingApplicationService>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -38,6 +40,18 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<BarberFlowDbContext>();
+    await db.Database.MigrateAsync();
+
+    if (builder.Configuration.GetValue<bool>("SeedData:Enabled"))
+    {
+        await DevelopmentDataSeeder.SeedAsync(db);
+    }
+}
 
 app.UseExceptionHandler();
 
