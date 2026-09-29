@@ -76,10 +76,17 @@ export class AdminBookingService {
     dateKey: string,
     time: string,
     duration: number,
-    maxWaitMinutes = 10
+    preferredWaitMinutes = 10
   ): WalkInBarberOption[] {
     const startMinutes = this.timeToMinutes(time);
     if (!Number.isFinite(startMinutes)) return [];
+
+    const date = new Date(dateKey + 'T12:00:00');
+    const salonHours = this.settingsService.hoursForDate(date);
+    if (!salonHours) return [];
+
+    const latestStart = salonHours.end - duration;
+    if (startMinutes > latestStart) return [];
 
     const services = this.serviceNames(service);
     const eligible = this.barberService.active.filter(barber =>
@@ -90,7 +97,9 @@ export class AdminBookingService {
     const options: Array<WalkInBarberOption & { rating: number; id: number }> = [];
 
     for (const barber of eligible) {
-      for (let waitMinutes = 0; waitMinutes <= maxWaitMinutes; waitMinutes++) {
+      const maxWait = Math.max(0, latestStart - startMinutes);
+
+      for (let waitMinutes = 0; waitMinutes <= maxWait; waitMinutes++) {
         const candidateTime = this.minutesToTime(startMinutes + waitMinutes);
         const scheduleValidation = this.validateSchedule(dateKey, candidateTime, duration, true);
 
@@ -113,9 +122,19 @@ export class AdminBookingService {
     }
 
     const availableNow = options.filter(option => option.availableNow);
-    const visible = availableNow.length
-      ? availableNow
-      : options.filter(option => option.waitMinutes > 0 && option.waitMinutes <= maxWaitMinutes);
+    if (availableNow.length) {
+      return availableNow
+        .sort((a, b) => b.rating - a.rating || a.id - b.id)
+        .map(({ rating, id, ...option }) => option);
+    }
+
+    const shortWait = options.filter(option =>
+      option.waitMinutes > 0 && option.waitMinutes <= preferredWaitMinutes
+    );
+
+    const visible = shortWait.length
+      ? shortWait
+      : options.filter(option => option.waitMinutes > 0);
 
     return visible
       .sort((a, b) =>
