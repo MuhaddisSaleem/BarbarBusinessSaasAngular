@@ -144,7 +144,7 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const result = this.barberService.addBarber({
+    const payload = {
       name: this.newBarber.name,
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
       experience: this.newBarber.experience || 'New',
@@ -152,16 +152,18 @@ export class AdminBarbersComponent {
       workingHours: this.newBarber.workingHours.trim(),
       image: this.newBarber.image || 'assets/images/barber-placeholder.svg',
       rating: 5,
-      availability: 'Available Today',
-      accountStatus: 'Active',
+      availability: 'Available Today' as const,
+      accountStatus: 'Active' as const,
       note: ''
-    });
+    };
 
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.addModalOpen = false;
+    };
 
-    if (result.success) {
-      this.addModalOpen = false;
-    }
+    if (this.barberService.addBarberThroughApi(payload, handle)) return;
+    handle(this.barberService.addBarber(payload));
   }
 
   onPhoneInput(value: string): void {
@@ -459,20 +461,22 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const result = this.barberService.updateBarber(this.editCandidate.id, {
+    const changes = {
       name: this.editBarber.name,
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
       experience: this.editBarber.experience,
       specialties: this.editBarber.specialties,
       workingHours: this.editBarber.workingHours,
       image: this.editBarber.image
-    });
+    };
 
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeEditModal();
+    };
 
-    if (result.success) {
-      this.closeEditModal();
-    }
+    if (this.barberService.updateBarberThroughApi(this.editCandidate.id, changes, handle)) return;
+    handle(this.barberService.updateBarber(this.editCandidate.id, changes));
   }
 
   onAvailabilityChange(barber: AdminBarber, availability: BarberAvailability): void {
@@ -501,13 +505,19 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const result = this.barberService.updateAvailability(barber.id, 'Not Available Today');
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.barberService.updateAvailabilityThroughApi(barber.id, 'Not Available Today', handle)) return;
+    handle(this.barberService.updateAvailability(barber.id, 'Not Available Today'));
   }
 
   markAvailableToday(barber: AdminBarber): void {
-    const result = this.barberService.updateAvailability(barber.id, 'Available Today');
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.barberService.updateAvailabilityThroughApi(barber.id, 'Available Today', handle)) return;
+    handle(this.barberService.updateAvailability(barber.id, 'Available Today'));
   }
 
   openLeaveModal(barber: AdminBarber, type: 'On Leave' | 'Vacation'): void {
@@ -543,19 +553,27 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const result = this.barberService.updateLeave(
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeLeaveModal();
+    };
+
+    if (this.barberService.updateLeaveThroughApi(
+      this.selectedBarber.id,
+      this.leaveForm.type,
+      this.leaveForm.from,
+      this.leaveForm.to,
+      this.leaveForm.note,
+      handle
+    )) return;
+
+    handle(this.barberService.updateLeave(
       this.selectedBarber.id,
       this.leaveForm.type,
       this.leaveForm.from,
       this.leaveForm.to,
       this.leaveForm.note
-    );
-
-    this.showFeedback(result.success, result.message);
-
-    if (result.success) {
-      this.closeLeaveModal();
-    }
+    ));
   }
 
   toggleAccountStatus(barber: AdminBarber): void {
@@ -570,8 +588,11 @@ export class AdminBarbersComponent {
       }
     }
 
-    const result = this.barberService.toggleAccountStatus(barber.id);
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.barberService.toggleAccountStatusThroughApi(barber.id, handle)) return;
+    handle(this.barberService.toggleAccountStatus(barber.id));
   }
 
   requestDelete(barber: AdminBarber): void {
@@ -597,12 +618,13 @@ export class AdminBarbersComponent {
   confirmDelete(): void {
     if (!this.deleteCandidate) return;
 
-    const result = this.barberService.deleteBarber(this.deleteCandidate.id);
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeDeleteModal();
+    };
 
-    if (result.success) {
-      this.closeDeleteModal();
-    }
+    if (this.barberService.deleteBarberThroughApi(this.deleteCandidate.id, handle)) return;
+    handle(this.barberService.deleteBarber(this.deleteCandidate.id));
   }
 
   resetFilters(): void {
