@@ -525,6 +525,112 @@ button,input,select,textarea { font:inherit; }
   font-size:9px;
 }
 
+.walkin-modal {
+  width:min(900px,calc(100vw - 32px));
+}
+
+.walkin-main-grid {
+  display:grid;
+  grid-template-columns:1.2fr 1.15fr 1.1fr 1fr;
+  gap:12px;
+}
+
+.walkin-main-grid label,
+.walkin-notes {
+  display:block;
+  min-width:0;
+}
+
+.walkin-main-grid label > span,
+.walkin-notes > span {
+  display:block;
+  margin-bottom:7px;
+  color:#aab3b7;
+  font-size:9px;
+  font-weight:600;
+}
+
+.walkin-main-grid label > span small {
+  color:#66747a;
+  font-size:8px;
+  font-weight:500;
+}
+
+.walkin-main-grid input,
+.walkin-main-grid select,
+.walkin-notes textarea {
+  width:100%;
+  min-width:0;
+  min-height:44px;
+  padding:0 12px;
+  border:1px solid #303c41;
+  border-radius:8px;
+  background:#10181b;
+  color:#e5e8e9;
+  font-size:10px;
+}
+
+.walkin-main-grid select {
+  cursor:pointer;
+  text-overflow:ellipsis;
+}
+
+.walkin-main-grid select:disabled {
+  opacity:.52;
+  cursor:not-allowed;
+}
+
+.walkin-main-grid .phone-field {
+  min-height:44px;
+}
+
+.walkin-main-grid .phone-field input {
+  min-height:42px;
+  padding:0 12px;
+  border:0;
+  background:transparent;
+}
+
+.walkin-now-row {
+  min-height:40px;
+  margin-top:13px;
+  padding:9px 12px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  border:1px solid #29363b;
+  border-radius:8px;
+  background:#0f171a;
+  color:#7f8c91;
+  font-size:8px;
+}
+
+.walkin-now-row > div {
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.walkin-now-row i {
+  color:#d7ae57;
+  font-size:10px;
+}
+
+.walkin-now-row strong {
+  color:#e7ecee;
+  font-weight:750;
+}
+
+.walkin-notes {
+  margin-top:14px;
+}
+
+.walkin-notes textarea {
+  min-height:82px;
+  padding:11px 12px;
+  resize:vertical;
+}
+
 .submit-booking-btn {
   width:100%; min-height:46px; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:8px;
   border:0; border-radius:9px; background:linear-gradient(145deg,#ffd879,#e9ad45); color:#111; font-size:10px; font-weight:850;
@@ -545,6 +651,7 @@ button,input,select,textarea { font:inherit; }
 
 @media (max-width:991.98px) {
   .bookings-page { padding:24px 20px 45px; }
+  .walkin-main-grid { grid-template-columns:1fr 1fr; }
 }
 @media (max-width:575.98px) {
   .bookings-page { padding:20px 10px 35px; }
@@ -568,6 +675,8 @@ button,input,select,textarea { font:inherit; }
   .walkin-select-grid { grid-template-columns:1fr; }
   .walkin-summary { flex-wrap:wrap; gap:8px 14px; }
   .walkin-summary strong { width:100%; margin-left:0; }
+  .walkin-main-grid { grid-template-columns:1fr; }
+  .walkin-now-row { flex-direction:column; align-items:flex-start; gap:7px; }
 }
 
 
