@@ -212,6 +212,7 @@ button,input,select,textarea { font:inherit; }
 
 .form-grid .walkin-service-option {
   position:relative;
+  width:100%;
   min-height:50px;
   padding:10px;
   display:flex;
@@ -221,6 +222,8 @@ button,input,select,textarea { font:inherit; }
   border-radius:8px;
   background:#10181b;
   cursor:pointer;
+  text-align:left;
+  font-family:inherit;
   transition:border-color .2s ease, background .2s ease, transform .2s ease;
 }
 
@@ -232,17 +235,6 @@ button,input,select,textarea { font:inherit; }
 .form-grid .walkin-service-option.selected {
   border-color:#e9ad45;
   background:rgba(233,173,69,.08);
-}
-
-.form-grid .walkin-service-option input {
-  position:absolute;
-  width:1px;
-  height:1px;
-  min-height:0;
-  margin:0;
-  padding:0;
-  opacity:0;
-  pointer-events:none;
 }
 
 .walkin-check {
