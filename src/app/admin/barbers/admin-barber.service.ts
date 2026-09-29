@@ -43,7 +43,9 @@ export class AdminBarberService {
 
 
     this.api?.changes$.subscribe(changed => {
-      if (changed === 'barbers') this.refreshFromApi();
+      if (changed === 'barbers' && this.api) {
+        this.barbers = this.normalizeBarbers(this.api.barberSnapshot);
+      }
     });  }
 
   private readonly storageKey = 'royal-barbers.admin-barbers.v1';
