@@ -210,7 +210,7 @@ test('legacy labeled weekday arrays retain their identities',()=>{const f=fixtur
 test('barber edits preserve upcoming shifts and identity while services stay automatic',()=>{
   const f=fixture(),b=f.barber(),s=f.service();f.booking();const c=f.make('admin/barbers/admin-barbers.component.ts','AdminBarbersComponent',f.barbers,f.services,f.bookings);
   for(const patch of [{workingHours:'9 AM - 5 PM'},{name:'Renamed'}]) {c.openEditModal(b);Object.assign(c.editBarber,patch);c.saveBarberChanges();assert.equal(c.feedbackType,'error');assert.equal(b.name,'Barber 1');assert.equal(b.workingHours,'9:00 AM - 9:00 PM');}
-  c.openEditModal(b);c.editBarber.specialties=['Beard'];c.saveBarberChanges();assert.equal(c.feedbackType,'success');assert.deepEqual(b.specialties,[s.name]);
+  c.openEditModal(b);c.editBarber.specialties=['Beard'];c.saveBarberChanges();assert.equal(c.feedbackType,'success');assert.equal(JSON.stringify(b.specialties),JSON.stringify([s.name]));
   c.openEditModal(b);c.editBarber.workingHours='09:00 - 21:00';c.saveBarberChanges();assert.equal(c.feedbackType,'success');assert.equal(b.workingHours,'09:00 - 21:00');
 });
 test('barber availability, leave, deletion and deactivation protect active appointments',()=>{
