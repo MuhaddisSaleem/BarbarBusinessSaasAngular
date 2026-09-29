@@ -59,10 +59,6 @@ export class AdminBarbersComponent {
     'Vacation'
   ];
 
-  get specialtyOptions(): string[] {
-    return this.serviceService.active.map(service => service.name);
-  }
-
   constructor(
     public readonly barberService: AdminBarberService,
     public readonly serviceService: AdminServiceService,
@@ -125,11 +121,6 @@ export class AdminBarbersComponent {
       return;
     }
 
-    if (!this.newBarber.specialties.length) {
-      this.showFeedback(false, 'Select at least one specialty.');
-      return;
-    }
-
     if (!this.newBarber.image) {
       this.showFeedback(false, 'Upload a barber photo before adding the barber.');
       return;
@@ -148,7 +139,7 @@ export class AdminBarbersComponent {
       name: this.newBarber.name,
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
       experience: this.newBarber.experience || 'New',
-      specialties: this.newBarber.specialties,
+      specialties: this.serviceService.all.map(service => service.name),
       workingHours: this.newBarber.workingHours.trim(),
       image: this.newBarber.image || 'assets/images/barber-placeholder.svg',
       rating: 5,
@@ -301,7 +292,7 @@ export class AdminBarbersComponent {
       name: barber.name,
       phone: barber.phone.replace(/\D/g, '').replace(/^92/, '').slice(-10),
       experience: this.experienceNumber(barber.experience),
-      specialties: [...barber.specialties],
+      specialties: this.serviceService.all.map(service => service.name),
       workingHours: barber.workingHours,
       image: barber.image
     };
@@ -395,11 +386,6 @@ export class AdminBarbersComponent {
       return;
     }
 
-    if (!this.editBarber.specialties.length) {
-      this.showFeedback(false, 'Select at least one specialty.');
-      return;
-    }
-
     if (!this.editBarber.image) {
       this.showFeedback(false, 'A barber profile photo is required.');
       return;
@@ -427,24 +413,6 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const specialtySet = new Set(this.editBarber.specialties.map(item => item.trim().toLowerCase()));
-    const incompatibleBooking = upcomingBookings.find(booking =>
-      booking.service
-        .split(',')
-        .map(item => item.trim().toLowerCase())
-        .filter(Boolean)
-        .filter(service => !(booking.specialService?.trim() && service === 'custom home service'))
-        .some(service => !specialtySet.has(service))
-    );
-
-    if (incompatibleBooking) {
-      this.showFeedback(
-        false,
-        'This barber has an upcoming booking for "' + incompatibleBooking.service + '". Keep those specialties or reassign the booking first.'
-      );
-      return;
-    }
-
     const outsideNewShift = upcomingBookings.find(booking =>
       !this.barberService.workingHoursCover(
         this.editBarber.workingHours,
@@ -465,7 +433,7 @@ export class AdminBarbersComponent {
       name: this.editBarber.name,
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
       experience: this.editBarber.experience,
-      specialties: this.editBarber.specialties,
+      specialties: this.serviceService.all.map(service => service.name),
       workingHours: this.editBarber.workingHours,
       image: this.editBarber.image
     };
