@@ -643,8 +643,9 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         if (string.IsNullOrWhiteSpace(request.Name)) return "Barber name is required.";
         if (!IsValidPakistanPhone(request.Phone)) return "Enter a valid Pakistan mobile number.";
         if (request.Specialties.Count == 0) return "Select at least one specialty.";
-        if (!TryParseWorkingHours(request.WorkingHours, out _, out _))
-            return "Enter working hours like 8:00 AM - 9:00 PM.";
+        if (!string.IsNullOrWhiteSpace(request.WorkingHours)
+            && !TryParseWorkingHours(request.WorkingHours, out _, out _))
+            return "Enter working hours like 8:00 AM - 9:00 PM, or leave it blank to use salon hours.";
 
         var duplicateName = await db.Barbers.AnyAsync(
             x => x.SalonId == salonId
@@ -714,8 +715,15 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             barber.Services.Add(new BarberService { Barber = barber, Service = service });
     }
 
-    private static void UpdateWorkingHours(Barber barber, string value)
+    private void UpdateWorkingHours(Barber barber, string value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            db.BarberWorkingHours.RemoveRange(barber.WorkingHours);
+            barber.WorkingHours.Clear();
+            return;
+        }
+
         if (!TryParseWorkingHours(value, out var start, out var end))
             throw new InvalidOperationException("Invalid barber working hours.");
 
@@ -742,6 +750,8 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
     private static void ApplyWorkingHours(Barber barber, string value)
     {
+        if (string.IsNullOrWhiteSpace(value)) return;
+
         if (!TryParseWorkingHours(value, out var start, out var end))
             throw new InvalidOperationException("Invalid barber working hours.");
 
