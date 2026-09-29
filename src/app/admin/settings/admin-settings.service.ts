@@ -100,7 +100,11 @@ export class AdminSettingsService {
     if (this.api && typeof window !== 'undefined') {
       window.localStorage.removeItem(this.storageKey);
     }
-  }
+
+
+    this.api?.changes$.subscribe(changed => {
+      if (changed === 'settings') this.refreshFromApi();
+    });  }
 
   private readonly storageKey = 'royal-barbers.admin-settings.v1';
   private settings: AdminSettings = this.clone(DEFAULT_SETTINGS);
