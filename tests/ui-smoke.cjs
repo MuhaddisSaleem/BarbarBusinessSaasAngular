@@ -11,7 +11,7 @@ const server = http.createServer((req,res)=>{
   if(!fs.existsSync(file)||fs.statSync(file).isDirectory())file=path.join(root,'index.html');
   res.setHeader('Content-Type',types[path.extname(file)]||'application/octet-stream');fs.createReadStream(file).pipe(res);
 });
-const barber=(id,name,specialties,rating)=>({id,name,specialties,rating,phone:'+92 300 1234567',accountStatus:'Active',availability:'Available Today',workingHours:'9 AM - 9 PM',experience:'5 years',image:'assets/images/barber-placeholder.svg'});
+const barber=(id,name,specialties,rating)=>({id,name,specialties,rating,phone:'+92 '+(id===1?'300':'301')+' 1234567',accountStatus:'Active',availability:'Available Today',workingHours:'9 AM - 9 PM',experience:'5 years',image:'assets/images/barber-placeholder.svg'});
 const service=(id,name)=>({id,name,duration:40,originalPrice:600,discountPrice:null,homeServiceEnabled:true,homeOriginalPrice:900,homeDiscountPrice:null,status:'Active',image:'assets/images/service-placeholder.svg'});
 const seed={
   'royal-barbers.admin-barbers.v1':[barber(1,'Falak Shair',['Haircut','Beard'],5),barber(2,'Second Barber',['Haircut'],4)],

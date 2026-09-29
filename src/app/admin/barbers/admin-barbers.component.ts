@@ -171,13 +171,12 @@ export class AdminBarbersComponent {
   async onImageSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
+    if (!file) return;
 
     this.newBarber.image = '';
     this.imageValidationState = 'idle';
     this.imageValidationMessage = '';
     this.manualFaceConfirmed = false;
-
-    if (!file) return;
 
     if (!file.type.startsWith('image/')) {
       this.imageValidationState = 'invalid';
@@ -323,12 +322,11 @@ export class AdminBarbersComponent {
   async onEditImageSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
+    if (!file) return;
 
     this.editImageValidationState = 'idle';
     this.editImageValidationMessage = '';
     this.editManualFaceConfirmed = false;
-
-    if (!file) return;
 
     if (!file.type.startsWith('image/')) {
       this.editImageValidationState = 'invalid';

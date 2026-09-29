@@ -97,4 +97,6 @@ A reproduced availability failure was stale records in an already-open customer 
 
 The empty-slot message now differentiates invalid shifts, insufficient remaining duration before closing, unavailable services/barbers, closed dates and occupied slots. The provided booking screenshot alone does not establish which saved value caused that user's failure. The specific message and their selected date/hours are needed if it persists.
 
-Follow-up suite: 59 regression scenarios and 32 browser scenarios, including both photo modals and cross-tab slot refresh at desktop/mobile sizes. See the latest PR workflow for the final result.
+Cancelling a photo picker also preserves the previously selected/approved photo.
+
+Follow-up suite: 60 regression scenarios and 32 browser scenarios, including both photo modals and cross-tab slot refresh at desktop/mobile sizes. See the latest PR workflow for the final result.

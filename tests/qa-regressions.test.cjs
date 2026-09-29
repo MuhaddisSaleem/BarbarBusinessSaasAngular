@@ -210,3 +210,12 @@ test('add and edit photo validation belong to separate forms', () => {
   assert.equal(b.image, 'assets/images/barber-placeholder.svg');
   c.editManualFaceConfirmed = true; c.saveBarberChanges(); assert.equal(b.image, 'data:image/png;base64,edit');
 });
+test('cancelling either photo picker preserves its approved photo and validation', async () => {
+  const f = fixture(), b = f.barber();
+  const c = f.make('admin/barbers/admin-barbers.component.ts', 'AdminBarbersComponent', f.barbers, f.services, f.bookings);
+  c.openAddModal(); c.newBarber.image = 'data:image/png;base64,existing'; c.imageValidationState = 'valid';
+  await c.onImageSelected({target:{files:[]}});
+  assert.equal(c.newBarber.image, 'data:image/png;base64,existing'); assert.equal(c.imageValidationState, 'valid');
+  c.openEditModal(b); await c.onEditImageSelected({target:{files:[]}});
+  assert.equal(c.editBarber.image, b.image); assert.equal(c.editImageValidationState, 'valid');
+});
