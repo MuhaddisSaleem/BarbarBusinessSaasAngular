@@ -77,6 +77,10 @@ let browser, activePage;
         if(pathname==='/api/services'&&req.method()==='POST'){
           const item={...body,id:nextServiceId++};
           apiServices=[...apiServices,item];
+          apiBarbers=apiBarbers.map(barber=>({
+            ...barber,
+            specialties:Array.from(new Set([...(barber.specialties||[]),item.name]))
+          }));
           return await route.fulfill(apiResponse({success:true,message:item.name+' added successfully.',item}));
         }
         let match=pathname.match(/^\/api\/services\/(\d+)(?:\/(status))?$/);
@@ -97,7 +101,14 @@ let browser, activePage;
 
         if(pathname==='/api/barbers'&&req.method()==='GET')return await route.fulfill(apiResponse(apiBarbers));
         if(pathname==='/api/barbers'&&req.method()==='POST'){
-          const item={...body,id:nextBarberId++,leaveFrom:body.leaveFrom||null,leaveTo:body.leaveTo||null,note:body.note||''};
+          const item={
+            ...body,
+            id:nextBarberId++,
+            specialties:apiServices.map(service=>service.name),
+            leaveFrom:body.leaveFrom||null,
+            leaveTo:body.leaveTo||null,
+            note:body.note||''
+          };
           apiBarbers=[...apiBarbers,item];
           return await route.fulfill(apiResponse({success:true,message:item.name+' added successfully.',item}));
         }
@@ -110,7 +121,12 @@ let browser, activePage;
             return await route.fulfill(apiResponse({success:true,message:item.name+' removed from the barber list.'}));
           }
           if(req.method()==='PUT'&&!action){
-            apiBarbers[index]={...apiBarbers[index],...body,id};
+            apiBarbers[index]={
+              ...apiBarbers[index],
+              ...body,
+              id,
+              specialties:apiServices.map(service=>service.name)
+            };
             return await route.fulfill(apiResponse({success:true,message:'Barber updated.',item:apiBarbers[index]}));
           }
           if(req.method()==='PATCH'&&action==='availability'){
@@ -233,22 +249,28 @@ let browser, activePage;
     await page.locator('.add-barber-btn').click();
     const add=page.locator('.add-modal');
     assert.equal(await add.locator('input[type=file]').count(),1,'Add Barber must contain only its own photo field');
+    assert.equal(await add.locator('.specialty-picker').count(),0,'Add Barber must not ask the admin to select specialties');
     await add.getByPlaceholder('Enter full name').fill('Modal QA Barber');
     await add.getByPlaceholder('3001234567').fill('3001234568');
-    await add.locator('.specialty-option').filter({hasText:'Haircut'}).click();
     await add.locator('input[type=file]').setInputFiles({name:'qa-fixture.png',mimeType:'image/png',buffer:await photo('#2255aa')});
     await add.locator('.manual-face-confirm').waitFor();
     await add.locator('.submit-btn').click();assert.equal(await add.isVisible(),true,'Manual confirmation must still be required');
     await add.locator('.manual-face-confirm input').check();
     await page.screenshot({path:`test-results/add-barber-${width}.png`,fullPage:true});
     await add.locator('.submit-btn').click();await add.waitFor({state:'hidden'});
-    assert.equal(apiBarbers.length,3);scenarios++;
+    assert.equal(apiBarbers.length,3);
+    assert.deepEqual(
+      apiBarbers.find(x=>x.name==='Modal QA Barber')?.specialties,
+      apiServices.map(service=>service.name),
+      'New barber should automatically receive every admin service'
+    );scenarios++;
 
     const barberContainerSelector=width>=768?'.barbers-table tbody tr':'.mobile-barber-card';
     const modalBarber=()=>page.locator(barberContainerSelector).filter({hasText:'Modal QA Barber'});
     await modalBarber().locator('.edit-action').click();
     const edit=page.locator('.edit-modal');
     assert.equal(await edit.locator('input[type=file]').count(),1,'Edit Barber must contain Change Photo');
+    assert.equal(await edit.locator('.specialty-picker').count(),0,'Edit Barber must not manually manage specialties');
     await edit.locator('input[type=file]').setInputFiles({name:'qa-replacement.png',mimeType:'image/png',buffer:await photo('#aa5522')});
     await edit.locator('.manual-face-confirm input').check();
     await page.screenshot({path:`test-results/edit-barber-${width}.png`,fullPage:true});
