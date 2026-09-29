@@ -47,17 +47,19 @@ let browser, activePage;
     // Customer's persisted booking is visible to admin and its overlap cannot be selected.
     await goto('/admin/bookings');await page.locator('.create-booking-btn').click();
     const form=page.locator('.create-modal'), selects=form.locator('select');
-    assert.equal(await selects.count(),3,'Walk-in modal should contain service, barber and time selects');
-    const serviceSelect=selects.nth(0), barberSelect=selects.nth(1), timeSelect=selects.nth(2);
-    assert.equal(await barberSelect.isDisabled(),true);assert.equal(await timeSelect.isDisabled(),true);
+    assert.equal(await selects.count(),2,'Walk-in modal should contain only service and barber selects');
+    const serviceSelect=selects.nth(0), barberSelect=selects.nth(1);
+    assert.equal(await barberSelect.isDisabled(),true);
     await serviceSelect.selectOption('Haircut');assert.equal(await barberSelect.isDisabled(),false);
-    const barbers=await barberSelect.locator('option').allTextContents();assert.ok(barbers.includes('Falak Shair'));assert.ok(barbers.includes('Second Barber'));
-    await barberSelect.selectOption('Second Barber');assert.equal(await timeSelect.isDisabled(),false);
-    const slots=await timeSelect.locator('option').allTextContents();assert.ok(slots.includes('5:00 PM'));
-    await form.getByPlaceholder('Enter full name').fill('Walk-in QA');await timeSelect.selectOption({label:'5:00 PM'});
+    const barbers=await barberSelect.locator('option').allTextContents();
+    assert.equal(barbers.includes('Falak Shair'),false,'Falak overlaps the current 4:30 PM walk-in window');
+    assert.ok(barbers.includes('Second Barber'),'Free barber should be available for the walk-in');
+    await barberSelect.selectOption('Second Barber');
+    await form.getByPlaceholder('Enter full name').fill('Walk-in QA');
+    await form.getByPlaceholder('Add any notes or instructions for the barber').fill('Walk-in browser QA');
     await page.screenshot({path:`test-results/walk-in-${width}.png`,fullPage:true});
     await form.locator('.submit-booking-btn').click();await form.waitFor({state:'hidden'});
-    assert.equal((await stored()).length,2);assert.equal((await stored())[0].source,'Walk-in');assert.equal((await stored())[0].phone,'');assert.equal((await stored())[0].barber,'Second Barber');scenarios++;
+    assert.equal((await stored()).length,2);assert.equal((await stored())[0].source,'Walk-in');assert.equal((await stored())[0].phone,'');assert.equal((await stored())[0].barber,'Second Barber');assert.equal((await stored())[0].time,'4:30 PM');assert.equal((await stored())[0].notes,'Walk-in browser QA');scenarios++;
     // Specialist matching must select two different barbers for parallel Any Barber bookings.
     await goto();await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
     const group=(await stored()).slice(0,2);assert.equal(new Set(group.map(x=>x.barber)).size,2);assert.ok(group.every(x=>x.time==='7:00 PM'));scenarios++;
