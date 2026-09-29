@@ -26,7 +26,7 @@ test('closed weekdays, same-day disabled, past and advance dates remain disabled
   const f=fixture(),b=f.barber(),s=f.service();
   f.settings.settings.businessHours[0].enabled=false; f.select(b,s);assert.equal(f.customer.availableTimes.length,0);
   f.settings.settings.businessHours[0].enabled=true;f.settings.settings.allowSameDayBooking=false;f.select(b,s);assert.equal(f.customer.availableTimes.length,0);
-  f.admin.openCreateModal(); assert.equal(f.admin.newBooking.date,f.admin.minDate);
+  f.admin.openCreateModal(); assert.equal(f.admin.newBooking.date,DAY);
   f.select(b,s,'2026-09-27');assert.equal(f.customer.availableTimes.length,0);
   f.select(b,s,'2026-11-30');assert.equal(f.customer.availableTimes.length,0);
   f.select(b,s,NEXT);assert.ok(f.customer.availableTimes.length>0);
@@ -116,6 +116,44 @@ test('failed booking writes and conflicting groups never partly save', () => {
 test('invalid calendar dates and 12-hour times cannot roll into valid bookings', () => {
   const f=fixture();f.barber();for (const patch of [{date:'2026-09-31'}, {time:'0:30 PM'}, {time:'13:00 PM'},{time:'5:65 PM'}]) {assert.equal(f.bookings.addBooking({customerName:'C',phone:'+92 300 1234567',barber:'Barber 1',date:DAY,time:'5:00 PM',duration:40,amount:600,service:'Haircut',...patch}).success,false);}
 });
+
+test('walk-ins can book today even when public same-day booking is disabled', () => {
+  const f=fixture(),b=f.barber(),s=f.service();f.settings.settings.allowSameDayBooking=false;
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.service=s.name;f.admin.newBooking.barber=b.name;f.admin.newBooking.time='5:00 PM';
+  assert.ok(f.admin.createTimeSlots.includes('5:00 PM'));
+  f.admin.createBooking();
+  assert.equal(f.bookings.all.length,1);assert.equal(f.bookings.all[0].source,'Walk-in');assert.equal(f.bookings.all[0].status,'Confirmed');assert.equal(f.bookings.all[0].phone,'');
+});
+
+test('walk-ins combine multiple services into one reserved duration and amount', () => {
+  const f=fixture(),b=f.barber(),hair=f.service({name:'Haircut',duration:40,originalPrice:600}),beard=f.service({name:'Beard',duration:20,originalPrice:300});
+  f.admin.openCreateModal();f.admin.toggleWalkInService(hair.name);f.admin.toggleWalkInService(beard.name);f.admin.newBooking.customerName='Multi Service';f.admin.newBooking.barber=b.name;
+  assert.equal(f.admin.walkInDuration,60);assert.equal(f.admin.walkInAmount,900);assert.ok(f.admin.createTimeSlots.includes('5:00 PM'));
+  f.admin.newBooking.time='5:00 PM';f.admin.createBooking();
+  const created=f.bookings.all[0];assert.equal(created.service,'Haircut, Beard');assert.equal(created.duration,60);assert.equal(created.amount,900);
+  assert.equal(f.bookings.isBarberSlotAvailable(b.name,DAY,'5:30 PM',20),false);assert.equal(f.bookings.isBarberSlotAvailable(b.name,DAY,'6:00 PM',20),true);
+});
+
+test('walk-in barber choices require all selected specialties', () => {
+  const f=fixture(),hairOnly=f.barber({specialties:['Haircut']}),both=f.barber({specialties:['Haircut','Beard']});
+  f.service({name:'Haircut'});f.service({name:'Beard'});f.admin.openCreateModal();f.admin.toggleWalkInService('Haircut');f.admin.toggleWalkInService('Beard');
+  assert.equal(f.admin.createBarbers.includes(hairOnly.name),false);assert.equal(f.admin.createBarbers.includes(both.name),true);
+});
+
+test('walk-ins still obey closed days, barber leave and overlap protection', () => {
+  const f=fixture(),b=f.barber(),s=f.service();const input={customerName:'Walk In',phone:'',barber:b.name,date:DAY,time:'5:00 PM',duration:s.duration,amount:s.originalPrice,service:s.name,serviceLocation:'Salon'};
+  f.settings.settings.businessHours[0].enabled=false;assert.equal(f.bookings.addWalkInBooking(input).success,false);
+  f.settings.settings.businessHours[0].enabled=true;b.availability='On Leave';b.leaveFrom=DAY;b.leaveTo=DAY;assert.equal(f.bookings.addWalkInBooking(input).success,false);
+  b.availability='Available Today';f.booking();assert.equal(f.bookings.addWalkInBooking(input).success,false);
+});
+
+test('phone-less walk-ins stay separate in customer history', () => {
+  const f=fixture();f.booking({id:1,source:'Walk-in',phone:'',customerName:'Guest One'});f.booking({id:2,source:'Walk-in',phone:'',customerName:'Guest Two',time:'6:00 PM'});
+  const customers=f.make('admin/customers/admin-customer.service.ts','AdminCustomerService',f.bookings);
+  assert.equal(customers.all.length,2);assert.notEqual(customers.all[0].id,customers.all[1].id);
+  assert.equal(customers.bookingsForCustomer(customers.all[0]).length,1);
+});
+
 
 for (const autoConfirmBookings of [true,false]) test('customer confirmation persists correct status and ignores duplicate submit: '+autoConfirmBookings,()=>{
   const f=fixture(),b=f.barber(),s=f.service();f.settings.settings.autoConfirmBookings=autoConfirmBookings;f.select(b,s);f.customer.selectTime('5:00 PM');f.customer.customer={name:'Customer',phone:'3001234567',notes:''};f.customer.confirmBooking();
