@@ -28,17 +28,28 @@ let browser, activePage;
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
 
     let apiBookings=[];
-    let nextBookingId=1;
+    let apiServices=JSON.parse(JSON.stringify(seed['royal-barbers.admin-services.v1']));
+    let apiBarbers=JSON.parse(JSON.stringify(seed['royal-barbers.admin-barbers.v1']));
+    let apiSettings={
+      businessName:'Royal Barbers',businessPhone:'+92 300 1234567',whatsappNumber:'+92 300 1234567',
+      email:'owner@royalbarbers.local',address:'',city:'',currency:'PKR',timezone:'Asia/Karachi',
+      brandSubtitle:'LOOK GOOD · FEEL GREAT',heroEyebrow:'PREMIUM BARBERSHOP',heroHeadline:'',
+      heroTagline:"More Than a Haircut. It's a Lifestyle.",bookingInterval:30,maxAdvanceDays:30,
+      cancellationHours:2,lateArrivalMinutes:10,allowSameDayBooking:true,autoConfirmBookings:true,
+      sendWhatsappConfirmation:true,sendSmsFallback:false,sendAppointmentReminder:true,
+      reminderHoursBefore:2,notifyOwnerOnNewBooking:true,
+      businessHours:['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+        .map(key=>({key,label:key[0].toUpperCase()+key.slice(1),enabled:true,open:'08:00',close:'21:00'}))
+    };
+    let nextBookingId=1,nextServiceId=3,nextBarberId=3;
     const apiResponse=(body,status=200)=>({
       status,
       contentType:'application/json',
-      headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,PATCH,DELETE,OPTIONS'},
+      headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,PUT,PATCH,DELETE,OPTIONS'},
       body:JSON.stringify(body)
     });
     const normalizeBooking=(input,source,id)=>({
-      ...input,
-      id,
-      code:'RB-'+String(2600+id),
+      ...input,id,code:'RB-'+String(2600+id),
       status:source==='Walk-in'?'Confirmed':(input.serviceLocation==='Home'&&input.specialService?'Pending':'Confirmed'),
       source
     });
@@ -46,42 +57,119 @@ let browser, activePage;
       const raw=req.postData();
       return raw ? JSON.parse(raw) : null;
     };
-    await page.route(/\/api\/bookings(?:\/[^?#]*)?(?:\?[^#]*)?$/,async route=>{
+    await context.route(/\/api\//,async route=>{
       const req=route.request();
       try{
         if(req.method()==='OPTIONS')return await route.fulfill(apiResponse({}));
-        const url=new URL(req.url());
-        const pathname=url.pathname;
+        const pathname=new URL(req.url()).pathname;
+        const body=requestBody(req);
+
+        if(pathname==='/api/bootstrap/legacy-catalog'&&req.method()==='POST'){
+          if(Array.isArray(body?.services)&&body.services.length)apiServices=JSON.parse(JSON.stringify(body.services));
+          if(Array.isArray(body?.barbers)&&body.barbers.length)apiBarbers=JSON.parse(JSON.stringify(body.barbers));
+          if(body?.settings)apiSettings=JSON.parse(JSON.stringify(body.settings));
+          nextServiceId=Math.max(0,...apiServices.map(x=>Number(x.id)||0))+1;
+          nextBarberId=Math.max(0,...apiBarbers.map(x=>Number(x.id)||0))+1;
+          return await route.fulfill(apiResponse({success:true,imported:true,message:'Legacy catalog migrated.'}));
+        }
+
+        if(pathname==='/api/services'&&req.method()==='GET')return await route.fulfill(apiResponse(apiServices));
+        if(pathname==='/api/services'&&req.method()==='POST'){
+          const item={...body,id:nextServiceId++};
+          apiServices=[...apiServices,item];
+          return await route.fulfill(apiResponse({success:true,message:item.name+' added successfully.',item}));
+        }
+        let match=pathname.match(/^\/api\/services\/(\d+)(?:\/(status))?$/);
+        if(match){
+          const id=Number(match[1]),action=match[2],index=apiServices.findIndex(x=>x.id===id);
+          if(index<0)return await route.fulfill(apiResponse({success:false,message:'Service not found.'},404));
+          if(req.method()==='DELETE'){
+            const [item]=apiServices.splice(index,1);
+            apiBarbers=apiBarbers.map(barber=>({...barber,specialties:barber.specialties.filter(name=>name!==item.name)}));
+            return await route.fulfill(apiResponse({success:true,message:item.name+' deleted successfully.'}));
+          }
+          if(req.method()==='PUT'){apiServices[index]={...apiServices[index],...body,id};return await route.fulfill(apiResponse({success:true,message:'Service updated.',item:apiServices[index]}));}
+          if(req.method()==='PATCH'&&action==='status'){
+            apiServices[index].status=apiServices[index].status==='Active'?'Inactive':'Active';
+            return await route.fulfill(apiResponse({success:true,message:'Service status updated.',item:apiServices[index]}));
+          }
+        }
+
+        if(pathname==='/api/barbers'&&req.method()==='GET')return await route.fulfill(apiResponse(apiBarbers));
+        if(pathname==='/api/barbers'&&req.method()==='POST'){
+          const item={...body,id:nextBarberId++,leaveFrom:body.leaveFrom||null,leaveTo:body.leaveTo||null,note:body.note||''};
+          apiBarbers=[...apiBarbers,item];
+          return await route.fulfill(apiResponse({success:true,message:item.name+' added successfully.',item}));
+        }
+        match=pathname.match(/^\/api\/barbers\/(\d+)(?:\/(availability|leave|status))?$/);
+        if(match){
+          const id=Number(match[1]),action=match[2],index=apiBarbers.findIndex(x=>x.id===id);
+          if(index<0)return await route.fulfill(apiResponse({success:false,message:'Barber not found.'},404));
+          if(req.method()==='DELETE'){
+            const [item]=apiBarbers.splice(index,1);
+            return await route.fulfill(apiResponse({success:true,message:item.name+' removed from the barber list.'}));
+          }
+          if(req.method()==='PUT'&&!action){
+            apiBarbers[index]={...apiBarbers[index],...body,id};
+            return await route.fulfill(apiResponse({success:true,message:'Barber updated.',item:apiBarbers[index]}));
+          }
+          if(req.method()==='PATCH'&&action==='availability'){
+            apiBarbers[index].availability=body.availability;
+            if(body.availability==='Available Today'||body.availability==='Not Available Today'){
+              apiBarbers[index].leaveFrom=null;apiBarbers[index].leaveTo=null;apiBarbers[index].note='';
+            }
+            return await route.fulfill(apiResponse({success:true,message:'Availability updated.',item:apiBarbers[index]}));
+          }
+          if(req.method()==='PUT'&&action==='leave'){
+            Object.assign(apiBarbers[index],{availability:body.availability,leaveFrom:body.leaveFrom,leaveTo:body.leaveTo,note:body.note||''});
+            return await route.fulfill(apiResponse({success:true,message:'Leave updated.',item:apiBarbers[index]}));
+          }
+          if(req.method()==='PATCH'&&action==='status'){
+            apiBarbers[index].accountStatus=apiBarbers[index].accountStatus==='Active'?'Inactive':'Active';
+            apiBarbers[index].availability=apiBarbers[index].accountStatus==='Active'?'Available Today':'Not Available Today';
+            return await route.fulfill(apiResponse({success:true,message:'Barber status updated.',item:apiBarbers[index]}));
+          }
+        }
+
+        if(pathname==='/api/settings'&&req.method()==='GET')return await route.fulfill(apiResponse(apiSettings));
+        if(pathname==='/api/settings'&&req.method()==='PUT'){
+          apiSettings=JSON.parse(JSON.stringify(body));
+          return await route.fulfill(apiResponse({success:true,message:'Settings saved successfully.',item:apiSettings}));
+        }
+        if(pathname==='/api/settings/reset'&&req.method()==='POST'){
+          return await route.fulfill(apiResponse({success:true,message:'Settings reset to defaults.',item:apiSettings}));
+        }
+
         if(req.method()==='GET'&&pathname==='/api/bookings')return await route.fulfill(apiResponse(apiBookings));
         if(req.method()==='POST'&&pathname==='/api/bookings/online'){
-          const items=requestBody(req);
+          const items=body;
           if(!Array.isArray(items))throw new Error('Online booking payload is not an array');
           const created=items.map(item=>normalizeBooking(item,'Online',nextBookingId++));
           apiBookings=[...created.slice().reverse(),...apiBookings];
           return await route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created[0]}));
         }
         if(req.method()==='POST'&&pathname==='/api/bookings/walk-in'){
-          const created=normalizeBooking(requestBody(req),'Walk-in',nextBookingId++);
+          const created=normalizeBooking(body,'Walk-in',nextBookingId++);
           apiBookings=[created,...apiBookings];
           return await route.fulfill(apiResponse({success:true,message:'Walk-in booked successfully.',booking:created}));
         }
         if(req.method()==='POST'&&pathname==='/api/bookings/admin'){
-          const created=normalizeBooking(requestBody(req),'Admin',nextBookingId++);
+          const created=normalizeBooking(body,'Admin',nextBookingId++);
           apiBookings=[created,...apiBookings];
           return await route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created}));
         }
-        const match=pathname.match(/^\/api\/bookings\/(\d+)(?:\/(status|barber|schedule|special-service-price))?$/);
+        match=pathname.match(/^\/api\/bookings\/(\d+)(?:\/(status|barber|schedule|special-service-price))?$/);
         if(match){
-          const id=Number(match[1]), action=match[2], booking=apiBookings.find(x=>x.id===id);
+          const id=Number(match[1]),action=match[2],booking=apiBookings.find(x=>x.id===id);
           if(!booking)return await route.fulfill(apiResponse({success:false,message:'Booking not found.'},404));
           if(req.method()==='DELETE'){booking.status='Cancelled';return await route.fulfill(apiResponse({success:true,message:'Cancelled.',booking}));}
-          const body=requestBody(req)||{};
           if(action==='status')booking.status=body.status;
           if(action==='barber')booking.barber=body.barber;
           if(action==='schedule'){booking.date=body.date;booking.time=body.time;}
           if(action==='special-service-price'){const prev=booking.specialServiceAmount||0;booking.specialServiceAmount=body.amount;booking.amount=booking.amount-prev+body.amount;}
           return await route.fulfill(apiResponse({success:true,message:'Updated.',booking}));
         }
+
         return await route.fulfill(apiResponse({success:false,message:'Unhandled QA API route: '+req.method()+' '+pathname},404));
       }catch(error){
         return await route.fulfill(apiResponse({success:false,message:'QA API mock error: '+error.message},500));
@@ -104,7 +192,9 @@ let browser, activePage;
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();await details();
     await page.screenshot({path:`test-results/customer-${width}.png`,fullPage:true});await finish();
     assert.equal((await stored()).length,1);assert.equal((await stored())[0].status,'Confirmed');
-    assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-bookings.v1')),null,'Bookings must not be persisted to localStorage when API mode is active');scenarios++;
+    assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-bookings.v1')),null,'Bookings must not be persisted to localStorage when API mode is active');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-services.v1')),null,'Services must be migrated out of localStorage');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-barbers.v1')),null,'Barbers must be migrated out of localStorage');scenarios++;
     // Customer's persisted booking overlaps Falak. Make Second Barber busy until 4:55 PM too,
     // so all eligible barbers are busy for more than ten minutes and the next-available fallback is exercised.
     apiBookings.push({id:900,code:'RB-WAIT',customerName:'Existing Customer',phone:'+92 300 0000000',barber:'Second Barber',service:'Haircut',duration:55,date:'2026-09-28',time:'4:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
@@ -152,7 +242,7 @@ let browser, activePage;
     await add.locator('.manual-face-confirm input').check();
     await page.screenshot({path:`test-results/add-barber-${width}.png`,fullPage:true});
     await add.locator('.submit-btn').click();await add.waitFor({state:'hidden'});
-    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('royal-barbers.admin-barbers.v1')).length),3);scenarios++;
+    assert.equal(apiBarbers.length,3);scenarios++;
     await page.locator('.edit-action:visible').first().click();
     const edit=page.locator('.edit-modal');
     assert.equal(await edit.locator('input[type=file]').count(),1,'Edit Barber must contain Change Photo');
@@ -160,21 +250,20 @@ let browser, activePage;
     await edit.locator('.manual-face-confirm input').check();
     await page.screenshot({path:`test-results/edit-barber-${width}.png`,fullPage:true});
     await edit.locator('.submit-btn').click();await edit.waitFor({state:'hidden'});
-    assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('royal-barbers.admin-barbers.v1'))[0].image.startsWith('data:image/')));scenarios++;
+    assert.ok(apiBarbers[0].image.startsWith('data:image/'));scenarios++;
     // Isolated fixture: public tab starts with a short shift and no bookings.
-    await page.evaluate(()=>{
-      const barbers=JSON.parse(localStorage.getItem('royal-barbers.admin-barbers.v1'));
-      barbers[0].workingHours='9 AM - 5 PM';localStorage.setItem('royal-barbers.admin-barbers.v1',JSON.stringify(barbers));
-      localStorage.setItem('royal-barbers.admin-bookings.v1','[]');
-    });
+    apiBarbers[0].workingHours='9 AM - 5 PM';
+    apiBookings=[];
     await goto();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();
     await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
     await page.locator('.no-times').filter({hasText:'40-minute slot fits before 5:00 PM'}).waitFor();
     await page.locator('#customer-name-input').fill('Keep my details');
     const adminTab=await context.newPage();await adminTab.goto('http://127.0.0.1:4173/admin/barbers');
+    apiBarbers[0].workingHours='9 AM - 9 PM';
     await adminTab.evaluate(()=>{
-      const barbers=JSON.parse(localStorage.getItem('royal-barbers.admin-barbers.v1'));
-      barbers[0].workingHours='9 AM - 9 PM';localStorage.setItem('royal-barbers.admin-barbers.v1',JSON.stringify(barbers));
+      const channel=new BroadcastChannel('barberflow-catalog-sync');
+      channel.postMessage('barbers');
+      channel.close();
     });
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor();
     assert.equal(await page.locator('#customer-name-input').inputValue(),'Keep my details');
