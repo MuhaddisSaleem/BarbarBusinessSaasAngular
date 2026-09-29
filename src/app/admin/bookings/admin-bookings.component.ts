@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
-import { AdminBooking, AdminBookingService, BookingStatus } from './admin-booking.service';
+import { AdminBooking, AdminBookingService, BookingStatus, WalkInBarberOption } from './admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 
 type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
@@ -146,7 +146,7 @@ export class AdminBookingsComponent implements OnInit {
     return this.minutesToTime(now.getHours() * 60 + now.getMinutes());
   }
 
-  get createBarbers(): string[] {
+  get walkInBarberOptions(): WalkInBarberOption[] {
     const service = this.selectedWalkInService;
     if (!service) return [];
 
@@ -154,8 +154,17 @@ export class AdminBookingsComponent implements OnInit {
       service.name,
       this.todayKey,
       this.currentWalkInTime,
-      service.duration
+      service.duration,
+      10
     );
+  }
+
+  get createBarbers(): string[] {
+    return this.walkInBarberOptions.map(option => option.name);
+  }
+
+  get selectedWalkInBarberOption(): WalkInBarberOption | undefined {
+    return this.walkInBarberOptions.find(option => option.name === this.newBooking.barber);
   }
 
   get walkInDuration(): number {
@@ -198,7 +207,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   onCreateBarberChange(): void {
-    this.newBooking.time = '';
+    this.newBooking.time = this.selectedWalkInBarberOption?.startTime || this.currentWalkInTime;
   }
 
   onEditBarberChange(): void {
@@ -354,7 +363,7 @@ export class AdminBookingsComponent implements OnInit {
       this.newBooking.customerName.trim()
       && this.selectedWalkInService
       && this.newBooking.barber
-      && this.createBarbers.includes(this.newBooking.barber)
+      && this.selectedWalkInBarberOption
       && (!digits || /^3\d{9}$/.test(digits))
     );
   }
@@ -363,7 +372,6 @@ export class AdminBookingsComponent implements OnInit {
     const form = this.newBooking;
     const digits = form.phone.replace(/\D/g, '');
     const service = this.selectedWalkInService;
-    const walkInTime = this.currentWalkInTime;
 
     if (!form.customerName.trim() || !service || !form.barber) {
       this.showFeedback(false, 'Enter the customer name and select a service and available barber.');
@@ -375,20 +383,22 @@ export class AdminBookingsComponent implements OnInit {
       return;
     }
 
-    const availableBarbers = this.bookingService.availableBarbersForWalkIn(
+    const freshOptions = this.bookingService.availableBarbersForWalkIn(
       service.name,
       this.todayKey,
-      walkInTime,
-      service.duration
+      this.currentWalkInTime,
+      service.duration,
+      10
     );
+    const selectedOption = freshOptions.find(option => option.name === form.barber);
 
-    if (!availableBarbers.includes(form.barber)) {
+    if (!selectedOption) {
       this.newBooking.barber = '';
-      this.showFeedback(false, 'That barber is no longer available right now. Please select another barber.');
+      this.showFeedback(false, 'That barber is no longer available within the next 10 minutes. Please select another barber.');
       return;
     }
 
-    this.newBooking.time = walkInTime;
+    this.newBooking.time = selectedOption.startTime;
 
     const result = this.bookingService.addWalkInBooking({
       customerName: form.customerName.trim(),
@@ -397,9 +407,9 @@ export class AdminBookingsComponent implements OnInit {
       duration: service.duration,
       barber: form.barber,
       date: this.todayKey,
-      time: walkInTime,
+      time: selectedOption.startTime,
       amount: service.amount,
-      notes: form.notes.trim(),
+      notes: '',
       groupSize: 1,
       serviceLocation: 'Salon'
     });
