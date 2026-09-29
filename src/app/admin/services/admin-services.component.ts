@@ -101,10 +101,13 @@ export class AdminServicesComponent {
 
   addService(): void {
     const payload = this.buildPayload(this.newService);
-    const result = this.serviceService.addService(payload);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeAddModal();
+    };
 
-    this.showFeedback(result.success, result.message);
-    if (result.success) this.closeAddModal();
+    if (this.serviceService.addServiceThroughApi(payload, handle)) return;
+    handle(this.serviceService.addService(payload));
   }
 
   saveService(): void {
@@ -124,24 +127,33 @@ export class AdminServicesComponent {
       }
     }
 
-    const result = this.serviceService.updateService(this.editCandidate.id, payload);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeEditModal();
+    };
 
-    this.showFeedback(result.success, result.message);
-    if (result.success) this.closeEditModal();
+    if (this.serviceService.updateServiceThroughApi(this.editCandidate.id, payload, handle)) return;
+    handle(this.serviceService.updateService(this.editCandidate.id, payload));
   }
 
   confirmDelete(): void {
     if (!this.deleteCandidate) return;
 
-    const result = this.serviceService.deleteService(this.deleteCandidate.id);
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeDeleteModal();
+    };
 
-    if (result.success) this.closeDeleteModal();
+    if (this.serviceService.deleteServiceThroughApi(this.deleteCandidate.id, handle)) return;
+    handle(this.serviceService.deleteService(this.deleteCandidate.id));
   }
 
   toggleStatus(service: AdminService): void {
-    const result = this.serviceService.toggleStatus(service.id);
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.serviceService.toggleStatusThroughApi(service.id, handle)) return;
+    handle(this.serviceService.toggleStatus(service.id));
   }
 
   resetFilters(): void {
