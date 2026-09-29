@@ -102,11 +102,18 @@ jobs:
           curl --fail --silent http://127.0.0.1:5080/api/services | grep '"name":"CI Service"'
 
           curl --fail --silent http://127.0.0.1:5080/api/barbers | grep '"name":"Falak Shair"'
-          curl --fail --silent \
+          BARBER_RESPONSE=$(curl --fail --silent \
             -H "Content-Type: application/json" \
             -d '{"name":"CI Barber","phone":"+92 300 7654321","experience":"3 years","specialties":["Haircut"],"workingHours":"9:00 AM - 8:00 PM","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
-            http://127.0.0.1:5080/api/barbers | grep '"success":true'
-          curl --fail --silent http://127.0.0.1:5080/api/barbers | grep '"name":"CI Barber"'
+            http://127.0.0.1:5080/api/barbers)
+          echo "$BARBER_RESPONSE" | grep '"success":true'
+          BARBER_ID=$(echo "$BARBER_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["item"]["id"])')
+          curl --fail --silent \
+            -X PUT \
+            -H "Content-Type: application/json" \
+            -d '{"name":"CI Barber Updated","phone":"+92 300 7654321","experience":"4 years","specialties":["Haircut"],"workingHours":"10:00 AM - 7:00 PM","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
+            http://127.0.0.1:5080/api/barbers/$BARBER_ID | grep '"success":true'
+          curl --fail --silent http://127.0.0.1:5080/api/barbers | grep '"name":"CI Barber Updated"'
 
           curl --fail --silent http://127.0.0.1:5080/api/settings | grep '"businessName":"Royal Barbers"'
           curl --fail --silent \
