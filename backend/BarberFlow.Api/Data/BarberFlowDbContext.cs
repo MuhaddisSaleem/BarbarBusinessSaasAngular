@@ -104,7 +104,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.Property(x => x.DiscountPrice).HasPrecision(18, 2);
             entity.Property(x => x.HomeOriginalPrice).HasPrecision(18, 2);
             entity.Property(x => x.HomeDiscountPrice).HasPrecision(18, 2);
-            entity.Property(x => x.ImageUrl).HasMaxLength(1000);
+            entity.Property(x => x.ImageUrl).HasColumnType("nvarchar(max)");
             entity.HasIndex(x => new { x.SalonId, x.PublicId }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.Name }).IsUnique();
             entity.HasOne(x => x.Salon)
