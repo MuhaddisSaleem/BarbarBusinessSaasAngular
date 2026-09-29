@@ -14,6 +14,7 @@ public sealed class Booking : BaseEntity
     public Guid BarberId { get; set; }
     public Barber Barber { get; set; } = null!;
 
+    public int PublicId { get; set; }
     public required string BookingCode { get; set; }
 
     // Snapshots preserve the booked customer details even if the customer profile changes later.
