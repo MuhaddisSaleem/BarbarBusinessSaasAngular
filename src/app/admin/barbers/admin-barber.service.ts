@@ -40,7 +40,11 @@ export class AdminBarberService {
       window.localStorage.removeItem(this.storageKey);
       window.localStorage.removeItem(this.demoCleanupKey);
     }
-  }
+
+
+    this.api?.changes$.subscribe(changed => {
+      if (changed === 'barbers') this.refreshFromApi();
+    });  }
 
   private readonly storageKey = 'royal-barbers.admin-barbers.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-barbers.demo-cleaned.v1';
