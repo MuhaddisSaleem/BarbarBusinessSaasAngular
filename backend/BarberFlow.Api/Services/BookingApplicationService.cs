@@ -58,44 +58,66 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
         if (requests.Count == 0)
             return new(false, "No booking details were provided.");
 
-        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var strategy = db.Database.CreateExecutionStrategy();
 
-        var salon = await db.Salons
-            .Include(x => x.Settings)
-            .FirstOrDefaultAsync(x => x.Slug == DefaultSalonSlug && x.IsActive, cancellationToken);
-
-        if (salon is null)
-            return new(false, "Salon configuration was not found.");
-
-        var nextPublicId = (await db.Bookings
-            .Where(x => x.SalonId == salon.Id)
-            .MaxAsync(x => (int?)x.PublicId, cancellationToken) ?? 0) + 1;
-
-        Booking? firstCreated = null;
-        var staged = new List<Booking>();
-
-        foreach (var request in requests)
+        return await strategy.ExecuteAsync(async () =>
         {
-            var validation = await ValidateAndBuildAsync(salon, request, source, nextPublicId++, staged, cancellationToken);
-            if (!validation.Success)
+            await using var transaction = await db.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable,
+                cancellationToken);
+
+            var salon = await db.Salons
+                .Include(x => x.Settings)
+                .FirstOrDefaultAsync(
+                    x => x.Slug == DefaultSalonSlug && x.IsActive,
+                    cancellationToken);
+
+            if (salon is null)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                return new(false, validation.Message);
+                return new BookingMutationResponse(false, "Salon configuration was not found.");
             }
 
-            staged.Add(validation.Booking!);
-            db.Bookings.Add(validation.Booking!);
-            firstCreated ??= validation.Booking;
-        }
+            var nextPublicId = (await db.Bookings
+                .Where(x => x.SalonId == salon.Id)
+                .MaxAsync(x => (int?)x.PublicId, cancellationToken) ?? 0) + 1;
 
-        await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+            Booking? firstCreated = null;
+            var staged = new List<Booking>();
 
-        return new(
-            true,
-            staged.Count > 1 ? $"{staged.Count} appointments booked successfully." : "Booking created successfully.",
-            firstCreated is null ? null : Map(firstCreated)
-        );
+            foreach (var request in requests)
+            {
+                var validation = await ValidateAndBuildAsync(
+                    salon,
+                    request,
+                    source,
+                    nextPublicId++,
+                    staged,
+                    cancellationToken);
+
+                if (!validation.Success)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    db.ChangeTracker.Clear();
+                    return new BookingMutationResponse(false, validation.Message);
+                }
+
+                staged.Add(validation.Booking!);
+                db.Bookings.Add(validation.Booking!);
+                firstCreated ??= validation.Booking;
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return new BookingMutationResponse(
+                true,
+                staged.Count > 1
+                    ? $"{staged.Count} appointments booked successfully."
+                    : "Booking created successfully.",
+                firstCreated is null ? null : Map(firstCreated)
+            );
+        });
     }
 
     public async Task<BookingMutationResponse> UpdateStatusAsync(
