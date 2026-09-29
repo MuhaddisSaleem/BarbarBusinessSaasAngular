@@ -117,38 +117,36 @@ test('invalid calendar dates and 12-hour times cannot roll into valid bookings',
   const f=fixture();f.barber();for (const patch of [{date:'2026-09-31'}, {time:'0:30 PM'}, {time:'13:00 PM'},{time:'5:65 PM'}]) {assert.equal(f.bookings.addBooking({customerName:'C',phone:'+92 300 1234567',barber:'Barber 1',date:DAY,time:'5:00 PM',duration:40,amount:600,service:'Haircut',...patch}).success,false);}
 });
 
-test('walk-ins can book today with explicit service barber and time selection', () => {
+test('walk-ins start at the current time without a time selection', () => {
   const f=fixture(),b=f.barber(),s=f.service();f.settings.settings.allowSameDayBooking=false;
-  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
-  equal(f.admin.createBarbers,[b.name]);assert.equal(f.admin.createTimeSlots.length,0);
-  f.admin.newBooking.barber=b.name;f.admin.onCreateBarberChange();assert.ok(f.admin.createTimeSlots.includes('5:00 PM'));
-  f.admin.newBooking.time='5:00 PM';f.admin.createBooking();
-  assert.equal(f.bookings.all.length,1);assert.equal(f.bookings.all[0].source,'Walk-in');assert.equal(f.bookings.all[0].status,'Confirmed');assert.equal(f.bookings.all[0].phone,'');assert.equal(f.bookings.all[0].barber,b.name);
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.notes='Front desk walk-in';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  assert.equal(f.admin.currentWalkInTime,'4:30 PM');equal(f.admin.createBarbers,[b.name]);
+  f.admin.newBooking.barber=b.name;f.admin.createBooking();
+  assert.equal(f.bookings.all.length,1);assert.equal(f.bookings.all[0].source,'Walk-in');assert.equal(f.bookings.all[0].status,'Confirmed');assert.equal(f.bookings.all[0].phone,'');assert.equal(f.bookings.all[0].barber,b.name);assert.equal(f.bookings.all[0].time,'4:30 PM');assert.equal(f.bookings.all[0].notes,'Front desk walk-in');
 });
 
 test('walk-in service selection carries correct duration and amount', () => {
   const f=fixture(),b=f.barber(),s=f.service({name:'Haircut',duration:40,originalPrice:600});
   f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   assert.equal(f.admin.walkInDuration,40);assert.equal(f.admin.walkInAmount,600);
-  f.admin.newBooking.barber=b.name;f.admin.newBooking.time='5:00 PM';f.admin.createBooking();
-  const created=f.bookings.all[0];assert.equal(created.service,'Haircut');assert.equal(created.duration,40);assert.equal(created.amount,600);
+  f.admin.newBooking.barber=b.name;f.admin.createBooking();
+  const created=f.bookings.all[0];assert.equal(created.service,'Haircut');assert.equal(created.duration,40);assert.equal(created.amount,600);assert.equal(created.time,'4:30 PM');
 });
 
-test('walk-in barber select only shows eligible barbers for the selected service', () => {
-  const f=fixture(),hair=f.barber({specialties:['Haircut']}),beard=f.barber({specialties:['Beard']});
-  f.service({name:'Haircut'});f.service({name:'Beard'});f.admin.openCreateModal();f.admin.newBooking.service='Haircut';f.admin.onCreateServiceOrDateChange();
-  equal(f.admin.createBarbers,[hair.name]);assert.equal(f.admin.createBarbers.includes(beard.name),false);
+test('walk-in barber select only shows eligible barbers available right now', () => {
+  const f=fixture(),busy=f.barber({specialties:['Haircut']}),free=f.barber({specialties:['Haircut']}),beard=f.barber({specialties:['Beard']}),s=f.service({name:'Haircut',duration:40});
+  f.booking({barber:busy.name,time:'5:00 PM',duration:40});f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  equal(f.admin.createBarbers,[free.name]);assert.equal(f.admin.createBarbers.includes(busy.name),false);assert.equal(f.admin.createBarbers.includes(beard.name),false);
 });
 
-test('walk-in time select excludes overlaps for the selected barber', () => {
-  const f=fixture(),busy=f.barber(),free=f.barber(),s=f.service();f.booking({barber:busy.name,time:'5:00 PM',duration:s.duration});
+test('walk-in barber select respects current working hours and leave', () => {
+  const f=fixture(),working=f.barber(),offShift=f.barber({workingHours:'9:00 AM - 4:00 PM'}),onLeave=f.barber({availability:'On Leave',leaveFrom:DAY,leaveTo:DAY}),s=f.service();
   f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
-  f.admin.newBooking.barber=busy.name;f.admin.onCreateBarberChange();assert.equal(f.admin.createTimeSlots.includes('5:00 PM'),false);
-  f.admin.newBooking.barber=free.name;f.admin.onCreateBarberChange();assert.equal(f.admin.createTimeSlots.includes('5:00 PM'),true);
+  equal(f.admin.createBarbers,[working.name]);assert.equal(f.admin.createBarbers.includes(offShift.name),false);assert.equal(f.admin.createBarbers.includes(onLeave.name),false);
 });
 
 test('walk-ins still obey closed days, barber leave and overlap protection', () => {
-  const f=fixture(),b=f.barber(),s=f.service();const input={customerName:'Walk In',phone:'',barber:b.name,date:DAY,time:'5:00 PM',duration:s.duration,amount:s.originalPrice,service:s.name,serviceLocation:'Salon'};
+  const f=fixture(),b=f.barber(),s=f.service();const input={customerName:'Walk In',phone:'',barber:b.name,date:DAY,time:'4:30 PM',duration:s.duration,amount:s.originalPrice,service:s.name,serviceLocation:'Salon'};
   f.settings.settings.businessHours[0].enabled=false;assert.equal(f.bookings.addWalkInBooking(input).success,false);
   f.settings.settings.businessHours[0].enabled=true;b.availability='On Leave';b.leaveFrom=DAY;b.leaveTo=DAY;assert.equal(f.bookings.addWalkInBooking(input).success,false);
   b.availability='Available Today';f.booking();assert.equal(f.bookings.addWalkInBooking(input).success,false);
@@ -179,7 +177,7 @@ test('admin separate assignment and reschedule actions preserve the saved choice
 for(const status of ['Completed','Cancelled'])test('closed bookings block reschedule/reassign/status mutations: '+status,()=>{
   const f=fixture(),a=f.barber(),b=f.barber(),s=f.service(),ap=f.booking({status});assert.equal(f.bookings.reschedule(ap.id,NEXT,'5:00 PM').success,false);assert.equal(f.bookings.assignBarber(ap.id,b.name).success,false);assert.equal(f.bookings.updateStatus(ap.id,'Confirmed').success,false);
 });
-test('walk-in time choices require both service and barber selection',()=>{const f=fixture(),b=f.barber(),s=f.service();f.admin.openCreateModal();assert.equal(f.admin.createTimeSlots.length,0);f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();assert.equal(f.admin.createTimeSlots.length,0);f.admin.newBooking.barber=b.name;assert.ok(f.admin.createTimeSlots.length>0);});
+test('walk-in barber options stay empty until a service is selected',()=>{const f=fixture();f.barber();const s=f.service();f.admin.openCreateModal();assert.equal(f.admin.createBarbers.length,0);f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();assert.ok(f.admin.createBarbers.length>0);});
 test('changing walk-in service clears the selected barber and stale time',()=>{const f=fixture(),b=f.barber({specialties:['Haircut','Beard']});f.service({name:'Haircut'});f.service({name:'Beard'});f.admin.openCreateModal();f.admin.newBooking.service='Haircut';f.admin.newBooking.barber=b.name;f.admin.newBooking.time='5:00 PM';f.admin.newBooking.service='Beard';f.admin.onCreateServiceOrDateChange();assert.equal(f.admin.newBooking.time,'');assert.equal(f.admin.newBooking.barber,'');});
 test('legacy labeled weekday arrays retain their identities',()=>{const f=fixture({'royal-barbers.admin-settings.v1':{businessHours:[{label:'Tuesday',enabled:false},{label:'Monday',enabled:true,open:'10:15',close:'18:00'}]}});equal(f.settings.hoursForDate(new f.Clock(DAY+'T12:00:00')),{start:615,end:1080});assert.equal(f.settings.hoursForDate(new f.Clock(NEXT+'T12:00:00')),null);});
 test('barber edits preserve upcoming shifts, specialties and identity while allowing compatible updates',()=>{
