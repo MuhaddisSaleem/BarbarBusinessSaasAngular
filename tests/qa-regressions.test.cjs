@@ -3,6 +3,13 @@ const assert = require('node:assert/strict');
 const { fixture, DAY, NEXT } = require('./harness.cjs');
 const equal = (a,b) => assert.equal(JSON.stringify(a),JSON.stringify(b));
 
+test('booking persistence no longer uses booking localStorage', () => {
+  const fs = require('node:fs');
+  const source = fs.readFileSync(require('node:path').join(__dirname,'../src/app/admin/bookings/admin-booking.service.ts'),'utf8');
+  assert.equal(source.includes('royal-barbers.admin-bookings.v1'),false);
+  assert.ok(source.includes("'/api/bookings'"));
+});
+
 for (const hours of ['9:00 AM - 9:00 PM','9 AM - 9 PM','09:00 - 21:00','9am to 9pm','9:00AM – 9:00PM','9:00 a.m. — 9:00 p.m.','']) {
   test('legacy working hours allow matching customer/admin slots: ' + (hours || '(salon hours)'), () => {
     const f = fixture(), b = f.barber({workingHours:hours}), s = f.service();f.select(b,s);
@@ -110,8 +117,8 @@ test('service rename keeps eligible barber specialties synchronized', () => {
 test('failed specialty persistence rolls back a service rename', () => {
   const f=fixture(),b=f.barber(),s=f.service();f.fail('royal-barbers.admin-barbers.v1');assert.equal(f.services.updateService(s.id,{...s,name:'Hair Cut'}).success,false);assert.equal(s.name,'Haircut');assert.equal(f.barbers.supportsServices(b.id,['Haircut']),true);
 });
-test('failed booking writes and conflicting groups never partly save', () => {
-  const f=fixture();f.barber();const input={customerName:'C',phone:'+92 300 1234567',barber:'Barber 1',date:DAY,time:'5:00 PM',duration:40,amount:600,service:'Haircut'};assert.equal(f.bookings.addOnlineBookings([input,input]).success,false);assert.equal(f.bookings.all.length,0);f.fail('royal-barbers.admin-bookings.v1');assert.equal(f.bookings.addOnlineBookings([input]).success,false);assert.equal(f.bookings.all.length,0);
+test('conflicting groups never partly save in the booking cache', () => {
+  const f=fixture();f.barber();const input={customerName:'C',phone:'+92 300 1234567',barber:'Barber 1',date:DAY,time:'5:00 PM',duration:40,amount:600,service:'Haircut'};assert.equal(f.bookings.addOnlineBookings([input,input]).success,false);assert.equal(f.bookings.all.length,0);assert.equal(f.bookings.addOnlineBookings([input]).success,true);assert.equal(f.bookings.all.length,1);
 });
 test('invalid calendar dates and 12-hour times cannot roll into valid bookings', () => {
   const f=fixture();f.barber();for (const patch of [{date:'2026-09-31'}, {time:'0:30 PM'}, {time:'13:00 PM'},{time:'5:65 PM'}]) {assert.equal(f.bookings.addBooking({customerName:'C',phone:'+92 300 1234567',barber:'Barber 1',date:DAY,time:'5:00 PM',duration:40,amount:600,service:'Haircut',...patch}).success,false);}
@@ -195,8 +202,8 @@ test('cancelling a customer booking releases its slot in the same session',()=>{
   const f=fixture(),b=f.barber(),s=f.service();f.select(b,s);f.customer.selectTime('5:00 PM');f.customer.customer={name:'Customer',phone:'3001234567',notes:''};f.customer.confirmBooking();
   assert.equal(f.bookings.all.length,1);f.bookings.cancel(f.bookings.all[0].id);f.customer.resetBookingForm();f.select(b,s);assert.ok(f.customer.availableTimes.includes('5:00 PM'));
 });
-test('last-minute conflicts and failed writes do not show customer success',()=>{
-  for(const fail of [false,true]) {const f=fixture(),b=f.barber(),s=f.service();f.select(b,s);f.customer.selectTime('5:00 PM');f.customer.customer={name:'Customer',phone:'3001234567',notes:''};if(fail)f.fail('royal-barbers.admin-bookings.v1');else f.booking();f.customer.confirmBooking();assert.equal(f.customer.bookingConfirmed,false);assert.equal(f.bookings.all.length,fail?0:1);}
+test('last-minute conflicts do not show customer success',()=>{
+  const f=fixture(),b=f.barber(),s=f.service();f.select(b,s);f.customer.selectTime('5:00 PM');f.customer.customer={name:'Customer',phone:'3001234567',notes:''};f.booking();f.customer.confirmBooking();assert.equal(f.customer.bookingConfirmed,false);assert.equal(f.bookings.all.length,1);
 });
 test('admin separate assignment and reschedule actions preserve the saved choice',()=>{
   const f=fixture(),a=f.barber(),b=f.barber(),s=f.service();const ap=f.booking();f.admin.openBooking(ap);f.admin.editBarber=b.name;f.admin.onEditBarberChange();f.admin.editTime='6:00 PM';f.admin.saveSchedule();assert.equal(ap.barber,a.name);assert.equal(ap.time,'6:00 PM');f.admin.saveBarber();assert.equal(ap.barber,b.name);
@@ -238,18 +245,15 @@ test('an open booking tab reloads edited barber hours from admin storage', () =>
   f.customer.refreshAvailability({ key: 'royal-barbers.admin-barbers.v1', storageArea: f.storage });
   assert.ok(f.customer.availableTimes.includes('5:00 PM'));
 });
-test('storage refresh clears a time booked by another tab and restores it after cancellation', () => {
+test('booking cache changes clear a taken time and restore it after cancellation', () => {
   const f = fixture(), b = f.barber(), s = f.service();
-  f.storage.setItem('royal-barbers.admin-services.v1', JSON.stringify(f.services.all));
-  f.storage.setItem('royal-barbers.admin-barbers.v1', JSON.stringify(f.barbers.all));
   f.select(b, s); f.customer.selectTime('5:00 PM');
   const ap = f.booking();
-  f.storage.setItem('royal-barbers.admin-bookings.v1', JSON.stringify([ap]));
-  f.customer.refreshAvailability({ key: 'royal-barbers.admin-bookings.v1', storageArea: f.storage });
+  f.customer.generateAvailableTimes();
   assert.equal(f.customer.selectedTime, null);
   assert.equal(f.customer.availableTimes.includes('5:00 PM'), false);
-  f.storage.setItem('royal-barbers.admin-bookings.v1', JSON.stringify([{ ...ap, status: 'Cancelled' }]));
-  f.customer.refreshAvailability();
+  ap.status = 'Cancelled';
+  f.customer.generateAvailableTimes();
   assert.ok(f.customer.availableTimes.includes('5:00 PM'));
 });
 test('unrelated storage events leave the booking selection intact', () => {
