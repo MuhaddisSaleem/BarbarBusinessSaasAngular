@@ -264,12 +264,16 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
                 return new(false, barber.FullName + " has active bookings today. Reassign or cancel them first.");
 
             db.BarberScheduleOverrides.RemoveRange(barber.ScheduleOverrides.Where(x => x.Date == today));
-            barber.ScheduleOverrides.Add(new BarberScheduleOverride
+            var scheduleOverride = new BarberScheduleOverride
             {
+                BarberId = barber.Id,
+                Barber = barber,
                 Date = today,
                 IsAvailable = false,
                 Reason = "Not Available Today"
-            });
+            };
+            barber.ScheduleOverrides.Add(scheduleOverride);
+            db.BarberScheduleOverrides.Add(scheduleOverride);
         }
         else if (availability.Equals("Available Today", StringComparison.OrdinalIgnoreCase))
         {
@@ -317,13 +321,17 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
         db.BarberLeaves.RemoveRange(barber.Leaves);
         barber.Leaves.Clear();
-        barber.Leaves.Add(new BarberLeave
+        var leave = new BarberLeave
         {
+            BarberId = barber.Id,
+            Barber = barber,
             StartDate = from,
             EndDate = to,
             LeaveType = request.Availability,
             Reason = request.Note?.Trim()
-        });
+        };
+        barber.Leaves.Add(leave);
+        db.BarberLeaves.Add(leave);
 
         await db.SaveChangesAsync(cancellationToken);
         await ReloadBarberGraphAsync(barber, cancellationToken);
@@ -684,7 +692,17 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             .ToListAsync(cancellationToken);
 
         foreach (var service in services)
-            barber.Services.Add(new BarberService { Barber = barber, Service = service });
+        {
+            var link = new BarberService
+            {
+                BarberId = barber.Id,
+                Barber = barber,
+                ServiceId = service.Id,
+                Service = service
+            };
+            barber.Services.Add(link);
+            db.BarberServices.Add(link);
+        }
     }
 
     private async Task SyncBarberServicesAsync(
@@ -712,7 +730,17 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
         var existingServiceIds = barber.Services.Select(x => x.ServiceId).ToHashSet();
         foreach (var service in services.Where(x => !existingServiceIds.Contains(x.Id)))
-            barber.Services.Add(new BarberService { Barber = barber, Service = service });
+        {
+            var link = new BarberService
+            {
+                BarberId = barber.Id,
+                Barber = barber,
+                ServiceId = service.Id,
+                Service = service
+            };
+            barber.Services.Add(link);
+            db.BarberServices.Add(link);
+        }
     }
 
     private void UpdateWorkingHours(Barber barber, string value)
@@ -732,13 +760,17 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             var existing = barber.WorkingHours.FirstOrDefault(x => x.DayOfWeek == day);
             if (existing is null)
             {
-                barber.WorkingHours.Add(new BarberWorkingHour
+                var workingHour = new BarberWorkingHour
                 {
+                    BarberId = barber.Id,
+                    Barber = barber,
                     DayOfWeek = day,
                     IsWorking = true,
                     StartTime = start,
                     EndTime = end
-                });
+                };
+                barber.WorkingHours.Add(workingHour);
+                db.BarberWorkingHours.Add(workingHour);
                 continue;
             }
 
@@ -748,7 +780,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         }
     }
 
-    private static void ApplyWorkingHours(Barber barber, string value)
+    private void ApplyWorkingHours(Barber barber, string value)
     {
         if (string.IsNullOrWhiteSpace(value)) return;
 
@@ -757,29 +789,37 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
         foreach (var day in Enum.GetValues<DayOfWeek>())
         {
-            barber.WorkingHours.Add(new BarberWorkingHour
+            var workingHour = new BarberWorkingHour
             {
+                BarberId = barber.Id,
+                Barber = barber,
                 DayOfWeek = day,
                 IsWorking = true,
                 StartTime = start,
                 EndTime = end
-            });
+            };
+            barber.WorkingHours.Add(workingHour);
+            db.BarberWorkingHours.Add(workingHour);
         }
     }
 
-    private static void ApplyImportedAvailability(
+    private void ApplyImportedAvailability(
         Barber barber,
         BarberUpsertRequest request,
         DateOnly today)
     {
         if (request.Availability.Equals("Not Available Today", StringComparison.OrdinalIgnoreCase))
         {
-            barber.ScheduleOverrides.Add(new BarberScheduleOverride
+            var scheduleOverride = new BarberScheduleOverride
             {
+                BarberId = barber.Id,
+                Barber = barber,
                 Date = today,
                 IsAvailable = false,
                 Reason = "Not Available Today"
-            });
+            };
+            barber.ScheduleOverrides.Add(scheduleOverride);
+            db.BarberScheduleOverrides.Add(scheduleOverride);
         }
 
         if ((request.Availability.Equals("On Leave", StringComparison.OrdinalIgnoreCase)
@@ -787,13 +827,17 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             && DateOnly.TryParse(request.LeaveFrom, out var from)
             && DateOnly.TryParse(request.LeaveTo, out var to))
         {
-            barber.Leaves.Add(new BarberLeave
+            var leave = new BarberLeave
             {
+                BarberId = barber.Id,
+                Barber = barber,
                 StartDate = from,
                 EndDate = to,
                 LeaveType = request.Availability,
                 Reason = request.Note?.Trim()
-            });
+            };
+            barber.Leaves.Add(leave);
+            db.BarberLeaves.Add(leave);
         }
     }
 
