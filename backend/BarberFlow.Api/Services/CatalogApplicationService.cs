@@ -199,13 +199,8 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         barber.ImageUrl = request.Image;
         barber.Rating = NormalizeRating(request.Rating);
 
-        db.BarberServices.RemoveRange(barber.Services);
-        barber.Services.Clear();
-        await ApplyBarberServicesAsync(barber, request.Specialties, cancellationToken);
-
-        db.BarberWorkingHours.RemoveRange(barber.WorkingHours);
-        barber.WorkingHours.Clear();
-        ApplyWorkingHours(barber, request.WorkingHours);
+        await SyncBarberServicesAsync(barber, request.Specialties, cancellationToken);
+        UpdateWorkingHours(barber, request.WorkingHours);
 
         await db.SaveChangesAsync(cancellationToken);
         await ReloadBarberGraphAsync(barber, cancellationToken);
@@ -689,6 +684,60 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
         foreach (var service in services)
             barber.Services.Add(new BarberService { Barber = barber, Service = service });
+    }
+
+    private async Task SyncBarberServicesAsync(
+        Barber barber,
+        IReadOnlyList<string> specialties,
+        CancellationToken cancellationToken)
+    {
+        var normalized = specialties
+            .Select(x => x.Trim().ToLower())
+            .Distinct()
+            .ToList();
+
+        var services = await db.Services
+            .Where(x => x.SalonId == barber.SalonId && normalized.Contains(x.Name.ToLower()))
+            .ToListAsync(cancellationToken);
+
+        var desiredServiceIds = services.Select(x => x.Id).ToHashSet();
+        var removedLinks = barber.Services
+            .Where(x => !desiredServiceIds.Contains(x.ServiceId))
+            .ToList();
+
+        db.BarberServices.RemoveRange(removedLinks);
+        foreach (var link in removedLinks)
+            barber.Services.Remove(link);
+
+        var existingServiceIds = barber.Services.Select(x => x.ServiceId).ToHashSet();
+        foreach (var service in services.Where(x => !existingServiceIds.Contains(x.Id)))
+            barber.Services.Add(new BarberService { Barber = barber, Service = service });
+    }
+
+    private static void UpdateWorkingHours(Barber barber, string value)
+    {
+        if (!TryParseWorkingHours(value, out var start, out var end))
+            throw new InvalidOperationException("Invalid barber working hours.");
+
+        foreach (var day in Enum.GetValues<DayOfWeek>())
+        {
+            var existing = barber.WorkingHours.FirstOrDefault(x => x.DayOfWeek == day);
+            if (existing is null)
+            {
+                barber.WorkingHours.Add(new BarberWorkingHour
+                {
+                    DayOfWeek = day,
+                    IsWorking = true,
+                    StartTime = start,
+                    EndTime = end
+                });
+                continue;
+            }
+
+            existing.IsWorking = true;
+            existing.StartTime = start;
+            existing.EndTime = end;
+        }
     }
 
     private static void ApplyWorkingHours(Barber barber, string value)
