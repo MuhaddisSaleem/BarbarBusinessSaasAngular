@@ -60,8 +60,19 @@ let browser,activePage;
     assert.equal(first.source,'Walk-in');assert.equal(first.status,'Confirmed');
     assert.equal(first.service,'Haircut, Beard');assert.equal(first.duration,60);assert.equal(first.amount,900);
     assert.equal(first.date,'2026-09-28');assert.equal(first.time,'5:40 PM');assert.equal(first.serviceLocation,'Salon');
-    assert.deepEqual((await stored()).find(x=>x.id===1),existing);
+    const retained=(await stored()).find(x=>x.id===1);
+    for(const [key,value] of Object.entries(existing))assert.deepEqual(retained[key],value);
     await page.screenshot({path:`test-results/walk-in-saved-${width}.png`,fullPage:true});
+    await closeDrawer();scenarios++;
+    // A guest without a phone has a separate history and no unusable contact links.
+    await page.goto('http://127.0.0.1:4173/admin/customers');
+    const guest=page.locator(width===390?'.customer-mobile-card':'.customers-table tbody tr').filter({hasText:'Walk-in Guest'});
+    await guest.click();await page.locator('.customer-drawer.open').waitFor();
+    assert.equal(await page.locator('.customer-drawer .contact-actions').count(),0);
+    assert.equal(await page.locator('.customer-drawer .history-item').count(),1);
+    await page.locator('.all-bookings-btn').click();await page.locator('.booking-drawer.open').waitFor();
+    assert.match(await page.locator('.booking-drawer .customer-panel').innerText(),/Walk-in Guest/);
+    assert.equal(new URL(page.url()).searchParams.get('booking'),String(first.id));
     await closeDrawer();scenarios++;
     // Optional phone validation keeps the entered details, then accepts a real local format.
     await open();await modal.locator('[name=walkInName]').fill('Returning Walk-in');
@@ -103,7 +114,7 @@ let browser,activePage;
     assert.equal(await save().isDisabled(),true);assert.equal(await modal.locator('.walk-in-slot').count(),0);
     await page.screenshot({path:`test-results/walk-in-empty-${width}.png`,fullPage:true});
     await modal.getByRole('button',{name:'Close walk-in booking'}).click();scenarios++;
-    assert.deepEqual(errors,[]);console.log(`PASS walk-in ${width}px: multi-service, optional phone, regular booking policy, cross-tab conflict, closed salon`);
+    assert.deepEqual(errors,[]);console.log(`PASS walk-in ${width}px: multi-service, guest history, optional phone, regular booking policy, cross-tab conflict, closed salon`);
     await context.close();
   }
   console.log(`PASS ${scenarios} walk-in browser scenarios`);

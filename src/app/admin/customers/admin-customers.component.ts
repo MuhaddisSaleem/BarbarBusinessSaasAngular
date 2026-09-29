@@ -93,6 +93,11 @@ export class AdminCustomersComponent {
   }
 
   openBookings(customer: AdminCustomer): void {
+    if (!customer.phone && customer.id.startsWith('walk-in-')) {
+      const booking = this.customerService.bookingsForCustomer(customer)[0];
+      if (booking) void this.router.navigate(['/admin/bookings'], { queryParams: { booking: booking.id } });
+      return;
+    }
     void this.router.navigate(['/admin/bookings'], {
       queryParams: { customer: customer.phone }
     });

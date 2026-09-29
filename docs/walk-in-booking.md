@@ -43,8 +43,8 @@ changed by this feature.
 - `npm run test:walk-in`: 24 walk-in regression tests.
 - `npm run build`: production Angular build.
 - `npm run test:ui`: 32 existing desktop/mobile browser scenarios, unchanged.
-- `npm run test:walk-in:ui`: 10 additional scenarios across desktop and mobile,
-  using Asia/Karachi time, including cross-tab availability changes.
+- `npm run test:walk-in:ui`: 12 additional scenarios across desktop and mobile,
+  using Asia/Karachi time, including guest history and cross-tab availability changes.
 
 Browser tests require Playwright and Chromium and run against the production build.
 GitHub Actions installs these and retains screenshots.
