@@ -99,14 +99,27 @@ export class BookingComponent implements OnInit {
   @HostListener('window:focus')
   refreshAvailability(event?: StorageEvent): void {
     if (event && event.storageArea !== window.localStorage) return;
-    const keys = ['royal-barbers.admin-barbers.v1', 'royal-barbers.admin-services.v1',
-      'royal-barbers.admin-settings.v1', 'royal-barbers.admin-bookings.v1'];
+    const keys = [
+      'royal-barbers.admin-barbers.v1',
+      'royal-barbers.admin-services.v1',
+      'royal-barbers.admin-settings.v1'
+    ];
     if (event?.key && !keys.includes(event.key)) return;
 
     this.barberService.refreshFromStorage();
     this.serviceService.refreshFromStorage();
     this.settingsService.refreshFromStorage();
+
+    if (this.bookingService.apiEnabled) {
+      void this.bookingService.refreshFromApi().then(() => this.reconcileAvailability());
+      return;
+    }
+
     this.bookingService.refreshFromStorage();
+    this.reconcileAvailability();
+  }
+
+  private reconcileAvailability(): void {
     if (this.bookingConfirmed) return;
 
     const services = new Map(this.services.map(service => [service.id, service]));
@@ -121,6 +134,7 @@ export class BookingComponent implements OnInit {
         }
       }
     }
+
     this.generateAvailableTimes();
   }
 
@@ -646,14 +660,41 @@ export class BookingComponent implements OnInit {
       return;
     }
 
-    const bookingResult = this.bookingService.addOnlineBookings(onlineBookings);
-    if (!bookingResult.success) {
-      this.clearSelectedTime();
-      this.generateAvailableTimes();
-      this.showValidationError(bookingResult.message, 'date-time-section');
+    if (this.bookingService.apiEnabled) {
+      void this.confirmBookingWithApi(onlineBookings, assignments);
       return;
     }
 
+    const bookingResult = this.bookingService.addOnlineBookings(onlineBookings);
+    if (!bookingResult.success) {
+      this.handleBookingSubmitFailure(bookingResult.message);
+      return;
+    }
+
+    this.completeBookingConfirmation(assignments);
+  }
+
+  private async confirmBookingWithApi(
+    onlineBookings: Array<Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>>,
+    assignments: Map<number, Barber>
+  ): Promise<void> {
+    const result = await this.bookingService.addOnlineBookingsAsync(onlineBookings);
+
+    if (!result.success) {
+      this.handleBookingSubmitFailure(result.message);
+      return;
+    }
+
+    this.completeBookingConfirmation(assignments);
+  }
+
+  private handleBookingSubmitFailure(message: string): void {
+    this.clearSelectedTime();
+    this.generateAvailableTimes();
+    this.showValidationError(message, 'date-time-section');
+  }
+
+  private completeBookingConfirmation(assignments: Map<number, Barber>): void {
     this.bookingSubmittedStatus = this.hasHomeCustomService
       ? 'Pending'
       : (this.autoConfirmBookings ? 'Confirmed' : 'Pending');
