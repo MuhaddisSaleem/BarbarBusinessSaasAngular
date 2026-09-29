@@ -46,7 +46,7 @@
     </section>
 
     <section class="bookings-card">
-      <div class="booking-tabs d-flex overflow-auto">
+      <div class="booking-tabs d-flex">
         <button type="button" [class.active]="activeTab === 'all'" (click)="setTab('all')">
           All <span>{{ bookingService.all.length }}</span>
         </button>
