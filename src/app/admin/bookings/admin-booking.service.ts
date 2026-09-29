@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { AdminBarberService } from '../barbers/admin-barber.service';
 import { AdminServiceService } from '../services/admin-service.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
@@ -39,14 +41,28 @@ export interface WalkInBarberOption {
   availableNow: boolean;
 }
 
+interface BookingApiMutationResponse {
+  success: boolean;
+  message: string;
+  booking?: AdminBooking | null;
+  bookings?: AdminBooking[] | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminBookingService {
   constructor(
     private readonly barberService: AdminBarberService,
     private readonly serviceService: AdminServiceService,
     private readonly settingsService: AdminSettingsService,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
+    private readonly http?: HttpClient
   ) {}
+
+  private readonly apiUrl = '/api/bookings';
+
+  get apiEnabled(): boolean {
+    return !!this.http;
+  }
 
   get barbers(): string[] {
     return this.barberService.active.map(barber => barber.name);
@@ -157,12 +173,28 @@ export class AdminBookingService {
       .map(barber => barber.name);
   }
 
-  private readonly storageKey = 'royal-barbers.admin-bookings.v1';
-  private readonly demoCleanupKey = 'royal-barbers.admin-bookings.demo-cleaned.v1';
-  private bookings: AdminBooking[] = this.loadBookings();
+  private bookings: AdminBooking[] = [];
+
+  async initialize(): Promise<void> {
+    if (!this.http) return;
+    await this.refreshFromApi();
+  }
+
+  async refreshFromApi(): Promise<void> {
+    if (!this.http) return;
+
+    try {
+      const bookings = await firstValueFrom(this.http.get<AdminBooking[]>(this.apiUrl));
+      this.bookings = this.normalizeApiBookings(bookings);
+    } catch (error) {
+      console.error('Could not load bookings from the API.', error);
+    }
+  }
 
   refreshFromStorage(): void {
-    this.bookings = this.loadBookings();
+    // Compatibility alias while barbers/services/settings still use localStorage.
+    // Booking persistence itself is API/SQL Server only.
+    void this.refreshFromApi();
   }
 
   get all(): AdminBooking[] {
