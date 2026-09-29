@@ -400,7 +400,7 @@ export class AdminBookingsComponent implements OnInit {
 
     this.newBooking.time = selectedOption.startTime;
 
-    const result = this.bookingService.addWalkInBooking({
+    const bookingInput = {
       customerName: form.customerName.trim(),
       phone: digits ? '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3) : '',
       service: service.name,
@@ -411,9 +411,21 @@ export class AdminBookingsComponent implements OnInit {
       amount: service.amount,
       notes: '',
       groupSize: 1,
-      serviceLocation: 'Salon'
-    });
+      serviceLocation: 'Salon' as const
+    };
 
+    if (this.bookingService.createWalkInThroughApi(
+      bookingInput,
+      result => {
+        this.showFeedback(result.success, result.message);
+        if (result.success) this.createModalOpen = false;
+      },
+      message => this.showFeedback(false, message)
+    )) {
+      return;
+    }
+
+    const result = this.bookingService.addWalkInBooking(bookingInput);
     this.showFeedback(result.success, result.message);
     if (result.success) this.createModalOpen = false;
   }
