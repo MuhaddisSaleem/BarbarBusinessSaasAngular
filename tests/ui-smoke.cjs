@@ -260,11 +260,8 @@ let browser, activePage;
     await page.locator('#customer-name-input').fill('Keep my details');
     const adminTab=await context.newPage();await adminTab.goto('http://127.0.0.1:4173/admin/barbers');
     apiBarbers[0].workingHours='9 AM - 9 PM';
-    await adminTab.evaluate(()=>{
-      const channel=new BroadcastChannel('barberflow-catalog-sync');
-      channel.postMessage('barbers');
-      channel.close();
-    });
+    await page.bringToFront();
+    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor();
     assert.equal(await page.locator('#customer-name-input').inputValue(),'Keep my details');
     await page.screenshot({path:`test-results/refreshed-slots-${width}.png`,fullPage:true});
