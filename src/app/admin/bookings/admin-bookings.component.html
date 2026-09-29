@@ -312,18 +312,18 @@
   </aside>
 
   <div class="modal-backdrop" *ngIf="createModalOpen" (click)="closeCreateModal()"></div>
-  <section class="create-modal" *ngIf="createModalOpen">
+  <section class="create-modal walkin-modal" *ngIf="createModalOpen">
     <div class="modal-header d-flex align-items-start justify-content-between">
       <div>
         <span class="eyebrow">WALK-IN BOOKING</span>
         <h3>Add Walk-in Customer</h3>
-        <p class="modal-help">Choose the services and time. We’ll automatically assign an eligible available barber.</p>
+        <p class="modal-help">Select a service, choose an eligible barber, then pick an available time.</p>
       </div>
       <button type="button" class="icon-btn" (click)="closeCreateModal()"><i class="bi bi-x-lg"></i></button>
     </div>
 
     <div class="modal-body">
-      <div class="form-grid">
+      <div class="form-grid walkin-form-grid">
         <label>
           <span>Customer Name *</span>
           <input type="text" [(ngModel)]="newBooking.customerName" placeholder="Enter full name">
@@ -337,68 +337,49 @@
           </div>
         </label>
 
-        <div class="full walkin-service-field">
-          <div class="walkin-section-heading">
-            <div>
-              <span class="field-label">Services *</span>
-              <small>Select one or more services</small>
-            </div>
-            <span class="selected-count" *ngIf="selectedWalkInServices.length">
-              {{ selectedWalkInServices.length }} selected
-            </span>
-          </div>
-
-          <div class="walkin-service-list">
-            <button
-              type="button"
-              class="walkin-service-option"
-              *ngFor="let service of bookingService.services"
-              [class.selected]="isWalkInServiceSelected(service.name)"
-              [attr.aria-pressed]="isWalkInServiceSelected(service.name)"
-              (click)="toggleWalkInService(service.name)">
-              <span class="walkin-check"><i class="bi bi-check-lg"></i></span>
-              <span class="walkin-service-copy">
-                <strong>{{ service.name }}</strong>
-                <small>{{ service.duration }} min</small>
-              </span>
-              <strong class="walkin-service-price">Rs. {{ service.amount | number }}</strong>
-            </button>
-          </div>
-
-          <div class="walkin-total" *ngIf="selectedWalkInServices.length">
-            <div>
-              <i class="bi bi-receipt"></i>
-              <span>{{ selectedWalkInServices.length }} service{{ selectedWalkInServices.length > 1 ? 's' : '' }} · {{ walkInDuration }} min</span>
-            </div>
-            <strong>Rs. {{ walkInAmount | number }}</strong>
-          </div>
+        <div class="full walkin-date-line">
+          <i class="bi bi-calendar3"></i>
+          <span>Walk-in date</span>
+          <strong>{{ todayKey | date:'dd MMM yyyy' }}</strong>
         </div>
 
-        <div class="full walkin-schedule-grid">
-          <div class="walkin-date-card">
-            <span>Walk-in date</span>
-            <strong><i class="bi bi-calendar3"></i>{{ todayKey | date:'dd MMM yyyy' }}</strong>
-          </div>
+        <div class="full walkin-select-grid">
+          <label>
+            <span>Service *</span>
+            <select [(ngModel)]="newBooking.service" (ngModelChange)="onCreateServiceOrDateChange()">
+              <option value="">Select service</option>
+              <option *ngFor="let service of bookingService.services" [value]="service.name">
+                {{ service.name }} · {{ service.duration }} min · Rs. {{ service.amount | number }}
+              </option>
+            </select>
+          </label>
 
-          <div class="auto-barber-card">
-            <span class="auto-barber-icon"><i class="bi bi-person-check"></i></span>
-            <div>
-              <small>BARBER ASSIGNMENT</small>
-              <strong>Auto-assign eligible barber</strong>
-              <span>Based on services and live availability</span>
-            </div>
-          </div>
+          <label>
+            <span>Barber *</span>
+            <select [(ngModel)]="newBooking.barber" (ngModelChange)="onCreateBarberChange()" [disabled]="!newBooking.service">
+              <option value="">
+                {{ !newBooking.service ? 'Select service first' : (createBarbers.length ? 'Select barber' : 'No eligible barber') }}
+              </option>
+              <option *ngFor="let barber of createBarbers" [value]="barber">{{ barber }}</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Time *</span>
+            <select [(ngModel)]="newBooking.time" [disabled]="!newBooking.barber">
+              <option value="">
+                {{ !newBooking.barber ? 'Select barber first' : (createTimeSlots.length ? 'Select time' : 'No available time') }}
+              </option>
+              <option *ngFor="let slot of createTimeSlots" [value]="slot">{{ slot }}</option>
+            </select>
+          </label>
         </div>
 
-        <label class="full">
-          <span>Available Time *</span>
-          <select [(ngModel)]="newBooking.time" [disabled]="!newBooking.service">
-            <option value="">
-              {{ !newBooking.service ? 'Select services first' : (createTimeSlots.length ? 'Select available time' : 'No eligible barber is available') }}
-            </option>
-            <option *ngFor="let slot of createTimeSlots">{{ slot }}</option>
-          </select>
-        </label>
+        <div class="full walkin-summary" *ngIf="selectedWalkInService">
+          <span><i class="bi bi-scissors"></i>{{ selectedWalkInService.name }}</span>
+          <span><i class="bi bi-clock"></i>{{ selectedWalkInService.duration }} min</span>
+          <strong>Rs. {{ selectedWalkInService.amount | number }}</strong>
+        </div>
 
         <label class="full">
           <span>Notes <small>(optional)</small></span>
