@@ -196,6 +196,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
         modelBuilder.Entity<Booking>(entity =>
         {
             entity.ToTable("Bookings");
+            entity.Property(x => x.PublicId).ValueGeneratedOnAdd();
             entity.Property(x => x.BookingCode).HasMaxLength(40).IsRequired();
             entity.Property(x => x.CustomerName).HasMaxLength(160).IsRequired();
             entity.Property(x => x.CustomerPhone).HasMaxLength(30);
@@ -207,6 +208,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.Property(x => x.SpecialService).HasMaxLength(1000);
             entity.Property(x => x.SpecialServiceAmount).HasPrecision(18, 2);
 
+            entity.HasIndex(x => new { x.SalonId, x.PublicId }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.BookingCode }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.AppointmentDate, x.Status });
             entity.HasIndex(x => new { x.SalonId, x.BarberId, x.AppointmentDate, x.StartTime });
