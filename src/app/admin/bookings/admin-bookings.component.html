@@ -317,7 +317,7 @@
       <div>
         <span class="eyebrow">WALK-IN BOOKING</span>
         <h3>Add Walk-in Customer</h3>
-        <p class="modal-help">Choose the service and an available barber. The appointment starts at the current time.</p>
+        <p class="modal-help">Select a service and barber. Available barbers are shown first; if everyone is busy, we suggest barbers becoming free within 10 minutes.</p>
       </div>
       <button type="button" class="icon-btn" (click)="closeCreateModal()"><i class="bi bi-x-lg"></i></button>
     </div>
@@ -330,7 +330,7 @@
         </label>
 
         <label>
-          <span>Pakistan Mobile <small>(optional)</small></span>
+          <span>Phone Number <small>(optional)</small></span>
           <div class="phone-field d-flex">
             <b>+92</b>
             <input type="tel" inputmode="numeric" [ngModel]="newBooking.phone" (ngModelChange)="onPhoneInput($event)" maxlength="10" placeholder="3001234567">
@@ -349,11 +349,13 @@
 
         <label>
           <span>Barber *</span>
-          <select [(ngModel)]="newBooking.barber" [disabled]="!newBooking.service">
+          <select [(ngModel)]="newBooking.barber" (ngModelChange)="onCreateBarberChange()" [disabled]="!newBooking.service">
             <option value="">
-              {{ !newBooking.service ? 'Select service first' : (createBarbers.length ? 'Select available barber' : 'No barber available now') }}
+              {{ !newBooking.service ? 'Select service first' : (walkInBarberOptions.length ? 'Select barber' : 'No barber available within 10 min') }}
             </option>
-            <option *ngFor="let barber of createBarbers" [value]="barber">{{ barber }}</option>
+            <option *ngFor="let option of walkInBarberOptions" [value]="option.name">
+              {{ option.name }} · {{ option.availableNow ? 'Available now' : ('Available in ' + option.waitMinutes + ' min') }}
+            </option>
           </select>
         </label>
       </div>
@@ -363,20 +365,29 @@
           <i class="bi bi-calendar3"></i>
           <span>{{ todayKey | date:'dd MMM yyyy' }}</span>
         </div>
-        <div>
-          <i class="bi bi-clock"></i>
-          <span>Starts now at <strong>{{ currentWalkInTime }}</strong></span>
-        </div>
         <div *ngIf="selectedWalkInService">
           <i class="bi bi-scissors"></i>
           <span>{{ selectedWalkInService.duration }} min · Rs. {{ selectedWalkInService.amount | number }}</span>
         </div>
+        <div *ngIf="selectedWalkInBarberOption as option">
+          <i class="bi bi-clock"></i>
+          <span *ngIf="option.availableNow">Available now · starts at <strong>{{ option.startTime }}</strong></span>
+          <span *ngIf="!option.availableNow">Available in {{ option.waitMinutes }} min · starts at <strong>{{ option.startTime }}</strong></span>
+        </div>
       </div>
 
-      <label class="walkin-notes">
-        <span>Notes</span>
-        <textarea [(ngModel)]="newBooking.notes" placeholder="Add any notes or instructions for the barber"></textarea>
-      </label>
+      <div class="walkin-waiting-hint" *ngIf="selectedWalkInBarberOption && !selectedWalkInBarberOption.availableNow">
+        <i class="bi bi-hourglass-split"></i>
+        <div>
+          <strong>Short wait</strong>
+          <span>Ask the customer to sit in the waiting area. {{ selectedWalkInBarberOption.name }} will be free in {{ selectedWalkInBarberOption.waitMinutes }} minutes.</span>
+        </div>
+      </div>
+
+      <div class="walkin-unavailable-hint" *ngIf="selectedWalkInService && !walkInBarberOptions.length">
+        <i class="bi bi-exclamation-circle"></i>
+        <span>All eligible barbers are busy for more than 10 minutes.</span>
+      </div>
 
       <button type="button" class="submit-booking-btn" [disabled]="!canCreateWalkIn" (click)="createBooking()">
         <i class="bi bi-person-check"></i>
