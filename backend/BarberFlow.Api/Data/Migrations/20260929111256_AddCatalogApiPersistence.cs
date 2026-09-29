@@ -33,7 +33,7 @@ namespace BarberFlow.Api.Data.Migrations
                 type: "nvarchar(60)",
                 maxLength: 60,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "LOOK GOOD · FEEL GREAT");
 
             migrationBuilder.AddColumn<string>(
                 name: "HeroEyebrow",
@@ -41,7 +41,7 @@ namespace BarberFlow.Api.Data.Migrations
                 type: "nvarchar(60)",
                 maxLength: 60,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "PREMIUM BARBERSHOP");
 
             migrationBuilder.AddColumn<string>(
                 name: "HeroHeadline",
@@ -57,28 +57,28 @@ namespace BarberFlow.Api.Data.Migrations
                 type: "nvarchar(140)",
                 maxLength: 140,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "More Than a Haircut. It's a Lifestyle.");
 
             migrationBuilder.AddColumn<bool>(
                 name: "NotifyOwnerOnNewBooking",
                 table: "SalonSettings",
                 type: "bit",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<int>(
                 name: "ReminderHoursBefore",
                 table: "SalonSettings",
                 type: "int",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 2);
 
             migrationBuilder.AddColumn<bool>(
                 name: "SendAppointmentReminder",
                 table: "SalonSettings",
                 type: "bit",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<bool>(
                 name: "SendSmsFallback",
@@ -92,7 +92,7 @@ namespace BarberFlow.Api.Data.Migrations
                 table: "SalonSettings",
                 type: "bit",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "Address",
@@ -128,7 +128,31 @@ namespace BarberFlow.Api.Data.Migrations
                 type: "nvarchar(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "On Leave");
+
+            migrationBuilder.Sql(@"
+                ;WITH RankedServices AS (
+                    SELECT Id, ROW_NUMBER() OVER (PARTITION BY SalonId ORDER BY CreatedAtUtc, Id) AS PublicId
+                    FROM Services
+                )
+                UPDATE s
+                SET PublicId = r.PublicId
+                FROM Services s
+                INNER JOIN RankedServices r ON r.Id = s.Id;
+
+                ;WITH RankedBarbers AS (
+                    SELECT Id, ROW_NUMBER() OVER (PARTITION BY SalonId ORDER BY CreatedAtUtc, Id) AS PublicId
+                    FROM Barbers
+                )
+                UPDATE b
+                SET PublicId = r.PublicId
+                FROM Barbers b
+                INNER JOIN RankedBarbers r ON r.Id = b.Id;
+
+                UPDATE Salons
+                SET WhatsAppNumber = Phone
+                WHERE WhatsAppNumber IS NULL AND Phone IS NOT NULL;
+            ");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Services_SalonId_PublicId",
