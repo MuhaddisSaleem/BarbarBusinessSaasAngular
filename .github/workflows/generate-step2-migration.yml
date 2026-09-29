@@ -1,4 +1,4 @@
-name: Generate Step 2 booking migration
+name: Regenerate Step 2 migrations
 
 on:
   push:
@@ -25,20 +25,17 @@ jobs:
       - run: dotnet tool restore
       - run: dotnet restore backend/BarberFlow.Api/BarberFlow.Api.csproj
 
-      - name: Generate booking API migration
+      - name: Regenerate clean initial migration
         run: |
-          if ls backend/BarberFlow.Api/Data/Migrations/*_BookingApiPersistence.cs 1> /dev/null 2>&1; then
-            echo "BookingApiPersistence migration already exists."
-            exit 0
-          fi
+          rm -rf backend/BarberFlow.Api/Data/Migrations
 
-          dotnet ef migrations add BookingApiPersistence \
+          dotnet ef migrations add InitialCreate \
             --project backend/BarberFlow.Api \
             --startup-project backend/BarberFlow.Api \
             --output-dir Data/Migrations
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/BarberFlow.Api/Data/Migrations
-          git commit -m "feat: add booking API persistence migration"
+          git add -A backend/BarberFlow.Api/Data/Migrations
+          git commit -m "fix: regenerate SQL Server-compatible initial migration"
           git push origin HEAD:codex/bookings-api-integration
