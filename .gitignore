@@ -2,3 +2,23 @@
 /dist
 /.angular
 .DS_Store
+
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local environment / secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+secrets.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
