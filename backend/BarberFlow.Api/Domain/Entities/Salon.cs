@@ -7,7 +7,10 @@ public sealed class Salon : BaseEntity
     public required string Name { get; set; }
     public required string Slug { get; set; }
     public string? Phone { get; set; }
+    public string? WhatsAppNumber { get; set; }
     public string? Email { get; set; }
+    public string? Address { get; set; }
+    public string? City { get; set; }
     public string TimeZone { get; set; } = "Asia/Karachi";
     public string CurrencyCode { get; set; } = "PKR";
     public bool IsActive { get; set; } = true;
@@ -32,6 +35,17 @@ public sealed class SalonSettings : BaseEntity
     public bool AutoConfirmBookings { get; set; } = true;
     public int CancellationHours { get; set; } = 2;
     public int LateArrivalMinutes { get; set; } = 10;
+
+    public string BrandSubtitle { get; set; } = "LOOK GOOD · FEEL GREAT";
+    public string HeroEyebrow { get; set; } = "PREMIUM BARBERSHOP";
+    public string HeroHeadline { get; set; } = "";
+    public string HeroTagline { get; set; } = "More Than a Haircut. It's a Lifestyle.";
+
+    public bool SendWhatsappConfirmation { get; set; } = true;
+    public bool SendSmsFallback { get; set; }
+    public bool SendAppointmentReminder { get; set; } = true;
+    public int ReminderHoursBefore { get; set; } = 2;
+    public bool NotifyOwnerOnNewBooking { get; set; } = true;
 }
 
 public sealed class BusinessHour : BaseEntity
