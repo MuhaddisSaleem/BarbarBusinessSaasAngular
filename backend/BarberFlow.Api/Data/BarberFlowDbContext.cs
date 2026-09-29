@@ -121,7 +121,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.ToTable("Barbers");
             entity.Property(x => x.FullName).HasMaxLength(160).IsRequired();
             entity.Property(x => x.Phone).HasMaxLength(30);
-            entity.Property(x => x.ImageUrl).HasMaxLength(1000);
+            entity.Property(x => x.ImageUrl).HasColumnType("nvarchar(max)");
             entity.Property(x => x.Rating).HasPrecision(3, 2);
             entity.HasIndex(x => new { x.SalonId, x.PublicId }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.IsActive });
