@@ -117,11 +117,34 @@ jobs:
           echo "$BARBER_RESPONSE" | grep '"workingHours":""'
           BARBER_ID=$(echo "$BARBER_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["item"]["id"])')
 
+          BARBER_UPDATE_RESPONSE=$(curl --silent -w 
+
+          curl --fail --silent -X PATCH http://127.0.0.1:5080/api/barbers/$BARBER_ID/status | grep '"accountStatus":"Inactive"'
+          curl --fail --silent -X PATCH http://127.0.0.1:5080/api/barbers/$BARBER_ID/status | grep '"accountStatus":"Active"'
+
+          curl --fail --silent -X DELETE http://127.0.0.1:5080/api/barbers/$BARBER_ID | grep '"success":true'
+          curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; items=json.load(sys.stdin); assert all(x["name"] != "CI Barber Updated" for x in items)'
+
+          curl --fail --silent http://127.0.0.1:5080/api/settings | grep '"businessName":"Royal Barbers"'
           curl --fail --silent \
             -X PUT \
             -H "Content-Type: application/json" \
+            -d '{"businessName":"Royal Barbers CI","businessPhone":"+92 300 1234567","whatsappNumber":"+92 300 1234567","email":"owner@royalbarbers.local","address":"CI Address","city":"Bahawalpur","currency":"PKR","timezone":"Asia/Karachi","brandSubtitle":"LOOK GOOD · FEEL GREAT","heroEyebrow":"PREMIUM BARBERSHOP","heroHeadline":"","heroTagline":"More Than a Haircut. It is a Lifestyle.","bookingInterval":30,"maxAdvanceDays":30,"cancellationHours":2,"lateArrivalMinutes":10,"allowSameDayBooking":true,"autoConfirmBookings":true,"sendWhatsappConfirmation":true,"sendSmsFallback":false,"sendAppointmentReminder":true,"reminderHoursBefore":2,"notifyOwnerOnNewBooking":true,"businessHours":[{"key":"monday","label":"Monday","enabled":true,"open":"08:00","close":"21:00"},{"key":"tuesday","label":"Tuesday","enabled":true,"open":"08:00","close":"21:00"},{"key":"wednesday","label":"Wednesday","enabled":true,"open":"08:00","close":"21:00"},{"key":"thursday","label":"Thursday","enabled":true,"open":"08:00","close":"21:00"},{"key":"friday","label":"Friday","enabled":true,"open":"08:00","close":"21:00"},{"key":"saturday","label":"Saturday","enabled":true,"open":"08:00","close":"21:00"},{"key":"sunday","label":"Sunday","enabled":true,"open":"08:00","close":"21:00"}]}' \
+            http://127.0.0.1:5080/api/settings | grep '"success":true'
+          curl --fail --silent http://127.0.0.1:5080/api/settings | grep '"businessName":"Royal Barbers CI"'
+\n%{http_code}' \
+            -X PUT \
+            -H "Content-Type: application/json" \
             -d '{"name":"CI Barber Updated","phone":"+92 300 7654321","experience":"4 years","specialties":["Haircut"],"workingHours":"10:00 AM - 7:00 PM","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
-            http://127.0.0.1:5080/api/barbers/$BARBER_ID | grep '"success":true'
+            http://127.0.0.1:5080/api/barbers/$BARBER_ID)
+          BARBER_UPDATE_STATUS=$(echo "$BARBER_UPDATE_RESPONSE" | tail -n1)
+          BARBER_UPDATE_BODY=$(echo "$BARBER_UPDATE_RESPONSE" | sed '$d')
+          echo "$BARBER_UPDATE_BODY"
+          if [ "$BARBER_UPDATE_STATUS" != "200" ]; then
+            cat /tmp/barberflow-api.log
+            exit 1
+          fi
+          echo "$BARBER_UPDATE_BODY" | grep '"success":true'
           curl --fail --silent http://127.0.0.1:5080/api/barbers | grep '"name":"CI Barber Updated"'
 
           curl --fail --silent -X PATCH http://127.0.0.1:5080/api/barbers/$BARBER_ID/status | grep '"accountStatus":"Inactive"'
