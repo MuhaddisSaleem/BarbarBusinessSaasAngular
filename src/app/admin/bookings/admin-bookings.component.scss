@@ -188,6 +188,124 @@ button,input,select,textarea { font:inherit; }
 .form-grid textarea { min-height:74px; padding-top:9px; resize:vertical; }
 .phone-field b { min-width:45px; display:grid; place-items:center; border-right:1px solid #303c41; color:#c6cdcf; font-size:9px; }
 .phone-field input { border:0; background:transparent; }
+
+.modal-help {
+  max-width:390px;
+  margin:5px 0 0;
+  color:#879398;
+  font-size:8px;
+  line-height:1.45;
+}
+
+.walkin-service-field .field-label {
+  display:block;
+  margin-bottom:5px;
+  color:#9ba5a9;
+  font-size:8px;
+}
+
+.walkin-service-list {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.form-grid .walkin-service-option {
+  position:relative;
+  min-height:50px;
+  padding:10px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  border:1px solid #303c41;
+  border-radius:8px;
+  background:#10181b;
+  cursor:pointer;
+  transition:border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.form-grid .walkin-service-option:hover {
+  border-color:#56646a;
+  transform:translateY(-1px);
+}
+
+.form-grid .walkin-service-option.selected {
+  border-color:#e9ad45;
+  background:rgba(233,173,69,.08);
+}
+
+.form-grid .walkin-service-option input {
+  position:absolute;
+  width:1px;
+  height:1px;
+  min-height:0;
+  margin:0;
+  padding:0;
+  opacity:0;
+  pointer-events:none;
+}
+
+.walkin-check {
+  width:20px;
+  height:20px;
+  flex:0 0 20px;
+  display:grid;
+  place-items:center;
+  border:1px solid #4a575c;
+  border-radius:5px;
+  color:transparent;
+  font-size:10px;
+}
+
+.walkin-service-option.selected .walkin-check {
+  border-color:#e9ad45;
+  background:#e9ad45;
+  color:#111;
+}
+
+.walkin-service-copy {
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.walkin-service-copy strong {
+  color:#e5e8e9;
+  font-size:9px;
+  font-weight:700;
+}
+
+.walkin-service-copy small {
+  color:#7f8b90;
+  font-size:7px;
+}
+
+.walkin-total {
+  margin-top:8px;
+  padding:9px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  border:1px solid rgba(233,173,69,.22);
+  border-radius:7px;
+  background:rgba(233,173,69,.05);
+  color:#aeb7ba;
+  font-size:8px;
+}
+
+.walkin-total strong {
+  color:#f2ca73;
+  font-size:8px;
+}
+
+.form-grid input:disabled {
+  color:#879398;
+  opacity:.75;
+  cursor:not-allowed;
+}
+
 .submit-booking-btn {
   width:100%; min-height:42px; margin-top:15px; display:flex; align-items:center; justify-content:center; gap:7px;
   border:0; border-radius:8px; background:linear-gradient(145deg,#ffd879,#e9ad45); color:#111; font-size:9px; font-weight:800;
@@ -218,6 +336,7 @@ button,input,select,textarea { font:inherit; }
   .booking-drawer { width:100%; }
   .form-grid { grid-template-columns:1fr; }
   .form-grid label.full { grid-column:auto; }
+  .walkin-service-list { grid-template-columns:1fr; }
 }
 
 
