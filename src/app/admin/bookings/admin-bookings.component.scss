@@ -40,7 +40,18 @@ button,input,select,textarea { font:inherit; }
 }
 
 .booking-tabs {
-  min-height:58px; padding:0 16px; gap:4px; border-bottom:1px solid #202b30;
+  min-height:58px;
+  padding:0 16px;
+  gap:4px;
+  border-bottom:1px solid #202b30;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+
+.booking-tabs::-webkit-scrollbar {
+  display:none;
 }
 .booking-tabs button {
   position:relative; min-width:max-content; padding:0 12px; border:0; background:transparent;
