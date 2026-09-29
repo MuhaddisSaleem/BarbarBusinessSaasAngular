@@ -20,6 +20,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: "Developer"
+          MSSQL_SA_PASSWORD: "CiSqlServer123!"
+        ports:
+          - 1433:1433
     steps:
       - uses: actions/checkout@v4
 
@@ -50,3 +59,37 @@ jobs:
         env:
           BARBERFLOW_DB_CONNECTION: "Server=localhost,1433;Database=BarberFlow;User Id=sa;Password=CiDesignTime123!;Encrypt=False;TrustServerCertificate=True"
         run: dotnet ef migrations script --idempotent --project backend/BarberFlow.Api --startup-project backend/BarberFlow.Api --configuration Release --no-build --output /tmp/barberflow.sql
+
+      - name: Smoke test Booking API against SQL Server
+        env:
+          ASPNETCORE_ENVIRONMENT: "Development"
+          ASPNETCORE_URLS: "http://127.0.0.1:5080"
+          ConnectionStrings__DefaultConnection: "Server=127.0.0.1,1433;Database=BarberFlow;User Id=sa;Password=CiSqlServer123!;Encrypt=False;TrustServerCertificate=True"
+        run: |
+          for i in {1..30}; do
+            if (echo > /dev/tcp/127.0.0.1/1433) >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+
+          dotnet run --project backend/BarberFlow.Api --configuration Release --no-build > /tmp/barberflow-api.log 2>&1 &
+          API_PID=$!
+          trap 'kill $API_PID || true' EXIT
+
+          for i in {1..40}; do
+            if curl --fail --silent http://127.0.0.1:5080/health >/dev/null; then break; fi
+            if ! kill -0 $API_PID 2>/dev/null; then
+              cat /tmp/barberflow-api.log
+              exit 1
+            fi
+            sleep 2
+          done
+
+          curl --fail --silent http://127.0.0.1:5080/api/system/database | grep '"connected":true'
+
+          BOOKING_DATE=$(date -u -d '+1 day' +%F)
+          curl --fail --silent \
+            -H "Content-Type: application/json" \
+            -d "[{\"customerName\":\"CI Customer\",\"phone\":\"+923001234567\",\"service\":\"Haircut\",\"duration\":40,\"barber\":\"Falak Shair\",\"date\":\"$BOOKING_DATE\",\"time\":\"5:00 PM\",\"amount\":600,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Salon\",\"serviceAddress\":\"\",\"specialService\":\"\",\"specialServiceAmount\":0}]" \
+            http://127.0.0.1:5080/api/bookings/online | grep '"success":true'
+
+          curl --fail --silent http://127.0.0.1:5080/api/bookings | grep '"customerName":"CI Customer"'
