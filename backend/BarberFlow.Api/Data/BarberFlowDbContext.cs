@@ -41,7 +41,10 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
             entity.Property(x => x.Slug).HasMaxLength(120).IsRequired();
             entity.Property(x => x.Phone).HasMaxLength(30);
+            entity.Property(x => x.WhatsAppNumber).HasMaxLength(30);
             entity.Property(x => x.Email).HasMaxLength(254);
+            entity.Property(x => x.Address).HasMaxLength(500);
+            entity.Property(x => x.City).HasMaxLength(120);
             entity.Property(x => x.TimeZone).HasMaxLength(80).IsRequired();
             entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.HasIndex(x => x.Slug).IsUnique();
@@ -50,6 +53,10 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
         modelBuilder.Entity<SalonSettings>(entity =>
         {
             entity.ToTable("SalonSettings");
+            entity.Property(x => x.BrandSubtitle).HasMaxLength(60);
+            entity.Property(x => x.HeroEyebrow).HasMaxLength(60);
+            entity.Property(x => x.HeroHeadline).HasMaxLength(90);
+            entity.Property(x => x.HeroTagline).HasMaxLength(140);
             entity.HasIndex(x => x.SalonId).IsUnique();
             entity.HasOne(x => x.Salon)
                 .WithOne(x => x.Settings)
@@ -98,6 +105,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.Property(x => x.HomeOriginalPrice).HasPrecision(18, 2);
             entity.Property(x => x.HomeDiscountPrice).HasPrecision(18, 2);
             entity.Property(x => x.ImageUrl).HasMaxLength(1000);
+            entity.HasIndex(x => new { x.SalonId, x.PublicId }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.Name }).IsUnique();
             entity.HasOne(x => x.Salon)
                 .WithMany(x => x.Services)
@@ -115,6 +123,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.Property(x => x.Phone).HasMaxLength(30);
             entity.Property(x => x.ImageUrl).HasMaxLength(1000);
             entity.Property(x => x.Rating).HasPrecision(3, 2);
+            entity.HasIndex(x => new { x.SalonId, x.PublicId }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.IsActive });
             entity.HasOne(x => x.Salon)
                 .WithMany(x => x.Barbers)
@@ -165,6 +174,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.ToTable("BarberLeaves");
             entity.Property(x => x.StartDate).HasColumnType("date");
             entity.Property(x => x.EndDate).HasColumnType("date");
+            entity.Property(x => x.LeaveType).HasMaxLength(20).IsRequired();
             entity.Property(x => x.Reason).HasMaxLength(500);
             entity.HasIndex(x => new { x.BarberId, x.StartDate, x.EndDate });
             entity.HasOne(x => x.Barber)
