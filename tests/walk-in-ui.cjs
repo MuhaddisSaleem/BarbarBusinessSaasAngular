@@ -30,6 +30,7 @@ let browser,activePage;
     const page=await context.newPage();activePage=page;page.setDefaultTimeout(15000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.clock.install({time:new Date('2026-09-28T11:30:00Z')});
+    await page.clock.setFixedTime(new Date('2026-09-28T11:30:00Z'));
     await page.addInitScript(seed=>{
       if(localStorage.getItem('walk-in-qa-seeded'))return;
       for(const [key,value] of Object.entries(seed))localStorage.setItem(key,JSON.stringify(value));

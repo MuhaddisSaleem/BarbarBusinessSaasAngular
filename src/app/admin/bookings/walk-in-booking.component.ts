@@ -40,6 +40,8 @@ export class WalkInBookingComponent implements OnInit {
   @HostListener('document:keydown.escape')
   close(): void { if (!this.saving) this.closed.emit(); }
 
+  trackService(_index: number, service: { id: number }): number { return service.id; }
+
   toggleService(id: number): void {
     this.serviceIds = this.serviceIds.includes(id)
       ? this.serviceIds.filter(value => value !== id) : [...this.serviceIds, id];

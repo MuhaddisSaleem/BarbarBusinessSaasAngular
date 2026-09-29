@@ -17,7 +17,7 @@
     <fieldset>
       <legend>Services <span>*</span></legend>
       <div class="service-options">
-        <label class="service-option" *ngFor="let service of bookingService.walkInServices" [class.selected]="serviceIds.includes(service.id)">
+        <label class="service-option" *ngFor="let service of bookingService.walkInServices; trackBy: trackService" [class.selected]="serviceIds.includes(service.id)">
           <input type="checkbox" [checked]="serviceIds.includes(service.id)" (change)="toggleService(service.id)">
           <span><strong>{{ service.name }}</strong><small>{{ service.duration }} min · Rs. {{ service.amount | number }}</small></span>
         </label>
