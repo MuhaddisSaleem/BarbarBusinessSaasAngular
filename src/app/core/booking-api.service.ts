@@ -15,7 +15,7 @@ export interface AvailabilityApiResult {
 
 @Injectable({ providedIn: 'root' })
 export class BookingApiService {
-  private readonly baseUrl = 'http://localhost:5080/api/bookings';
+  private readonly baseUrl = '/api/bookings';
 
   constructor(private readonly http: HttpClient) {}
 
