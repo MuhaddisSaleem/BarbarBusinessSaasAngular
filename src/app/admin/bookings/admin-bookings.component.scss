@@ -439,6 +439,92 @@ button,input,select,textarea { font:inherit; }
   cursor:not-allowed;
 }
 
+.walkin-modal {
+  width:min(640px,calc(100vw - 32px));
+}
+
+.walkin-form-grid {
+  gap:14px;
+}
+
+.walkin-date-line {
+  min-height:38px;
+  padding:9px 12px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid #29363b;
+  border-radius:8px;
+  background:#0f171a;
+  color:#77858a;
+  font-size:8px;
+}
+
+.walkin-date-line i {
+  color:#d7ae57;
+  font-size:11px;
+}
+
+.walkin-date-line span {
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.walkin-date-line strong {
+  margin-left:auto;
+  color:#e3e8ea;
+  font-size:9px;
+}
+
+.walkin-select-grid {
+  display:grid;
+  grid-template-columns:1.25fr 1fr 1fr;
+  gap:10px;
+}
+
+.walkin-select-grid label {
+  min-width:0;
+}
+
+.walkin-select-grid select {
+  min-width:0;
+  cursor:pointer;
+}
+
+.walkin-select-grid select:disabled {
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+.walkin-summary {
+  min-height:40px;
+  padding:9px 12px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  border:1px solid rgba(233,173,69,.2);
+  border-radius:8px;
+  background:rgba(233,173,69,.05);
+  color:#a7b1b5;
+  font-size:8px;
+}
+
+.walkin-summary span {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.walkin-summary i {
+  color:#d5ac54;
+}
+
+.walkin-summary strong {
+  margin-left:auto;
+  color:#f1c86f;
+  font-size:9px;
+}
+
 .submit-booking-btn {
   width:100%; min-height:46px; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:8px;
   border:0; border-radius:9px; background:linear-gradient(145deg,#ffd879,#e9ad45); color:#111; font-size:10px; font-weight:850;
@@ -478,6 +564,10 @@ button,input,select,textarea { font:inherit; }
   .walkin-service-list { grid-template-columns:1fr; }
   .walkin-schedule-grid { grid-template-columns:1fr; }
   .walkin-service-option { min-height:58px; }
+  .walkin-modal { width:calc(100vw - 18px); }
+  .walkin-select-grid { grid-template-columns:1fr; }
+  .walkin-summary { flex-wrap:wrap; gap:8px 14px; }
+  .walkin-summary strong { width:100%; margin-left:0; }
 }
 
 
