@@ -39,4 +39,4 @@ jobs:
       - name: Validate EF Core model
         env:
           BARBERFLOW_DB_CONNECTION: "Server=localhost,1433;Database=BarberFlow;User Id=sa;Password=CiDesignTime123!;Encrypt=False;TrustServerCertificate=True"
-        run: dotnet ef dbcontext info --project backend/BarberFlow.Api --startup-project backend/BarberFlow.Api --no-build
+        run: dotnet ef dbcontext info --project backend/BarberFlow.Api --startup-project backend/BarberFlow.Api --configuration Release --no-build
