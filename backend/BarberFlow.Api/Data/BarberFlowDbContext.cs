@@ -133,7 +133,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.HasOne(x => x.Service)
                 .WithMany(x => x.Barbers)
                 .HasForeignKey(x => x.ServiceId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<BarberWorkingHour>(entity =>
