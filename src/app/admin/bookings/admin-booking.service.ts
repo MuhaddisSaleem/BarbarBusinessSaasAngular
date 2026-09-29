@@ -64,6 +64,23 @@ export class AdminBookingService {
       .map(barber => barber.name);
   }
 
+  availableBarbersForWalkIn(service: string, dateKey: string, time: string, duration: number): string[] {
+    const scheduleValidation = this.validateSchedule(dateKey, time, duration, true);
+    if (!scheduleValidation.success) return [];
+
+    const services = this.serviceNames(service);
+
+    return this.barberService.active
+      .filter(barber =>
+        this.barberService.isAvailableOnDate(barber.id, dateKey)
+        && this.barberService.supportsServices(barber.id, services)
+        && this.barberService.isWorkingAt(barber.id, time, duration)
+        && !this.hasConflict(barber.name, dateKey, time, duration)
+      )
+      .sort((a, b) => b.rating - a.rating || a.id - b.id)
+      .map(barber => barber.name);
+  }
+
   availableBarbersForBooking(booking: AdminBooking, dateKey: string): string[] {
     const services = this.bookingServiceNames(booking);
 
@@ -584,7 +601,8 @@ export class AdminBookingService {
 
     if (dateKey === todayKey) {
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      if (start <= nowMinutes) {
+      const isPast = allowWalkInSameDay ? start < nowMinutes : start <= nowMinutes;
+      if (isPast) {
         return { success: false, message: 'The selected appointment time has already passed.' };
       }
     }
