@@ -14,12 +14,13 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
     public async Task<IReadOnlyList<ServiceDto>> GetServicesAsync(CancellationToken cancellationToken)
     {
         var salonId = await GetSalonIdAsync(cancellationToken);
-        return await db.Services
+        var services = await db.Services
             .AsNoTracking()
             .Where(x => x.SalonId == salonId)
             .OrderBy(x => x.PublicId)
-            .Select(x => MapService(x))
             .ToListAsync(cancellationToken);
+
+        return services.Select(MapService).ToList();
     }
 
     public async Task<MutationResponse<ServiceDto>> AddServiceAsync(
@@ -400,106 +401,111 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         LegacyCatalogImportRequest request,
         CancellationToken cancellationToken)
     {
-        var salon = await GetSalonAsync(cancellationToken, includeSettings: true);
+        var strategy = db.Database.CreateExecutionStrategy();
 
-        if (await db.Bookings.AnyAsync(x => x.SalonId == salon.Id, cancellationToken))
+        return await strategy.ExecuteAsync(async () =>
         {
-            return new(false, false,
-                "Legacy catalog import was skipped because SQL Server already contains bookings.");
-        }
-
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-
-        try
-        {
-            if (request.Services is { Count: > 0 })
+    var salon = await GetSalonAsync(cancellationToken, includeSettings: true);
+    
+            if (await db.Bookings.AnyAsync(x => x.SalonId == salon.Id, cancellationToken))
             {
-                var existingLinks = await db.BarberServices
-                    .Where(x => x.Barber.SalonId == salon.Id)
-                    .ToListAsync(cancellationToken);
-                db.BarberServices.RemoveRange(existingLinks);
-
-                var existingServices = await db.Services
-                    .Where(x => x.SalonId == salon.Id)
-                    .ToListAsync(cancellationToken);
-                db.Services.RemoveRange(existingServices);
-                await db.SaveChangesAsync(cancellationToken);
-
-                foreach (var dto in request.Services.OrderBy(x => x.Id))
-                {
-                    var upsert = new ServiceUpsertRequest(
-                        dto.Name, dto.Duration, dto.OriginalPrice, dto.DiscountPrice,
-                        dto.HomeServiceEnabled, dto.HomeOriginalPrice, dto.HomeDiscountPrice,
-                        dto.Image, dto.Status);
-                    var validation = ValidateService(upsert);
-                    if (validation is not null) throw new InvalidOperationException(validation);
-                    db.Services.Add(BuildService(salon.Id, dto.Id, upsert));
-                }
-                await db.SaveChangesAsync(cancellationToken);
+                return new(false, false,
+                    "Legacy catalog import was skipped because SQL Server already contains bookings.");
             }
-
-            if (request.Barbers is { Count: > 0 })
+    
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+    
+            try
             {
-                var oldBarbers = await db.Barbers
-                    .Where(x => x.SalonId == salon.Id)
-                    .Include(x => x.Services)
-                    .Include(x => x.WorkingHours)
-                    .Include(x => x.ScheduleOverrides)
-                    .Include(x => x.Leaves)
-                    .ToListAsync(cancellationToken);
-
-                foreach (var old in oldBarbers)
+                if (request.Services is { Count: > 0 })
                 {
-                    db.BarberServices.RemoveRange(old.Services);
-                    db.BarberWorkingHours.RemoveRange(old.WorkingHours);
-                    db.BarberScheduleOverrides.RemoveRange(old.ScheduleOverrides);
-                    db.BarberLeaves.RemoveRange(old.Leaves);
-                }
-                db.Barbers.RemoveRange(oldBarbers);
-                await db.SaveChangesAsync(cancellationToken);
-
-                var today = DateOnly.FromDateTime(GetSalonNow(salon).DateTime);
-                foreach (var dto in request.Barbers.OrderBy(x => x.Id))
-                {
-                    var barber = new Barber
+                    var existingLinks = await db.BarberServices
+                        .Where(x => x.Barber.SalonId == salon.Id)
+                        .ToListAsync(cancellationToken);
+                    db.BarberServices.RemoveRange(existingLinks);
+    
+                    var existingServices = await db.Services
+                        .Where(x => x.SalonId == salon.Id)
+                        .ToListAsync(cancellationToken);
+                    db.Services.RemoveRange(existingServices);
+                    await db.SaveChangesAsync(cancellationToken);
+    
+                    foreach (var dto in request.Services.OrderBy(x => x.Id))
                     {
-                        SalonId = salon.Id,
-                        PublicId = dto.Id,
-                        FullName = dto.Name.Trim(),
-                        Phone = NormalizePhone(dto.Phone),
-                        ExperienceYears = ExperienceYears(dto.Experience),
-                        ImageUrl = dto.Image,
-                        Rating = NormalizeRating(dto.Rating),
-                        IsActive = !dto.AccountStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
-                    };
-                    db.Barbers.Add(barber);
-                    await ApplyBarberServicesAsync(barber, dto.Specialties, cancellationToken);
-                    ApplyWorkingHours(barber, dto.WorkingHours);
-                    ApplyImportedAvailability(barber, new BarberUpsertRequest(
-                        dto.Name, dto.Phone, dto.Experience, dto.Specialties,
-                        dto.WorkingHours, dto.Image, dto.Rating, dto.Availability,
-                        dto.AccountStatus, dto.LeaveFrom, dto.LeaveTo, dto.Note), today);
+                        var upsert = new ServiceUpsertRequest(
+                            dto.Name, dto.Duration, dto.OriginalPrice, dto.DiscountPrice,
+                            dto.HomeServiceEnabled, dto.HomeOriginalPrice, dto.HomeDiscountPrice,
+                            dto.Image, dto.Status);
+                        var validation = ValidateService(upsert);
+                        if (validation is not null) throw new InvalidOperationException(validation);
+                        db.Services.Add(BuildService(salon.Id, dto.Id, upsert));
+                    }
+                    await db.SaveChangesAsync(cancellationToken);
                 }
-                await db.SaveChangesAsync(cancellationToken);
+    
+                if (request.Barbers is { Count: > 0 })
+                {
+                    var oldBarbers = await db.Barbers
+                        .Where(x => x.SalonId == salon.Id)
+                        .Include(x => x.Services)
+                        .Include(x => x.WorkingHours)
+                        .Include(x => x.ScheduleOverrides)
+                        .Include(x => x.Leaves)
+                        .ToListAsync(cancellationToken);
+    
+                    foreach (var old in oldBarbers)
+                    {
+                        db.BarberServices.RemoveRange(old.Services);
+                        db.BarberWorkingHours.RemoveRange(old.WorkingHours);
+                        db.BarberScheduleOverrides.RemoveRange(old.ScheduleOverrides);
+                        db.BarberLeaves.RemoveRange(old.Leaves);
+                    }
+                    db.Barbers.RemoveRange(oldBarbers);
+                    await db.SaveChangesAsync(cancellationToken);
+    
+                    var today = DateOnly.FromDateTime(GetSalonNow(salon).DateTime);
+                    foreach (var dto in request.Barbers.OrderBy(x => x.Id))
+                    {
+                        var barber = new Barber
+                        {
+                            SalonId = salon.Id,
+                            PublicId = dto.Id,
+                            FullName = dto.Name.Trim(),
+                            Phone = NormalizePhone(dto.Phone),
+                            ExperienceYears = ExperienceYears(dto.Experience),
+                            ImageUrl = dto.Image,
+                            Rating = NormalizeRating(dto.Rating),
+                            IsActive = !dto.AccountStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
+                        };
+                        db.Barbers.Add(barber);
+                        await ApplyBarberServicesAsync(barber, dto.Specialties, cancellationToken);
+                        ApplyWorkingHours(barber, dto.WorkingHours);
+                        ApplyImportedAvailability(barber, new BarberUpsertRequest(
+                            dto.Name, dto.Phone, dto.Experience, dto.Specialties,
+                            dto.WorkingHours, dto.Image, dto.Rating, dto.Availability,
+                            dto.AccountStatus, dto.LeaveFrom, dto.LeaveTo, dto.Note), today);
+                    }
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+    
+                if (request.Settings is not null)
+                {
+                    var validation = ValidateSettings(request.Settings);
+                    if (validation is not null) throw new InvalidOperationException(validation);
+                    ApplySettings(salon, request.Settings);
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+    
+                await transaction.CommitAsync(cancellationToken);
+                return new(true, true, "Legacy Services, Barbers and Settings were migrated to SQL Server.");
             }
-
-            if (request.Settings is not null)
+            catch (Exception ex)
             {
-                var validation = ValidateSettings(request.Settings);
-                if (validation is not null) throw new InvalidOperationException(validation);
-                ApplySettings(salon, request.Settings);
-                await db.SaveChangesAsync(cancellationToken);
+                await transaction.RollbackAsync(cancellationToken);
+                db.ChangeTracker.Clear();
+                return new(false, false, "Legacy data migration failed: " + ex.Message);
             }
-
-            await transaction.CommitAsync(cancellationToken);
-            return new(true, true, "Legacy Services, Barbers and Settings were migrated to SQL Server.");
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            db.ChangeTracker.Clear();
-            return new(false, false, "Legacy data migration failed: " + ex.Message);
-        }
+        });
     }
 
     private static ServiceDto MapService(Service service) => new(
