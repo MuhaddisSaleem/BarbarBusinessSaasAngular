@@ -516,12 +516,17 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
         var working = await db.BarberWorkingHours
             .FirstOrDefaultAsync(x => x.BarberId == barber.Id && x.DayOfWeek == date.DayOfWeek, cancellationToken);
 
-        if (working is null || !working.IsWorking || !working.StartTime.HasValue || !working.EndTime.HasValue)
-            return (false, $"{barber.FullName} is not working on this date.");
+        // No barber-specific row means this barber follows the salon business hours.
+        // ValidateSalonScheduleAsync has already checked that window before this method runs.
+        if (working is not null)
+        {
+            if (!working.IsWorking || !working.StartTime.HasValue || !working.EndTime.HasValue)
+                return (false, $"{barber.FullName} is not working on this date.");
 
-        var end = time.AddMinutes(duration);
-        if (time < working.StartTime.Value || end > working.EndTime.Value)
-            return (false, $"{barber.FullName} is outside their configured working hours at this time.");
+            var end = time.AddMinutes(duration);
+            if (time < working.StartTime.Value || end > working.EndTime.Value)
+                return (false, $"{barber.FullName} is outside their configured working hours at this time.");
+        }
 
         var dayBookings = await db.Bookings
             .Where(x => x.SalonId == salonId
