@@ -1,3 +1,4 @@
+using BarberFlow.Api.Domain.Common;
 using BarberFlow.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -262,10 +263,10 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
         var now = DateTimeOffset.UtcNow;
 
         foreach (var entry in ChangeTracker.Entries()
-                     .Where(entry => entry.Entity is Domain.Common.BaseEntity
+                     .Where(entry => entry.Entity is BaseEntity
                                      && entry.State is EntityState.Added or EntityState.Modified))
         {
-            var entity = (Domain.Common.BaseEntity)entry.Entity;
+            var entity = (BaseEntity)entry.Entity;
             entity.UpdatedAtUtc = now;
 
             if (entry.State == EntityState.Added)
