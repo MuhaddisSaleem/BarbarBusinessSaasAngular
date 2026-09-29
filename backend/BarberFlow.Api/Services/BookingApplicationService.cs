@@ -315,6 +315,18 @@ public sealed class BookingApplicationService(
         bool walkIn,
         CancellationToken cancellationToken)
     {
+        var strategy = db.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
+            await CreateWithinTransactionAsync(request, source, walkIn, cancellationToken));
+    }
+
+    private async Task<BookingMutationResponse> CreateWithinTransactionAsync(
+        CreateBookingsRequest request,
+        BookingSource source,
+        bool walkIn,
+        CancellationToken cancellationToken)
+    {
         if (request.Bookings.Count == 0)
             return Failure("No booking details were provided.");
 
