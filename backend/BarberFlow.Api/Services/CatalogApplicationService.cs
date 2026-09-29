@@ -44,6 +44,10 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         db.Services.Add(service);
         await db.SaveChangesAsync(cancellationToken);
 
+        // Every barber can perform every service configured by the admin.
+        // Keep this invariant true for both existing and newly-added barbers.
+        await EnsureAllBarbersHaveAllServicesAsync(salonId, cancellationToken);
+
         return new(true, service.Name + " added successfully.", MapService(service));
     }
 
@@ -124,6 +128,10 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
     public async Task<IReadOnlyList<BarberDto>> GetBarbersAsync(CancellationToken cancellationToken)
     {
         var salon = await GetSalonAsync(cancellationToken);
+
+        // Backfill older data created before services became universal for all barbers.
+        await EnsureAllBarbersHaveAllServicesAsync(salon.Id, cancellationToken);
+
         var barbers = await db.Barbers
             .AsNoTracking()
             .Where(x => x.SalonId == salon.Id)
@@ -163,7 +171,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         };
 
         db.Barbers.Add(barber);
-        await ApplyBarberServicesAsync(barber, request.Specialties, cancellationToken);
+        await ApplyBarberServicesAsync(barber, cancellationToken);
         ApplyWorkingHours(barber, request.WorkingHours);
         ApplyImportedAvailability(barber, request, DateOnly.FromDateTime(GetSalonNow(salon).DateTime));
 
@@ -199,7 +207,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         barber.ImageUrl = request.Image;
         barber.Rating = NormalizeRating(request.Rating);
 
-        await SyncBarberServicesAsync(barber, request.Specialties, cancellationToken);
+        await SyncBarberServicesAsync(barber, cancellationToken);
         UpdateWorkingHours(barber, request.WorkingHours);
 
         await db.SaveChangesAsync(cancellationToken);
@@ -526,7 +534,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
                             barber.Leaves.Clear();
                         }
 
-                        await ApplyBarberServicesAsync(barber, dto.Specialties, cancellationToken);
+                        await ApplyBarberServicesAsync(barber, cancellationToken);
                         ApplyWorkingHours(barber, dto.WorkingHours);
                         ApplyImportedAvailability(
                             barber,
@@ -650,7 +658,6 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
     {
         if (string.IsNullOrWhiteSpace(request.Name)) return "Barber name is required.";
         if (!IsValidPakistanPhone(request.Phone)) return "Enter a valid Pakistan mobile number.";
-        if (request.Specialties.Count == 0) return "Select at least one specialty.";
         if (!string.IsNullOrWhiteSpace(request.WorkingHours)
             && !TryParseWorkingHours(request.WorkingHours, out _, out _))
             return "Enter working hours like 8:00 AM - 9:00 PM, or leave it blank to use salon hours.";
@@ -670,25 +677,15 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             cancellationToken);
         if (duplicatePhone) return "Another barber already uses this mobile number.";
 
-        var normalizedSpecialties = request.Specialties.Select(x => x.Trim().ToLower()).Distinct().ToList();
-        var serviceCount = await db.Services.CountAsync(
-            x => x.SalonId == salonId
-                 && normalizedSpecialties.Contains(x.Name.ToLower()),
-            cancellationToken);
-        if (serviceCount != normalizedSpecialties.Count)
-            return "One or more selected specialties do not exist in the service catalog.";
-
         return null;
     }
 
     private async Task ApplyBarberServicesAsync(
         Barber barber,
-        IReadOnlyList<string> specialties,
         CancellationToken cancellationToken)
     {
-        var normalized = specialties.Select(x => x.Trim().ToLower()).Distinct().ToList();
         var services = await db.Services
-            .Where(x => x.SalonId == barber.SalonId && normalized.Contains(x.Name.ToLower()))
+            .Where(x => x.SalonId == barber.SalonId)
             .ToListAsync(cancellationToken);
 
         foreach (var service in services)
@@ -707,16 +704,10 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
     private async Task SyncBarberServicesAsync(
         Barber barber,
-        IReadOnlyList<string> specialties,
         CancellationToken cancellationToken)
     {
-        var normalized = specialties
-            .Select(x => x.Trim().ToLower())
-            .Distinct()
-            .ToList();
-
         var services = await db.Services
-            .Where(x => x.SalonId == barber.SalonId && normalized.Contains(x.Name.ToLower()))
+            .Where(x => x.SalonId == barber.SalonId)
             .ToListAsync(cancellationToken);
 
         var desiredServiceIds = services.Select(x => x.Id).ToHashSet();
@@ -741,6 +732,46 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             barber.Services.Add(link);
             db.BarberServices.Add(link);
         }
+    }
+
+    private async Task EnsureAllBarbersHaveAllServicesAsync(
+        Guid salonId,
+        CancellationToken cancellationToken)
+    {
+        var serviceIds = await db.Services
+            .AsNoTracking()
+            .Where(x => x.SalonId == salonId)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        if (serviceIds.Count == 0) return;
+
+        var barbers = await db.Barbers
+            .Where(x => x.SalonId == salonId)
+            .Include(x => x.Services)
+            .ToListAsync(cancellationToken);
+
+        var changed = false;
+
+        foreach (var barber in barbers)
+        {
+            var existingServiceIds = barber.Services.Select(x => x.ServiceId).ToHashSet();
+
+            foreach (var serviceId in serviceIds.Where(id => !existingServiceIds.Contains(id)))
+            {
+                db.BarberServices.Add(new BarberService
+                {
+                    BarberId = barber.Id,
+                    ServiceId = serviceId
+                });
+                changed = true;
+            }
+        }
+
+        if (changed)
+            await db.SaveChangesAsync(cancellationToken);
+
+        db.ChangeTracker.Clear();
     }
 
     private void UpdateWorkingHours(Barber barber, string value)
