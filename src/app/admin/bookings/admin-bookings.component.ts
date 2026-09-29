@@ -394,7 +394,7 @@ export class AdminBookingsComponent implements OnInit {
 
     if (!selectedOption) {
       this.newBooking.barber = '';
-      this.showFeedback(false, 'That barber is no longer available within the next 10 minutes. Please select another barber.');
+      this.showFeedback(false, 'That barber is no longer available today. Please select another barber.');
       return;
     }
 
