@@ -41,7 +41,9 @@ export class AdminServiceService {
 
 
     this.api?.changes$.subscribe(changed => {
-      if (changed === 'services') this.refreshFromApi();
+      if (changed === 'services' && this.api) {
+        this.services = this.normalizeServices(this.api.serviceSnapshot);
+      }
     });  }
 
   private readonly storageKey = 'royal-barbers.admin-services.v1';
