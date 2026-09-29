@@ -93,6 +93,10 @@ export class AdminSettingsService {
   private readonly storageKey = 'royal-barbers.admin-settings.v1';
   private settings = this.loadSettings();
 
+  refreshFromStorage(): void {
+    this.settings = this.loadSettings();
+  }
+
   get current(): AdminSettings {
     return this.clone(this.settings);
   }

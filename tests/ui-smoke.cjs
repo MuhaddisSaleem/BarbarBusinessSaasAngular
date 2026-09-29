@@ -58,6 +58,54 @@ let browser, activePage;
       await goto(route);await page.screenshot({path:`test-results/${route.replaceAll('/','-')}-${width}.png`,fullPage:true});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false,'Horizontal overflow at '+route+' '+width);scenarios++;
     }
+    // Exercise the actual Add/Edit modals, including the unsupported face-detector fallback.
+    await goto('/admin/barbers');
+    await page.evaluate(() => Object.defineProperty(window, 'FaceDetector', {value:undefined, configurable:true}));
+    const photo = async color => Buffer.from(await page.evaluate(color => {
+      const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;
+      const ctx=canvas.getContext('2d');ctx.fillStyle=color;ctx.fillRect(0,0,64,64);
+      return canvas.toDataURL('image/png').split(',')[1];
+    },color),'base64');
+    await page.locator('.add-barber-btn').click();
+    const add=page.locator('.add-modal');
+    assert.equal(await add.locator('input[type=file]').count(),1,'Add Barber must contain only its own photo field');
+    await add.getByPlaceholder('Enter full name').fill('Modal QA Barber');
+    await add.getByPlaceholder('3001234567').fill('3001234568');
+    await add.locator('.specialty-option').filter({hasText:'Haircut'}).click();
+    await add.locator('input[type=file]').setInputFiles({name:'qa-fixture.png',mimeType:'image/png',buffer:await photo('#2255aa')});
+    await add.locator('.manual-face-confirm').waitFor();
+    await add.locator('.submit-btn').click();assert.equal(await add.isVisible(),true,'Manual confirmation must still be required');
+    await add.locator('.manual-face-confirm input').check();
+    await page.screenshot({path:`test-results/add-barber-${width}.png`,fullPage:true});
+    await add.locator('.submit-btn').click();await add.waitFor({state:'hidden'});
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('royal-barbers.admin-barbers.v1')).length),3);scenarios++;
+    await page.locator('.edit-action:visible').first().click();
+    const edit=page.locator('.edit-modal');
+    assert.equal(await edit.locator('input[type=file]').count(),1,'Edit Barber must contain Change Photo');
+    await edit.locator('input[type=file]').setInputFiles({name:'qa-replacement.png',mimeType:'image/png',buffer:await photo('#aa5522')});
+    await edit.locator('.manual-face-confirm input').check();
+    await page.screenshot({path:`test-results/edit-barber-${width}.png`,fullPage:true});
+    await edit.locator('.submit-btn').click();await edit.waitFor({state:'hidden'});
+    assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('royal-barbers.admin-barbers.v1'))[0].image.startsWith('data:image/')));scenarios++;
+    // Isolated fixture: public tab starts with a short shift and no bookings.
+    await page.evaluate(()=>{
+      const barbers=JSON.parse(localStorage.getItem('royal-barbers.admin-barbers.v1'));
+      barbers[0].workingHours='9 AM - 5 PM';localStorage.setItem('royal-barbers.admin-barbers.v1',JSON.stringify(barbers));
+      localStorage.setItem('royal-barbers.admin-bookings.v1','[]');
+    });
+    await goto();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();
+    await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
+    await page.locator('.no-times').filter({hasText:'40-minute slot fits before 5:00 PM'}).waitFor();
+    await page.locator('#customer-name-input').fill('Keep my details');
+    const adminTab=await context.newPage();await adminTab.goto('http://127.0.0.1:4173/admin/barbers');
+    await adminTab.evaluate(()=>{
+      const barbers=JSON.parse(localStorage.getItem('royal-barbers.admin-barbers.v1'));
+      barbers[0].workingHours='9 AM - 9 PM';localStorage.setItem('royal-barbers.admin-barbers.v1',JSON.stringify(barbers));
+    });
+    await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor();
+    assert.equal(await page.locator('#customer-name-input').inputValue(),'Keep my details');
+    await page.screenshot({path:`test-results/refreshed-slots-${width}.png`,fullPage:true});
+    await adminTab.close();scenarios++;
     assert.deepEqual(errors,[]);console.log(`PASS ${width}px: customer, admin, group, home and all nine admin routes`);await context.close();
   }
   console.log(`PASS ${scenarios} browser scenarios`);

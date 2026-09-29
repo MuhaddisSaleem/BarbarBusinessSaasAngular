@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 import { AdminServiceService } from '../admin/services/admin-service.service';
@@ -93,6 +93,73 @@ export class BookingComponent implements OnInit {
 
   ngOnInit(): void {
     this.buildCalendar();
+  }
+
+  @HostListener('window:storage', ['$event'])
+  @HostListener('window:focus')
+  refreshAvailability(event?: StorageEvent): void {
+    if (event && event.storageArea !== window.localStorage) return;
+    const keys = ['royal-barbers.admin-barbers.v1', 'royal-barbers.admin-services.v1',
+      'royal-barbers.admin-settings.v1', 'royal-barbers.admin-bookings.v1'];
+    if (event?.key && !keys.includes(event.key)) return;
+
+    this.barberService.refreshFromStorage();
+    this.serviceService.refreshFromStorage();
+    this.settingsService.refreshFromStorage();
+    this.bookingService.refreshFromStorage();
+    if (this.bookingConfirmed) return;
+
+    const services = new Map(this.services.map(service => [service.id, service]));
+    for (const person of this.participants) {
+      person.selectedServices = person.selectedServices
+        .map(service => services.get(service.id))
+        .filter((service): service is Service => !!service);
+      if (person.selectedBarber && person.selectedBarber !== 'any') {
+        person.selectedBarber = this.barbers.find(barber => barber.id === (person.selectedBarber as Barber).id) || null;
+        if (person.selectedBarber && !this.barberSupportsPerson(person.selectedBarber, person)) {
+          person.selectedBarber = null;
+        }
+      }
+    }
+    this.generateAvailableTimes();
+  }
+
+  get noAvailabilityMessage(): string {
+    if (!this.selectedDate) return 'Select a date to see available times.';
+    const hours = this.settingsService.hoursForDate(this.selectedDate.date);
+    if (!hours) return 'The salon is closed on this date. Please choose another date.';
+    if (!this.settingsService.isBookingDateAllowed(this.selectedDate.date)) {
+      return 'This date is outside the salon’s booking window. Please choose an available date.';
+    }
+    const now = new Date();
+    const earliest = this.selectedDate.fullDate === this.formatDate(now)
+      ? Math.max(hours.start, now.getHours() * 60 + now.getMinutes() + 1) : hours.start;
+    const interval = this.settingsService.bookingInterval;
+    for (const person of this.participants) {
+      const duration = this.getPersonDuration(person);
+      if (!Number.isFinite(duration) || duration <= 0) return 'The selected service duration needs correcting. Please contact the salon.';
+      const candidates = (person.selectedBarber && person.selectedBarber !== 'any' ? [person.selectedBarber] : this.barbers)
+        .filter(barber => this.barberSupportsPerson(barber, person)
+          && this.barberService.isAvailableOnDate(barber.id, this.selectedDate!.fullDate));
+      if (!candidates.length) return 'No available barber provides all the selected services on this date. Try another barber or date.';
+      const shifts = candidates.map(barber => this.barberService.workingWindowFor(barber.id))
+        .filter((shift): shift is { start: number; end: number } => !!shift);
+      if (!shifts.length) return 'The selected barber’s working hours need correcting. Please contact the salon or choose another barber.';
+      const fits = shifts.some(shift => {
+        const start = hours.start + Math.ceil((Math.max(earliest, shift.start) - hours.start) / interval) * interval;
+        return start + duration <= Math.min(hours.end, shift.end);
+      });
+      if (!fits) {
+        const end = Math.min(hours.end, Math.max(...shifts.map(shift => shift.end)));
+        return `No remaining ${duration}-minute slot fits before ${this.minutesToTime(end)} on this date. Choose another date or barber.`;
+      }
+    }
+    if (this.bookingMode === 'group' && this.serviceLocation === 'salon') {
+      return this.groupStrategy === 'sequential'
+        ? 'The selected barber cannot fit the complete group between existing appointments. Try another date or barber.'
+        : 'No simultaneous slots are available with a different eligible barber for each person. Try separate times or another date.';
+    }
+    return 'The remaining slots for these services overlap existing appointments. Try another barber or date.';
   }
 
   get businessName(): string {

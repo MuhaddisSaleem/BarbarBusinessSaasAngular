@@ -5,6 +5,7 @@ const vm = require('node:vm');
 function load(file, name, globals = {}) {
   const source = fs.readFileSync(path.join(__dirname, '../src/app', file), 'utf8')
     .replace(/^import [\s\S]*?;\r?\n/gm, '')
+    .replace(/@HostListener\([^\n]*\)\r?\n/g, '')
     .replace(/@Injectable\([^\n]*\)\r?\n/g, '')
     .replace(/@Component\([\s\S]*?\}\)\r?\n/, '');
   let code;

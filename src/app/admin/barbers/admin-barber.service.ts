@@ -33,6 +33,10 @@ export class AdminBarberService {
   private readonly demoCleanupKey = 'royal-barbers.admin-barbers.demo-cleaned.v1';
   private barbers: AdminBarber[] = this.loadBarbers();
 
+  refreshFromStorage(): void {
+    this.barbers = this.loadBarbers();
+  }
+
   get all(): AdminBarber[] {
     this.normalizeExpiredLeave();
     return this.barbers;

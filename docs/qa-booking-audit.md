@@ -88,3 +88,13 @@ The test harness does not mock scheduling logic. It loads actual service/compone
 ## Existing limits
 
 The app persists in localStorage. Availability is shared by screens in one app session, not centrally reserved across devices or independent browser sessions. This change does not add a backend or claim cross-device concurrency safety. Date/time arithmetic still follows the browser clock; the existing displayed timezone setting does not convert appointments. Messaging remains unconnected. Real-device photo detection and the user's private production data require separate verification. No Phase 3 redesign, new appointment statuses, phone-field rewrite, or deployment is included.
+
+## Screenshot follow-up — 29 September 2026
+
+The user's Add Barber screenshot exposed a missed template regression: the edit-photo field and its validation controls were inside Add Barber. They are now in Edit Barber; each modal has exactly one upload tied to its own form. Browser coverage now opens both modals, uploads an isolated image fixture, checks the manual face-confirmation gate, saves a new barber and changes an existing photo. This tests the fallback flow, not face-recognition accuracy.
+
+A reproduced availability failure was stale records in an already-open customer tab after another admin tab changed hours. The booking component now reloads persisted barbers, services, settings and bookings on relevant localStorage events and window focus, reconciles its selections and regenerates slots without clearing contact details. This is same-origin browser-tab freshness, not a server reservation or cross-device synchronization guarantee.
+
+The empty-slot message now differentiates invalid shifts, insufficient remaining duration before closing, unavailable services/barbers, closed dates and occupied slots. The provided booking screenshot alone does not establish which saved value caused that user's failure. The specific message and their selected date/hours are needed if it persists.
+
+Follow-up suite: 59 regression scenarios and 32 browser scenarios, including both photo modals and cross-tab slot refresh at desktop/mobile sizes. See the latest PR workflow for the final result.

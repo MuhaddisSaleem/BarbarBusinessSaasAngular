@@ -80,6 +80,10 @@ export class AdminBookingService {
   private readonly demoCleanupKey = 'royal-barbers.admin-bookings.demo-cleaned.v1';
   private bookings: AdminBooking[] = this.loadBookings();
 
+  refreshFromStorage(): void {
+    this.bookings = this.loadBookings();
+  }
+
   get all(): AdminBooking[] {
     return this.bookings;
   }

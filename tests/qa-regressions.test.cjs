@@ -154,3 +154,59 @@ test('customer next appointment excludes elapsed, completed and cancelled record
 test('failed customer note persistence reports failure and retains saved note',()=>{const f=fixture();f.booking();const c=f.make('admin/customers/admin-customer.service.ts','AdminCustomerService',f.bookings);const id=c.all[0].id;assert.equal(c.saveNote(id,'Before').success,true);f.fail('royal-barbers.customer-notes.v1');assert.equal(c.saveNote(id,'After').success,false);assert.equal(c.all[0].notes,'Before');});
 test('historical multi-service bookings remain discoverable by individual service',()=>{const f=fixture();f.booking({service:'Retired Cut, Beard',barber:'Former Barber'});f.admin.selectedService='Beard';assert.equal(f.admin.bookings.length,1);assert.ok(f.admin.filterServices.includes('Retired Cut'));assert.ok(f.admin.filterBarbers.includes('Former Barber'));});
 test('calendar does not advertise slots on a disallowed booking date',()=>{const f=fixture();f.barber();f.settings.settings.allowSameDayBooking=false;const c=f.make('admin/calendar/admin-calendar.component.ts','AdminCalendarComponent',f.bookings,f.settings,f.barbers,{});assert.equal(c.barberSummaries[0].nextAvailable,'Booking unavailable');});
+
+test('an open booking tab reloads edited barber hours from admin storage', () => {
+  const f = fixture(), b = f.barber({ workingHours: '9 AM - 5 PM' }), s = f.service();
+  f.storage.setItem('royal-barbers.admin-services.v1', JSON.stringify(f.services.all));
+  f.storage.setItem('royal-barbers.admin-barbers.v1', JSON.stringify(f.barbers.all));
+  f.select(b, s);
+  assert.equal(f.customer.availableTimes.length, 0);
+  // An admin tab saves a longer shift; the already-open customer tab still has the old record.
+  f.storage.setItem('royal-barbers.admin-barbers.v1', JSON.stringify([{ ...b, workingHours: '9 AM - 9 PM' }]));
+  f.customer.generateAvailableTimes();
+  assert.equal(f.customer.availableTimes.length, 0);
+  f.customer.refreshAvailability({ key: 'royal-barbers.admin-barbers.v1', storageArea: f.storage });
+  assert.ok(f.customer.availableTimes.includes('5:00 PM'));
+});
+test('storage refresh clears a time booked by another tab and restores it after cancellation', () => {
+  const f = fixture(), b = f.barber(), s = f.service();
+  f.storage.setItem('royal-barbers.admin-services.v1', JSON.stringify(f.services.all));
+  f.storage.setItem('royal-barbers.admin-barbers.v1', JSON.stringify(f.barbers.all));
+  f.select(b, s); f.customer.selectTime('5:00 PM');
+  const ap = f.booking();
+  f.storage.setItem('royal-barbers.admin-bookings.v1', JSON.stringify([ap]));
+  f.customer.refreshAvailability({ key: 'royal-barbers.admin-bookings.v1', storageArea: f.storage });
+  assert.equal(f.customer.selectedTime, null);
+  assert.equal(f.customer.availableTimes.includes('5:00 PM'), false);
+  f.storage.setItem('royal-barbers.admin-bookings.v1', JSON.stringify([{ ...ap, status: 'Cancelled' }]));
+  f.customer.refreshAvailability();
+  assert.ok(f.customer.availableTimes.includes('5:00 PM'));
+});
+test('unrelated storage events leave the booking selection intact', () => {
+  const f = fixture(), b = f.barber(), s = f.service(); f.select(b, s); f.customer.selectTime('5:00 PM');
+  f.customer.refreshAvailability({ key: 'royal-barbers.notifications.v1', storageArea: f.storage });
+  assert.equal(f.customer.selectedTime, '5:00 PM');
+});
+test('empty availability explains invalid shifts, insufficient remaining time and overlaps separately', () => {
+  const f = fixture(), b = f.barber({ workingHours: 'bad hours' }), s = f.service(); f.select(b, s);
+  assert.match(f.customer.noAvailabilityMessage, /working hours need correcting/);
+  b.workingHours = '9 AM - 5 PM'; f.customer.generateAvailableTimes();
+  assert.match(f.customer.noAvailabilityMessage, /40-minute slot fits before 5:00 PM/);
+  b.workingHours = '9 AM - 9 PM'; f.booking({time:'4:30 PM', duration:270}); f.customer.generateAvailableTimes();
+  assert.equal(f.customer.availableTimes.length, 0);
+  assert.match(f.customer.noAvailabilityMessage, /overlap existing appointments/);
+  f.settings.settings.businessHours[0].enabled = false;
+  assert.match(f.customer.noAvailabilityMessage, /salon is closed/);
+});
+test('add and edit photo validation belong to separate forms', () => {
+  const f = fixture(), b = f.barber(); f.service();
+  const c = f.make('admin/barbers/admin-barbers.component.ts', 'AdminBarbersComponent', f.barbers, f.services, f.bookings);
+  c.openAddModal(); Object.assign(c.newBarber, {name:'New Barber', phone:'3001234568', specialties:['Haircut'], image:'data:image/png;base64,test'});
+  c.imageValidationState = 'unsupported'; c.addBarber();
+  assert.equal(f.barbers.all.length, 1);
+  c.manualFaceConfirmed = true; c.addBarber();
+  assert.equal(f.barbers.all.length, 2);
+  c.openEditModal(b); c.editImageValidationState = 'unsupported'; c.editBarber.image = 'data:image/png;base64,edit'; c.saveBarberChanges();
+  assert.equal(b.image, 'assets/images/barber-placeholder.svg');
+  c.editManualFaceConfirmed = true; c.saveBarberChanges(); assert.equal(b.image, 'data:image/png;base64,edit');
+});
