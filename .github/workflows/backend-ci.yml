@@ -100,6 +100,7 @@ jobs:
             -d '{"name":"CI Service","duration":25,"originalPrice":450,"discountPrice":null,"homeServiceEnabled":true,"homeOriginalPrice":650,"homeDiscountPrice":null,"image":"assets/images/service-placeholder.svg","status":"Active"}' \
             http://127.0.0.1:5080/api/services | grep '"success":true'
           curl --fail --silent http://127.0.0.1:5080/api/services | grep '"name":"CI Service"'
+          curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; items=json.load(sys.stdin); assert items and all("CI Service" in x["specialties"] for x in items)'
 
           BARBERS_RESPONSE=$(curl --fail --silent http://127.0.0.1:5080/api/barbers)
           echo "$BARBERS_RESPONSE" | grep '"name":"Falak Shair"'
@@ -111,16 +112,17 @@ jobs:
 
           BARBER_RESPONSE=$(curl --fail --silent \
             -H "Content-Type: application/json" \
-            -d '{"name":"CI Barber","phone":"+92 300 7654321","experience":"3 years","specialties":["Haircut"],"workingHours":"","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
+            -d '{"name":"CI Barber","phone":"+92 300 7654321","experience":"3 years","specialties":[],"workingHours":"","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
             http://127.0.0.1:5080/api/barbers)
           echo "$BARBER_RESPONSE" | grep '"success":true'
           echo "$BARBER_RESPONSE" | grep '"workingHours":""'
+          echo "$BARBER_RESPONSE" | python3 -c 'import json,sys; item=json.load(sys.stdin)["item"]; assert "Haircut" in item["specialties"] and "CI Service" in item["specialties"]'
           BARBER_ID=$(echo "$BARBER_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["item"]["id"])')
 
           BARBER_UPDATE_STATUS=$(curl --silent -o /tmp/barber-update.json -w "%{http_code}" \
             -X PUT \
             -H "Content-Type: application/json" \
-            -d '{"name":"CI Barber Updated","phone":"+92 300 7654321","experience":"4 years","specialties":["Haircut"],"workingHours":"10:00 AM - 7:00 PM","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
+            -d '{"name":"CI Barber Updated","phone":"+92 300 7654321","experience":"4 years","specialties":[],"workingHours":"10:00 AM - 7:00 PM","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
             http://127.0.0.1:5080/api/barbers/$BARBER_ID)
           cat /tmp/barber-update.json
           if [ "$BARBER_UPDATE_STATUS" != "200" ]; then
