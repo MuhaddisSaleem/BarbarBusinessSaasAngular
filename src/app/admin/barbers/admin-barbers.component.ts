@@ -494,15 +494,17 @@ export class AdminBarbersComponent {
   }
 
   markUnavailableToday(barber: AdminBarber): void {
-    const todayBookings = this.activeUpcomingBookingsFor(barber.name)
-      .filter(booking => booking.date === this.todayKey);
+    if (!this.barberService.apiEnabled) {
+      const todayBookings = this.activeUpcomingBookingsFor(barber.name)
+        .filter(booking => booking.date === this.todayKey);
 
-    if (todayBookings.length) {
-      this.showFeedback(
-        false,
-        barber.name + ' has ' + todayBookings.length + ' active booking' + (todayBookings.length === 1 ? '' : 's') + ' today. Reassign or cancel them first.'
-      );
-      return;
+      if (todayBookings.length) {
+        this.showFeedback(
+          false,
+          barber.name + ' has ' + todayBookings.length + ' active booking' + (todayBookings.length === 1 ? '' : 's') + ' today. Reassign or cancel them first.'
+        );
+        return;
+      }
     }
 
     const handle = (result: { success: boolean; message: string }) =>
@@ -539,18 +541,20 @@ export class AdminBarbersComponent {
   saveLeave(): void {
     if (!this.selectedBarber) return;
 
-    const overlappingBookings = this.activeUpcomingBookingsFor(this.selectedBarber.name)
-      .filter(booking =>
-        booking.date >= this.leaveForm.from
-        && booking.date <= this.leaveForm.to
-      );
+    if (!this.barberService.apiEnabled) {
+      const overlappingBookings = this.activeUpcomingBookingsFor(this.selectedBarber.name)
+        .filter(booking =>
+          booking.date >= this.leaveForm.from
+          && booking.date <= this.leaveForm.to
+        );
 
-    if (overlappingBookings.length) {
-      this.showFeedback(
-        false,
-        this.selectedBarber.name + ' has ' + overlappingBookings.length + ' active booking' + (overlappingBookings.length === 1 ? '' : 's') + ' during this period. Reassign or cancel them first.'
-      );
-      return;
+      if (overlappingBookings.length) {
+        this.showFeedback(
+          false,
+          this.selectedBarber.name + ' has ' + overlappingBookings.length + ' active booking' + (overlappingBookings.length === 1 ? '' : 's') + ' during this period. Reassign or cancel them first.'
+        );
+        return;
+      }
     }
 
     const handle = (result: { success: boolean; message: string }) => {
@@ -577,7 +581,7 @@ export class AdminBarbersComponent {
   }
 
   toggleAccountStatus(barber: AdminBarber): void {
-    if (barber.accountStatus === 'Active') {
+    if (!this.barberService.apiEnabled && barber.accountStatus === 'Active') {
       const upcoming = this.activeUpcomingBookingsFor(barber.name);
       if (upcoming.length) {
         this.showFeedback(
@@ -596,14 +600,16 @@ export class AdminBarbersComponent {
   }
 
   requestDelete(barber: AdminBarber): void {
-    const upcomingCount = this.activeUpcomingBookingsFor(barber.name).length;
+    if (!this.barberService.apiEnabled) {
+      const upcomingCount = this.activeUpcomingBookingsFor(barber.name).length;
 
-    if (upcomingCount) {
-      this.showFeedback(
-        false,
-        barber.name + ' has ' + upcomingCount + ' upcoming booking' + (upcomingCount === 1 ? '' : 's') + '. Reassign or cancel them before deleting this barber.'
-      );
-      return;
+      if (upcomingCount) {
+        this.showFeedback(
+          false,
+          barber.name + ' has ' + upcomingCount + ' upcoming booking' + (upcomingCount === 1 ? '' : 's') + '. Reassign or cancel them before deleting this barber.'
+        );
+        return;
+      }
     }
 
     this.deleteCandidate = barber;
