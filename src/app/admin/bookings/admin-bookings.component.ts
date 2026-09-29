@@ -141,9 +141,21 @@ export class AdminBookingsComponent implements OnInit {
     return this.bookingService.services.find(service => service.name === this.newBooking.service);
   }
 
+  get currentWalkInTime(): string {
+    const now = new Date();
+    return this.minutesToTime(now.getHours() * 60 + now.getMinutes());
+  }
+
   get createBarbers(): string[] {
-    if (!this.newBooking.service) return [];
-    return this.bookingService.availableBarbersForService(this.newBooking.service, this.todayKey);
+    const service = this.selectedWalkInService;
+    if (!service) return [];
+
+    return this.bookingService.availableBarbersForWalkIn(
+      service.name,
+      this.todayKey,
+      this.currentWalkInTime,
+      service.duration
+    );
   }
 
   get walkInDuration(): number {
@@ -178,7 +190,7 @@ export class AdminBookingsComponent implements OnInit {
 
   onCreateServiceOrDateChange(): void {
     this.newBooking.barber = '';
-    this.newBooking.time = '';
+    this.newBooking.time = this.currentWalkInTime;
   }
 
   onEditDateChange(): void {
@@ -326,7 +338,7 @@ export class AdminBookingsComponent implements OnInit {
       service: '',
       barber: '',
       date: this.todayKey,
-      time: '',
+      time: this.currentWalkInTime,
       notes: ''
     };
   }
@@ -342,7 +354,7 @@ export class AdminBookingsComponent implements OnInit {
       this.newBooking.customerName.trim()
       && this.selectedWalkInService
       && this.newBooking.barber
-      && this.newBooking.time
+      && this.createBarbers.includes(this.newBooking.barber)
       && (!digits || /^3\d{9}$/.test(digits))
     );
   }
@@ -351,9 +363,10 @@ export class AdminBookingsComponent implements OnInit {
     const form = this.newBooking;
     const digits = form.phone.replace(/\D/g, '');
     const service = this.selectedWalkInService;
+    const walkInTime = this.currentWalkInTime;
 
-    if (!form.customerName.trim() || !service || !form.barber || !form.time) {
-      this.showFeedback(false, 'Enter the customer name and select a service, barber and available time.');
+    if (!form.customerName.trim() || !service || !form.barber) {
+      this.showFeedback(false, 'Enter the customer name and select a service and available barber.');
       return;
     }
 
@@ -362,6 +375,21 @@ export class AdminBookingsComponent implements OnInit {
       return;
     }
 
+    const availableBarbers = this.bookingService.availableBarbersForWalkIn(
+      service.name,
+      this.todayKey,
+      walkInTime,
+      service.duration
+    );
+
+    if (!availableBarbers.includes(form.barber)) {
+      this.newBooking.barber = '';
+      this.showFeedback(false, 'That barber is no longer available right now. Please select another barber.');
+      return;
+    }
+
+    this.newBooking.time = walkInTime;
+
     const result = this.bookingService.addWalkInBooking({
       customerName: form.customerName.trim(),
       phone: digits ? '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3) : '',
@@ -369,7 +397,7 @@ export class AdminBookingsComponent implements OnInit {
       duration: service.duration,
       barber: form.barber,
       date: this.todayKey,
-      time: form.time,
+      time: walkInTime,
       amount: service.amount,
       notes: form.notes.trim(),
       groupSize: 1,
