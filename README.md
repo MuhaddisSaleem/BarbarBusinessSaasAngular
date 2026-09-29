@@ -62,11 +62,12 @@ PowerShell:
 $env:ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=BarberFlow;User Id=sa;Password=YOUR_PASSWORD;Encrypt=False;TrustServerCertificate=True"
 ```
 
-Then run:
+Create/update the local database and then run the API:
 
 ```bash
 dotnet tool restore
 dotnet restore backend/BarberFlow.Api/BarberFlow.Api.csproj
+dotnet ef database update --project backend/BarberFlow.Api --startup-project backend/BarberFlow.Api
 dotnet run --project backend/BarberFlow.Api
 ```
 
@@ -86,12 +87,13 @@ See `docs/database-architecture.md` for the schema, relationships, tenant bounda
 
 The Angular UI remains unchanged while backend persistence is introduced module by module.
 
+The initial EF Core migration is committed under `backend/BarberFlow.Api/Data/Migrations`.
+
 The next backend module is **Bookings**:
 
-1. create the initial EF Core migration;
-2. seed a development salon/services/barbers dataset;
-3. expose availability and booking APIs;
-4. move overlap validation into a database-backed transaction;
-5. replace Angular booking localStorage persistence with API calls.
+1. seed a development salon/services/barbers dataset;
+2. expose availability and booking APIs;
+3. move overlap validation into a database-backed transaction;
+4. replace Angular booking localStorage persistence with API calls.
 
 The approved frontend behavior remains the functional specification while this migration happens.
