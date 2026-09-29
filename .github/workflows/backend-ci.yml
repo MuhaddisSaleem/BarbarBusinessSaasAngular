@@ -101,19 +101,34 @@ jobs:
             http://127.0.0.1:5080/api/services | grep '"success":true'
           curl --fail --silent http://127.0.0.1:5080/api/services | grep '"name":"CI Service"'
 
-          curl --fail --silent http://127.0.0.1:5080/api/barbers | grep '"name":"Falak Shair"'
+          BARBERS_RESPONSE=$(curl --fail --silent http://127.0.0.1:5080/api/barbers)
+          echo "$BARBERS_RESPONSE" | grep '"name":"Falak Shair"'
+          FALAK_ID=$(echo "$BARBERS_RESPONSE" | python3 -c 'import json,sys; items=json.load(sys.stdin); print(next(x["id"] for x in items if x["name"]=="Falak Shair"))')
+          BLOCKED_STATUS=$(curl --silent -o /tmp/barber-status-conflict.json -w "%{http_code}" -X PATCH \
+            http://127.0.0.1:5080/api/barbers/$FALAK_ID/status)
+          test "$BLOCKED_STATUS" = "409"
+          grep -i 'upcoming bookings' /tmp/barber-status-conflict.json
+
           BARBER_RESPONSE=$(curl --fail --silent \
             -H "Content-Type: application/json" \
-            -d '{"name":"CI Barber","phone":"+92 300 7654321","experience":"3 years","specialties":["Haircut"],"workingHours":"9:00 AM - 8:00 PM","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
+            -d '{"name":"CI Barber","phone":"+92 300 7654321","experience":"3 years","specialties":["Haircut"],"workingHours":"","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
             http://127.0.0.1:5080/api/barbers)
           echo "$BARBER_RESPONSE" | grep '"success":true'
+          echo "$BARBER_RESPONSE" | grep '"workingHours":""'
           BARBER_ID=$(echo "$BARBER_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["item"]["id"])')
+
           curl --fail --silent \
             -X PUT \
             -H "Content-Type: application/json" \
             -d '{"name":"CI Barber Updated","phone":"+92 300 7654321","experience":"4 years","specialties":["Haircut"],"workingHours":"10:00 AM - 7:00 PM","image":"assets/images/barber-placeholder.svg","rating":4.8,"availability":"Available Today","accountStatus":"Active","leaveFrom":null,"leaveTo":null,"note":""}' \
             http://127.0.0.1:5080/api/barbers/$BARBER_ID | grep '"success":true'
           curl --fail --silent http://127.0.0.1:5080/api/barbers | grep '"name":"CI Barber Updated"'
+
+          curl --fail --silent -X PATCH http://127.0.0.1:5080/api/barbers/$BARBER_ID/status | grep '"accountStatus":"Inactive"'
+          curl --fail --silent -X PATCH http://127.0.0.1:5080/api/barbers/$BARBER_ID/status | grep '"accountStatus":"Active"'
+
+          curl --fail --silent -X DELETE http://127.0.0.1:5080/api/barbers/$BARBER_ID | grep '"success":true'
+          curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; items=json.load(sys.stdin); assert all(x["name"] != "CI Barber Updated" for x in items)'
 
           curl --fail --silent http://127.0.0.1:5080/api/settings | grep '"businessName":"Royal Barbers"'
           curl --fail --silent \
