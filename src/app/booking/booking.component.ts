@@ -646,28 +646,44 @@ export class BookingComponent implements OnInit {
       return;
     }
 
-    const bookingResult = this.bookingService.addOnlineBookings(onlineBookings);
-    if (!bookingResult.success) {
+    const completeBooking = () => {
+      this.bookingSubmittedStatus = this.hasHomeCustomService
+        ? 'Pending'
+        : (this.autoConfirmBookings ? 'Confirmed' : 'Pending');
+      this.confirmedAssignments = [];
+
+      this.participants.forEach((person, index) => {
+        const barber = assignments.get(person.id);
+        if (!barber) return;
+
+        const personStartTime = this.getPersonBookingTime(index);
+        this.confirmedAssignments.push({ person: person.label, barber: barber.name, time: personStartTime });
+      });
+
+      this.bookingConfirmed = this.confirmedAssignments.length === this.participants.length;
+    };
+
+    const handleApiFailure = (message: string) => {
       this.clearSelectedTime();
       this.generateAvailableTimes();
-      this.showValidationError(bookingResult.message, 'date-time-section');
+      this.showValidationError(message, 'date-time-section');
+    };
+
+    if (this.bookingService.createOnlineBookingsThroughApi(
+      onlineBookings,
+      result => result.success ? completeBooking() : handleApiFailure(result.message),
+      handleApiFailure
+    )) {
       return;
     }
 
-    this.bookingSubmittedStatus = this.hasHomeCustomService
-      ? 'Pending'
-      : (this.autoConfirmBookings ? 'Confirmed' : 'Pending');
-    this.confirmedAssignments = [];
+    const bookingResult = this.bookingService.addOnlineBookings(onlineBookings);
+    if (!bookingResult.success) {
+      handleApiFailure(bookingResult.message);
+      return;
+    }
 
-    this.participants.forEach((person, index) => {
-      const barber = assignments.get(person.id);
-      if (!barber) return;
-
-      const personStartTime = this.getPersonBookingTime(index);
-      this.confirmedAssignments.push({ person: person.label, barber: barber.name, time: personStartTime });
-    });
-
-    this.bookingConfirmed = this.confirmedAssignments.length === this.participants.length;
+    completeBooking();
   }
 
   private validateBookingBeforeConfirm(): boolean {
