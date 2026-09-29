@@ -1,4 +1,5 @@
 using BarberFlow.Api.Data;
+using BarberFlow.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,8 @@ builder.Services.AddDbContext<BarberFlowDbContext>(options =>
     options.UseSqlServer(
         connectionString,
         sql => sql.EnableRetryOnFailure(maxRetryCount: 5)));
+
+builder.Services.AddScoped<BookingApplicationService>();
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
@@ -43,6 +46,11 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<BarberFlowDbContext>();
+    await db.Database.MigrateAsync();
+    await DevelopmentDataSeeder.SeedAsync(db, builder.Configuration);
+
     app.MapOpenApi();
 }
 
