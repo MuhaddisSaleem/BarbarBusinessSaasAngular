@@ -416,6 +416,18 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
                 customer.FullName = request.CustomerName.Trim();
             }
         }
+        else
+        {
+            // Phone-less walk-ins must remain separate customers. Creating a dedicated
+            // row keeps notes/history in SQL without accidentally merging unrelated guests.
+            customer = new Customer
+            {
+                SalonId = salon.Id,
+                FullName = request.CustomerName.Trim(),
+                Phone = null
+            };
+            db.Customers.Add(customer);
+        }
 
         var serviceLocation = Enum.TryParse<ServiceLocation>(request.ServiceLocation, true, out var location)
             ? location

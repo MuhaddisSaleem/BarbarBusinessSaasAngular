@@ -14,6 +14,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddScoped<BookingApplicationService>();
+builder.Services.AddScoped<CustomerApplicationService>();
 builder.Services.AddScoped<CatalogApplicationService>();
 builder.Services.AddScoped<AuthApplicationService>();
 builder.Services.AddScoped<IPasswordHasher<SalonUser>, PasswordHasher<SalonUser>>();

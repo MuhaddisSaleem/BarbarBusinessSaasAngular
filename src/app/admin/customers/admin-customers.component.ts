@@ -79,16 +79,31 @@ export class AdminCustomersComponent {
   saveNote(): void {
     if (!this.selectedCustomer) return;
 
-    const result = this.customerService.saveNote(this.selectedCustomer.id, this.noteDraft);
+    const customerId = this.selectedCustomer.id;
 
-    if (result.success) {
-      this.selectedCustomer = this.customerService.getById(this.selectedCustomer.id) || this.selectedCustomer;
-    }
+    this.customerService.saveNote(customerId, this.noteDraft).subscribe({
+      next: result => {
+        if (result.success && result.customer) {
+          this.selectedCustomer = result.customer;
+          this.customerBookings = this.customerService.bookingsForCustomer(result.customer);
+          this.noteDraft = result.customer.notes;
+        }
 
-    this.feedbackMessage = result.message;
+        this.showFeedback(result.message);
+      },
+      error: error => {
+        this.showFeedback(
+          (error as any)?.error?.message || 'Could not save the customer note.'
+        );
+      }
+    });
+  }
+
+  private showFeedback(message: string): void {
+    this.feedbackMessage = message;
 
     window.setTimeout(() => {
-      if (this.feedbackMessage === result.message) this.feedbackMessage = '';
+      if (this.feedbackMessage === message) this.feedbackMessage = '';
     }, 2500);
   }
 
