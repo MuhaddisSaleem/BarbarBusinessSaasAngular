@@ -28,6 +28,34 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
         return bookings.Select(Map).ToList();
     }
 
+    public async Task<IReadOnlyList<BookingBusySlotResponse>> GetBusySlotsAsync(
+        CancellationToken cancellationToken)
+    {
+        var salon = await db.Salons
+            .AsNoTracking()
+            .FirstAsync(x => x.Slug == DefaultSalonSlug && x.IsActive, cancellationToken);
+
+        var today = DateOnly.FromDateTime(GetSalonNow(salon).DateTime);
+        var bookings = await db.Bookings
+            .AsNoTracking()
+            .Where(x => x.SalonId == salon.Id
+                        && x.AppointmentDate >= today
+                        && (x.Status == BookingStatus.Pending || x.Status == BookingStatus.Confirmed))
+            .Include(x => x.Barber)
+            .OrderBy(x => x.AppointmentDate)
+            .ThenBy(x => x.StartTime)
+            .ToListAsync(cancellationToken);
+
+        return bookings.Select(x => new BookingBusySlotResponse(
+            x.PublicId,
+            x.Barber.FullName,
+            x.AppointmentDate.ToString("yyyy-MM-dd"),
+            x.StartTime.ToString("h:mm tt"),
+            x.TotalDurationMinutes,
+            x.Status.ToString()
+        )).ToList();
+    }
+
     public async Task<BookingResponse?> GetByPublicIdAsync(int id, CancellationToken cancellationToken)
     {
         var salonId = await GetSalonIdAsync(cancellationToken);
