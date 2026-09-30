@@ -1,17 +1,25 @@
 using BarberFlow.Api.Domain.Entities;
+using BarberFlow.Api.Domain.Enums;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace BarberFlow.Api.Data;
 
 public static class DevelopmentDataSeeder
 {
-    public static async Task SeedAsync(BarberFlowDbContext db, CancellationToken cancellationToken = default)
+    public static async Task SeedAsync(
+        BarberFlowDbContext db,
+        IConfiguration configuration,
+        IPasswordHasher<SalonUser> passwordHasher,
+        CancellationToken cancellationToken = default)
     {
-        if (await db.Salons.AnyAsync(x => x.Slug == "royal-barbers", cancellationToken))
-            return;
+        var salon = await db.Salons
+            .FirstOrDefaultAsync(x => x.Slug == "royal-barbers", cancellationToken);
 
-        var salon = new Salon
+        if (salon is null)
         {
+            salon = new Salon
+            {
             Name = "Royal Barbers",
             Slug = "royal-barbers",
             Phone = "+923001234567",
@@ -109,10 +117,46 @@ public static class DevelopmentDataSeeder
             second.Services.Add(new BarberService { Service = service });
         }
 
-        db.Salons.Add(salon);
-        db.Services.AddRange(services);
-        db.Barbers.AddRange(falak, second);
+            db.Salons.Add(salon);
+            db.Services.AddRange(services);
+            db.Barbers.AddRange(falak, second);
 
-        await db.SaveChangesAsync(cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var adminEmail = (configuration["SeedData:AdminEmail"] ?? "").Trim().ToLowerInvariant();
+        var adminPassword = configuration["SeedData:AdminPassword"] ?? "";
+        var adminName = (configuration["SeedData:AdminName"] ?? "Salon Owner").Trim();
+
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+            return;
+
+        var owner = await db.SalonUsers
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salon.Id && x.Email.ToLower() == adminEmail,
+                cancellationToken);
+
+        if (owner is null)
+        {
+            owner = new SalonUser
+            {
+                SalonId = salon.Id,
+                FullName = adminName,
+                Email = adminEmail,
+                Role = SalonUserRole.Owner,
+                IsActive = true
+            };
+            owner.PasswordHash = passwordHasher.HashPassword(owner, adminPassword);
+            db.SalonUsers.Add(owner);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        else if (string.IsNullOrWhiteSpace(owner.PasswordHash))
+        {
+            owner.PasswordHash = passwordHasher.HashPassword(owner, adminPassword);
+            owner.FullName = string.IsNullOrWhiteSpace(owner.FullName) ? adminName : owner.FullName;
+            owner.Role = SalonUserRole.Owner;
+            owner.IsActive = true;
+            await db.SaveChangesAsync(cancellationToken);
+        }
     }
 }
