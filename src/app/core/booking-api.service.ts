@@ -13,6 +13,15 @@ export interface AvailabilityApiResult {
   eligibleBarbers: string[];
 }
 
+export interface BookingBusySlot {
+  id: number;
+  barber: string;
+  date: string;
+  time: string;
+  duration: number;
+  status: 'Pending' | 'Confirmed';
+}
+
 @Injectable({ providedIn: 'root' })
 export class BookingApiService {
   private readonly baseUrl = '/api/bookings';
@@ -21,6 +30,10 @@ export class BookingApiService {
 
   getAll(): Observable<AdminBooking[]> {
     return this.http.get<AdminBooking[]>(this.baseUrl);
+  }
+
+  getBusySlots(): Observable<BookingBusySlot[]> {
+    return this.http.get<BookingBusySlot[]>(this.baseUrl + '/busy-slots');
   }
 
   createOnline(bookings: Array<Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>>): Observable<BookingApiMutationResult> {
