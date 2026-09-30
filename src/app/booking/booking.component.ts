@@ -578,9 +578,11 @@ export class BookingComponent implements OnInit {
         if (selectedDay.getTime() === today.getTime() && minutes <= nowMinutes) continue;
 
         const time = this.minutesToTime(minutes);
-        const valid = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
-          ? !!this.buildSequentialSchedule(time)
-          : !!this.resolveParallelBarbers(time);
+        const valid = this.bookingService.apiEnabled && this.bookingMode === 'single'
+          ? true
+          : (this.bookingMode === 'group' && this.groupStrategy === 'sequential'
+            ? !!this.buildSequentialSchedule(time)
+            : !!this.resolveParallelBarbers(time));
 
         if (valid) slots.push(time);
       }
@@ -681,7 +683,50 @@ export class BookingComponent implements OnInit {
     if (this.bookingConfirmed) return;
     if (!this.validateBookingBeforeConfirm() || !this.selectedTime || !this.selectedDate) return;
 
-    // Re-check against the latest availability immediately before confirming.
+    // API-backed single bookings must be re-checked asynchronously. generateAvailableTimes()
+    // itself uses async server validation, so calling it and immediately inspecting the array
+    // incorrectly made every valid selected slot look unavailable.
+    if (this.bookingService.apiEnabled && this.bookingMode === 'single') {
+      const time = this.selectedTime;
+      const date = this.selectedDate.fullDate;
+      const person = this.activeParticipant;
+      const service = person.selectedServices.map(item => item.name).join(', ') || 'Custom Home Service';
+      const requestedBarber = person.selectedBarber && person.selectedBarber !== 'any'
+        ? person.selectedBarber.name
+        : undefined;
+
+      this.bookingApi.checkAvailability({
+        service,
+        date,
+        time,
+        duration: this.getPersonDuration(person),
+        barber: requestedBarber
+      }).subscribe({
+        next: result => {
+          // Ignore an old response if the customer changed date/time while the request was running.
+          if (this.selectedTime !== time || this.selectedDate?.fullDate !== date) return;
+
+          if (!result.available) {
+            this.refreshAfterAvailabilityConflict('This time slot is no longer available. Please choose another time.');
+            return;
+          }
+
+          const barber = this.resolveSingleBarberFromServer(person, result.eligibleBarbers, date);
+          if (!barber) {
+            this.refreshAfterAvailabilityConflict('No eligible barber is available for this time. Please choose another time.');
+            return;
+          }
+
+          this.submitOnlineBooking(new Map([[person.id, barber]]));
+        },
+        error: () => {
+          this.showValidationError('Could not verify this time slot. Please try again.', 'date-time-section');
+        }
+      });
+      return;
+    }
+
+    // Group/local-mode availability is synchronous, so it can still be checked immediately.
     this.generateAvailableTimes();
     if (!this.selectedTime || !this.availableTimes.includes(this.selectedTime)) {
       this.showValidationError('This time slot is no longer available. Please choose another time.', 'date-time-section');
@@ -690,11 +735,40 @@ export class BookingComponent implements OnInit {
 
     const assignments = this.resolveBarberAssignments(this.selectedTime);
     if (!assignments) {
-      this.clearSelectedTime();
-      this.generateAvailableTimes();
-      this.showValidationError('This time slot is no longer available. Please choose another time.', 'date-time-section');
+      this.refreshAfterAvailabilityConflict('This time slot is no longer available. Please choose another time.');
       return;
     }
+
+    this.submitOnlineBooking(assignments);
+  }
+
+  private resolveSingleBarberFromServer(
+    person: BookingPerson,
+    eligibleBarbers: string[],
+    date: string
+  ): Barber | null {
+    const eligible = new Set(eligibleBarbers);
+    const selected = person.selectedBarber;
+
+    if (selected && selected !== 'any') {
+      return eligible.has(selected.name) ? selected : null;
+    }
+
+    return this.barbers
+      .filter(barber => eligible.has(barber.name) && this.barberSupportsPerson(barber, person))
+      .sort((a, b) => this.compareAutoAssignedBarbers(a, b, date))[0] || null;
+  }
+
+  private refreshAfterAvailabilityConflict(message: string): void {
+    this.clearSelectedTime();
+    this.availableTimes = [];
+    this.bookingService.refreshFromApi();
+    this.generateAvailableTimes();
+    this.showValidationError(message, 'date-time-section');
+  }
+
+  private submitOnlineBooking(assignments: Map<number, Barber>): void {
+    if (!this.selectedTime || !this.selectedDate) return;
 
     this.bookingValidationMessage = '';
 
@@ -745,12 +819,7 @@ export class BookingComponent implements OnInit {
     };
 
     const handleApiFailure = (message: string) => {
-      this.clearSelectedTime();
-      // The server is the source of truth for conflicts. Clear stale slots immediately,
-      // then rebuild them only after the latest busy-slot snapshot arrives.
-      this.availableTimes = [];
-      this.bookingService.refreshFromApi();
-      this.showValidationError(message, 'date-time-section');
+      this.refreshAfterAvailabilityConflict(message);
     };
 
     if (this.bookingService.createOnlineBookingsThroughApi(

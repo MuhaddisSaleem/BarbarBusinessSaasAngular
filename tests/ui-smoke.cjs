@@ -377,10 +377,27 @@ let browser, activePage;
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor();
     assert.equal(await page.locator('#customer-name-input').inputValue(),'Keep my details');
 
+    // A last-second booking created after the slot was shown must be caught by the
+    // confirmation preflight without creating a duplicate appointment.
+    await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();
+    await page.locator('#customer-phone-input').fill('3001234567');
+    const beforeConflictCount=apiBookings.length;
+    apiBookings.push({id:901,code:'RB-LAST',customerName:'Other Client',phone:'+92 300 1111111',barber:'Falak Shair',service:'Haircut',duration:40,date:'2026-09-28',time:'5:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
+    nextBookingId=Math.max(nextBookingId,902);
+    await page.locator('.confirm-btn').click();
+    await page.getByText('This time slot is no longer available. Please choose another time.').waitFor();
+    await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor({state:'detached'});
+    assert.equal(apiBookings.length,beforeConflictCount+1,'Conflict preflight must not create a duplicate booking');
+
+    // Cancelled appointments must release their slot again.
+    apiBookings.find(item=>item.id===901).status='Cancelled';
+    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+    await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor();
+
     // A booking created elsewhere must disappear from this already-open customer's slot grid
     // after the async busy-slot refresh completes.
-    apiBookings.push({id:901,code:'RB-ASYNC',customerName:'Other Client',phone:'+92 300 1111111',barber:'Falak Shair',service:'Haircut',duration:40,date:'2026-09-28',time:'5:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
-    nextBookingId=Math.max(nextBookingId,902);
+    apiBookings.push({id:902,code:'RB-ASYNC',customerName:'Other Client',phone:'+92 300 2222222',barber:'Falak Shair',service:'Haircut',duration:40,date:'2026-09-28',time:'5:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
+    nextBookingId=Math.max(nextBookingId,903);
     await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor({state:'detached'});
 
