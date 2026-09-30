@@ -8,7 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BarberFlow.Api.Services;
 
-public sealed class BookingApplicationService(BarberFlowDbContext db)
+public sealed class BookingApplicationService(
+    BarberFlowDbContext db,
+    WhatsAppMessagingService whatsAppMessaging)
 {
     private const string DefaultSalonSlug = "royal-barbers";
 
@@ -167,6 +169,13 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
+            foreach (var createdBooking in staged.Where(x => x.Status == BookingStatus.Confirmed))
+            {
+                await whatsAppMessaging.TrySendBookingConfirmationAsync(
+                    createdBooking.Id,
+                    cancellationToken);
+            }
+
             return new BookingMutationResponse(
                 true,
                 staged.Count > 1
@@ -202,8 +211,17 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
             return new(false, "Set the custom home-service price before confirming this booking.");
         }
 
+        var previousStatus = booking.Status;
         booking.Status = status;
         await db.SaveChangesAsync(cancellationToken);
+
+        if (previousStatus != BookingStatus.Confirmed && status == BookingStatus.Confirmed)
+        {
+            await whatsAppMessaging.TrySendBookingConfirmationAsync(
+                booking.Id,
+                cancellationToken);
+        }
+
         return new(true, $"Booking {booking.BookingCode} marked {status.ToString().ToLowerInvariant()}.", Map(booking));
     }
 
