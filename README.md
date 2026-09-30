@@ -86,6 +86,33 @@ Useful endpoints:
 - `GET /health`
 - `GET /api/system/info`
 - `GET /api/system/database`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+
+## Admin authentication
+
+Admin routes are protected by JWT authentication. Open:
+
+```text
+http://localhost:4200/admin/login
+```
+
+or, when using the port-4300 workflow:
+
+```text
+http://localhost:4300/admin/login
+```
+
+For local **Development** only, the seeded owner account is:
+
+```text
+Email:    owner@royalbarbers.local
+Password: RoyalBarbers@2026
+```
+
+The development account is created even when the local salon database already exists. Do not use the development JWT key or password in production. Production must supply a strong `Jwt__SigningKey` and real user credentials through secure configuration.
+
+The Angular route guard protects all `/admin/**` pages except `/admin/login`. The HTTP interceptor attaches the JWT to admin API requests and expired/invalid sessions are returned to the login screen.
 
 ## Database model
 
@@ -97,7 +124,8 @@ Bookings are the first Angular module being moved from browser persistence to SQ
 
 When the ASP.NET API is available:
 
-- Angular loads bookings from `GET /api/bookings`;
+- authenticated admin pages load full booking records from `GET /api/bookings`;
+- the public booking page loads only privacy-safe occupied slots from `GET /api/bookings/busy-slots`;
 - the booking service removes the old booking localStorage key;
 - online, admin and walk-in booking creates are sent to the API;
 - status updates, barber reassignment, rescheduling, cancellation and custom home-service pricing are sent to the API;
@@ -108,11 +136,12 @@ Bookings, Services, Barbers and Settings are now API/SQL-backed. Existing browse
 ### Booking endpoints
 
 ```text
-GET    /api/bookings
-GET    /api/bookings/{id}
+GET    /api/bookings                 (admin auth)
+GET    /api/bookings/{id}            (admin auth)
+GET    /api/bookings/busy-slots      (public, no customer data)
 POST   /api/bookings/online
-POST   /api/bookings/walk-in
-POST   /api/bookings/admin
+POST   /api/bookings/walk-in        (admin auth)
+POST   /api/bookings/admin           (admin auth)
 POST   /api/bookings/availability
 PATCH  /api/bookings/{id}/status
 PATCH  /api/bookings/{id}/barber
