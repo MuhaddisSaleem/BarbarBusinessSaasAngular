@@ -37,6 +37,7 @@ public sealed class Booking : BaseEntity
     public decimal? SpecialServiceAmount { get; set; }
 
     public ICollection<BookingService> Services { get; set; } = [];
+    public ICollection<WhatsAppMessage> WhatsAppMessages { get; set; } = [];
 }
 
 public sealed class BookingService : BaseEntity

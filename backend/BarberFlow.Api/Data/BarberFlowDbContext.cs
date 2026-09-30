@@ -21,6 +21,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<BookingService> BookingServices => Set<BookingService>();
     public DbSet<SalonNotification> Notifications => Set<SalonNotification>();
+    public DbSet<WhatsAppMessage> WhatsAppMessages => Set<WhatsAppMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +34,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
         ConfigureCustomer(modelBuilder);
         ConfigureBooking(modelBuilder);
         ConfigureNotification(modelBuilder);
+        ConfigureWhatsAppMessage(modelBuilder);
     }
 
     private static void ConfigureSalon(ModelBuilder modelBuilder)
@@ -218,6 +220,33 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.HasOne(x => x.Salon)
                 .WithMany(x => x.Notifications)
                 .HasForeignKey(x => x.SalonId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
+    private static void ConfigureWhatsAppMessage(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<WhatsAppMessage>(entity =>
+        {
+            entity.ToTable("WhatsAppMessages");
+            entity.Property(x => x.MessageType).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.RecipientPhone).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.TemplateName).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.TemplateLanguage).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.ProviderMessageId).HasMaxLength(500);
+            entity.Property(x => x.FailureReason).HasMaxLength(2000);
+            entity.HasIndex(x => new { x.SalonId, x.CreatedAtUtc });
+            entity.HasIndex(x => new { x.BookingId, x.MessageType })
+                .IsUnique()
+                .HasFilter("[MessageType] = 'BookingConfirmation'");
+            entity.HasOne(x => x.Salon)
+                .WithMany(x => x.WhatsAppMessages)
+                .HasForeignKey(x => x.SalonId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Booking)
+                .WithMany(x => x.WhatsAppMessages)
+                .HasForeignKey(x => x.BookingId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

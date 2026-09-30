@@ -22,6 +22,7 @@ public sealed class Salon : BaseEntity
     public ICollection<Customer> Customers { get; set; } = [];
     public ICollection<Booking> Bookings { get; set; } = [];
     public ICollection<SalonNotification> Notifications { get; set; } = [];
+    public ICollection<WhatsAppMessage> WhatsAppMessages { get; set; } = [];
     public ICollection<BusinessHour> BusinessHours { get; set; } = [];
 }
 
