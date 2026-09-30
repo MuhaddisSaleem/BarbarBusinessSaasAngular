@@ -135,6 +135,28 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
                 firstCreated ??= validation.Booking;
             }
 
+            if (source == BookingSource.Online
+                && salon.Settings?.NotifyOwnerOnNewBooking != false
+                && firstCreated is not null)
+            {
+                var firstRequest = requests[0];
+                var notificationTitle = staged.Count > 1 ? "New group booking" : "New online booking";
+                var notificationMessage = staged.Count > 1
+                    ? $"{firstCreated.CustomerName} booked {staged.Count} appointments for {firstCreated.AppointmentDate:yyyy-MM-dd}."
+                    : $"{firstCreated.CustomerName} booked {firstRequest.Service} with {firstCreated.Barber.FullName} for {firstCreated.AppointmentDate:yyyy-MM-dd} at {firstCreated.StartTime.ToString("h:mm tt", CultureInfo.InvariantCulture)}.";
+
+                db.Notifications.Add(new SalonNotification
+                {
+                    SalonId = salon.Id,
+                    Type = "booking",
+                    Title = notificationTitle,
+                    Message = notificationMessage,
+                    Icon = "bi-calendar2-plus",
+                    Url = $"/admin/bookings?booking={firstCreated.PublicId}",
+                    IsRead = false
+                });
+            }
+
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 

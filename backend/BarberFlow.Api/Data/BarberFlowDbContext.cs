@@ -20,6 +20,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<BookingService> BookingServices => Set<BookingService>();
+    public DbSet<SalonNotification> Notifications => Set<SalonNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +32,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
         ConfigureBarber(modelBuilder);
         ConfigureCustomer(modelBuilder);
         ConfigureBooking(modelBuilder);
+        ConfigureNotification(modelBuilder);
     }
 
     private static void ConfigureSalon(ModelBuilder modelBuilder)
@@ -196,6 +198,25 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.HasIndex(x => new { x.SalonId, x.Phone });
             entity.HasOne(x => x.Salon)
                 .WithMany(x => x.Customers)
+                .HasForeignKey(x => x.SalonId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
+    private static void ConfigureNotification(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SalonNotification>(entity =>
+        {
+            entity.ToTable("Notifications");
+            entity.Property(x => x.Type).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Message).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.Icon).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.Url).HasMaxLength(500);
+            entity.HasIndex(x => new { x.SalonId, x.CreatedAtUtc });
+            entity.HasIndex(x => new { x.SalonId, x.IsRead, x.CreatedAtUtc });
+            entity.HasOne(x => x.Salon)
+                .WithMany(x => x.Notifications)
                 .HasForeignKey(x => x.SalonId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

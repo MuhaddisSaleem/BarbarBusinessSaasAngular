@@ -48,7 +48,12 @@ public sealed class CustomersController(CustomerApplicationService service) : Co
             request.Notes,
             cancellationToken);
 
-        return result.Success ? Ok(result) : NotFound(result);
+        if (result.Success)
+            return Ok(result);
+
+        return string.Equals(result.Message, "Customer not found.", StringComparison.Ordinal)
+            ? NotFound(result)
+            : BadRequest(result);
     }
 
     private bool TryGetSalonId(out Guid salonId)
