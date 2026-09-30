@@ -1,10 +1,12 @@
 using BarberFlow.Api.Contracts.Catalog;
 using BarberFlow.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BarberFlow.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/bootstrap")]
 public sealed class BootstrapController(CatalogApplicationService catalog) : ControllerBase
 {
