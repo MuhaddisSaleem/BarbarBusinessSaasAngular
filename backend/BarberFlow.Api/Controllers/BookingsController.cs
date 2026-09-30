@@ -1,11 +1,13 @@
 using BarberFlow.Api.Contracts.Bookings;
 using BarberFlow.Api.Domain.Enums;
 using BarberFlow.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BarberFlow.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/bookings")]
 public sealed class BookingsController(BookingApplicationService service) : ControllerBase
 {
@@ -20,6 +22,7 @@ public sealed class BookingsController(BookingApplicationService service) : Cont
         return booking is null ? NotFound() : Ok(booking);
     }
 
+    [AllowAnonymous]
     [HttpPost("online")]
     public async Task<ActionResult<BookingMutationResponse>> CreateOnline(
         [FromBody] IReadOnlyList<BookingRequest> requests,
@@ -38,6 +41,7 @@ public sealed class BookingsController(BookingApplicationService service) : Cont
         CancellationToken cancellationToken)
         => ToActionResult(await service.CreateAsync(request, BookingSource.Admin, cancellationToken));
 
+    [AllowAnonymous]
     [HttpPost("availability")]
     public async Task<ActionResult<AvailabilityResponse>> Availability(
         [FromBody] AvailabilityRequest request,
