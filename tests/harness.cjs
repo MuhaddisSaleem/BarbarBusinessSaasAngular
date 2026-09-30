@@ -31,7 +31,18 @@ function fixture(seed = {}) {
   };
   for (const key of ['barbers','services','bookings']) storage.setItem('royal-barbers.admin-' + key + '.demo-cleaned.v1', '1');
   const window = { localStorage: storage, setTimeout: () => 0 };
-  const globals = { Date: Clock, window, setTimeout: () => 0, document: { getElementById: () => null } };
+  class SubjectStub {
+    next() {}
+    subscribe() { return { unsubscribe() {} }; }
+    asObservable() { return this; }
+  }
+  const globals = {
+    Date: Clock,
+    window,
+    setTimeout: () => 0,
+    Subject: SubjectStub,
+    document: { getElementById: () => null }
+  };
   const make = (file, name, ...deps) => new (load(file, name, globals))(...deps);
   const notifications = [];
   const notify = { add: item => notifications.push(item) };
