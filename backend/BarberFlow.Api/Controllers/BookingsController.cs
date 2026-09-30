@@ -15,6 +15,12 @@ public sealed class BookingsController(BookingApplicationService service) : Cont
     public async Task<ActionResult<IReadOnlyList<BookingResponse>>> GetAll(CancellationToken cancellationToken)
         => Ok(await service.GetAllAsync(cancellationToken));
 
+    [AllowAnonymous]
+    [HttpGet("busy-slots")]
+    public async Task<ActionResult<IReadOnlyList<BookingBusySlotResponse>>> GetBusySlots(
+        CancellationToken cancellationToken)
+        => Ok(await service.GetBusySlotsAsync(cancellationToken));
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<BookingResponse>> GetById(int id, CancellationToken cancellationToken)
     {
