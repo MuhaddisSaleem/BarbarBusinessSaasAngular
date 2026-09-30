@@ -64,6 +64,27 @@ let browser, activePage;
         const pathname=new URL(req.url()).pathname;
         const body=requestBody(req);
 
+        if(pathname==='/api/auth/login'&&req.method()==='POST'){
+          if(body?.email==='owner@royalbarbers.local'&&body?.password==='RoyalBarbers@2026'){
+            return await route.fulfill(apiResponse({
+              success:true,
+              message:'Login successful.',
+              token:'qa-admin-token',
+              expiresAt:'2099-12-31T23:59:59.000Z',
+              user:{id:'00000000-0000-0000-0000-000000000001',fullName:'QA Administrator',email:body.email,role:'Owner'}
+            }));
+          }
+          return await route.fulfill(apiResponse({success:false,message:'Invalid email or password.'},401));
+        }
+        if(pathname==='/api/auth/me'&&req.method()==='GET'){
+          return await route.fulfill(apiResponse({
+            id:'00000000-0000-0000-0000-000000000001',
+            fullName:'QA Administrator',
+            email:'qa-admin@example.test',
+            role:'Owner'
+          }));
+        }
+
         if(pathname==='/api/bootstrap/legacy-catalog'&&req.method()==='POST'){
           if(Array.isArray(body?.services)&&body.services.length)apiServices=JSON.parse(JSON.stringify(body.services));
           if(Array.isArray(body?.barbers)&&body.barbers.length)apiBarbers=JSON.parse(JSON.stringify(body.barbers));
@@ -193,6 +214,14 @@ let browser, activePage;
     });
     await page.clock.install({time:new Date('2026-09-28T16:30:00Z')});
     await page.addInitScript(seed=>{
+      localStorage.setItem('adminToken','qa-admin-token');
+      localStorage.setItem('adminTokenExpiresAt','2099-12-31T23:59:59.000Z');
+      localStorage.setItem('adminUser',JSON.stringify({
+        id:'00000000-0000-0000-0000-000000000001',
+        fullName:'QA Administrator',
+        email:'qa-admin@example.test',
+        role:'Owner'
+      }));
       if(localStorage.getItem('qa-seeded'))return;
       for(const [key,value] of Object.entries(seed))localStorage.setItem(key,JSON.stringify(value));
       for(const type of ['barbers','services'])localStorage.setItem('royal-barbers.admin-'+type+'.demo-cleaned.v1','1');
