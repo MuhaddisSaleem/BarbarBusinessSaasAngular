@@ -177,6 +177,20 @@ let browser, activePage;
           return await route.fulfill(apiResponse({success:true,message:'Settings reset to defaults.',item:apiSettings}));
         }
 
+        if(req.method()==='GET'&&pathname==='/api/bookings/busy-slots'){
+          return await route.fulfill(apiResponse(
+            apiBookings
+              .filter(item=>item.status==='Pending'||item.status==='Confirmed')
+              .map(item=>({
+                id:item.id,
+                barber:item.barber,
+                date:item.date,
+                time:item.time,
+                duration:item.duration,
+                status:item.status
+              }))
+          ));
+        }
         if(req.method()==='GET'&&pathname==='/api/bookings')return await route.fulfill(apiResponse(apiBookings));
         if(req.method()==='POST'&&pathname==='/api/bookings/online'){
           const items=body;
