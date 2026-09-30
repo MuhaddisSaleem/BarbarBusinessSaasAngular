@@ -1,35 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AdminShellComponent } from '../shared/admin-shell.component';
-import { AdminBooking, AdminBookingService, BookingStatus } from '../bookings/admin-booking.service';
+import {
+  ReportsApiService,
+  ReportsOverview,
+  ReportBookingRow
+} from '../../core/reports-api.service';
+import { BookingStatus } from '../bookings/admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
-
-interface ServiceReportRow {
-  name: string;
-  bookings: number;
-  completed: number;
-  value: number;
-  percent: number;
-}
-
-interface BarberReportRow {
-  name: string;
-  bookings: number;
-  completed: number;
-  cancelled: number;
-  value: number;
-  percent: number;
-}
-
-interface DailyReportRow {
-  date: string;
-  bookings: number;
-  completed: number;
-  cancelled: number;
-  revenue: number;
-  bookedValue: number;
-}
+import { AdminShellComponent } from '../shared/admin-shell.component';
 
 @Component({
   selector: 'app-admin-reports',
@@ -38,149 +17,118 @@ interface DailyReportRow {
   templateUrl: './admin-reports.component.html',
   styleUrl: './admin-reports.component.scss'
 })
-export class AdminReportsComponent {
+export class AdminReportsComponent implements OnInit {
   dateFrom = this.firstDayOfMonth();
   dateTo = this.todayKey();
   selectedBarber = 'All';
   selectedStatus: 'All' | BookingStatus = 'All';
 
+  report: ReportsOverview | null = null;
+  loading = true;
+  errorMessage = '';
+  lastRefreshedAt: Date | null = null;
+
   constructor(
-    public readonly bookingService: AdminBookingService,
+    private readonly reportsApi: ReportsApiService,
     private readonly settingsService: AdminSettingsService
   ) {}
 
-  get filterBarbers(): string[] {
-    return Array.from(new Set(
-      this.bookingService.all.map(item => item.barber).filter(Boolean)
-    )).sort((a, b) => a.localeCompare(b));
+  ngOnInit(): void {
+    this.loadReport();
   }
 
-  get filteredBookings(): AdminBooking[] {
-    return this.bookingService.all
-      .filter(item => !this.dateFrom || item.date >= this.dateFrom)
-      .filter(item => !this.dateTo || item.date <= this.dateTo)
-      .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
-      .filter(item => this.selectedStatus === 'All' || item.status === this.selectedStatus)
-      .sort((a, b) => a.date.localeCompare(b.date));
+  get filterBarbers(): string[] {
+    return this.report?.barbers ?? [];
+  }
+
+  get filteredBookings(): ReportBookingRow[] {
+    return this.report?.bookings ?? [];
   }
 
   get totalBookings(): number {
-    return this.filteredBookings.length;
+    return Number(this.report?.summary.totalBookings) || 0;
   }
 
   get completedBookings(): number {
-    return this.filteredBookings.filter(item => item.status === 'Completed').length;
+    return Number(this.report?.summary.completedBookings) || 0;
   }
 
   get cancelledBookings(): number {
-    return this.filteredBookings.filter(item => item.status === 'Cancelled').length;
+    return Number(this.report?.summary.cancelledBookings) || 0;
   }
 
   get bookedValue(): number {
-    return this.filteredBookings
-      .filter(item => item.status !== 'Cancelled')
-      .reduce((sum, item) => sum + item.amount, 0);
+    return Number(this.report?.summary.bookedValue) || 0;
   }
 
   get completedRevenue(): number {
-    return this.filteredBookings
-      .filter(item => item.status === 'Completed')
-      .reduce((sum, item) => sum + item.amount, 0);
+    return Number(this.report?.summary.completedRevenue) || 0;
   }
 
   get averageCompletedTicket(): number {
-    return this.completedBookings
-      ? Math.round(this.completedRevenue / this.completedBookings)
-      : 0;
+    return Math.round(Number(this.report?.summary.averageCompletedTicket) || 0);
   }
 
   get completionRate(): number {
-    const eligible = this.filteredBookings.filter(item => item.status !== 'Cancelled').length;
-    return eligible ? Math.round((this.completedBookings / eligible) * 100) : 0;
+    return Number(this.report?.summary.completionRate) || 0;
   }
 
-  get serviceRows(): ServiceReportRow[] {
-    const groups = new Map<string, AdminBooking[]>();
-
-    this.filteredBookings
-      .filter(item => item.status !== 'Cancelled')
-      .forEach(item => {
-        const list = groups.get(item.service) || [];
-        list.push(item);
-        groups.set(item.service, list);
-      });
-
-    const rows = Array.from(groups.entries()).map(([name, bookings]) => ({
-      name,
-      bookings: bookings.length,
-      completed: bookings.filter(item => item.status === 'Completed').length,
-      value: bookings.reduce((sum, item) => sum + item.amount, 0),
-      percent: 0
-    }));
-
-    const maxBookings = Math.max(1, ...rows.map(item => item.bookings));
-
-    return rows
-      .map(item => ({
-        ...item,
-        percent: Math.round((item.bookings / maxBookings) * 100)
-      }))
-      .sort((a, b) => b.bookings - a.bookings || b.value - a.value);
+  get serviceRows() {
+    return this.report?.services ?? [];
   }
 
-  get barberRows(): BarberReportRow[] {
-    const groups = new Map<string, AdminBooking[]>();
+  get barberRows() {
+    return this.report?.barberPerformance ?? [];
+  }
 
-    this.filteredBookings.forEach(item => {
-      const list = groups.get(item.barber) || [];
-      list.push(item);
-      groups.set(item.barber, list);
+  get dailyRows() {
+    return this.report?.daily ?? [];
+  }
+
+  get lastRefreshedLabel(): string {
+    if (!this.lastRefreshedAt) return '';
+
+    return new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(this.lastRefreshedAt);
+  }
+
+  filtersChanged(): void {
+    if (!this.dateFrom || !this.dateTo) return;
+
+    if (this.dateTo < this.dateFrom) {
+      this.errorMessage = 'Report end date cannot be before the start date.';
+      return;
+    }
+
+    this.loadReport();
+  }
+
+  loadReport(): void {
+    if (!this.dateFrom || !this.dateTo) return;
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.reportsApi.getReport(
+      this.dateFrom,
+      this.dateTo,
+      this.selectedBarber,
+      this.selectedStatus
+    ).subscribe({
+      next: response => {
+        this.report = response;
+        this.loading = false;
+        this.lastRefreshedAt = new Date();
+      },
+      error: error => {
+        this.loading = false;
+        this.errorMessage = (error as any)?.error?.message
+          || (error as any)?.error?.detail
+          || 'Could not load the report. Please try again.';
+      }
     });
-
-    const rows = Array.from(groups.entries()).map(([name, bookings]) => ({
-      name,
-      bookings: bookings.length,
-      completed: bookings.filter(item => item.status === 'Completed').length,
-      cancelled: bookings.filter(item => item.status === 'Cancelled').length,
-      value: bookings
-        .filter(item => item.status !== 'Cancelled')
-        .reduce((sum, item) => sum + item.amount, 0),
-      percent: 0
-    }));
-
-    const maxBookings = Math.max(1, ...rows.map(item => item.bookings));
-
-    return rows
-      .map(item => ({
-        ...item,
-        percent: Math.round((item.bookings / maxBookings) * 100)
-      }))
-      .sort((a, b) => b.bookings - a.bookings || b.value - a.value);
-  }
-
-  get dailyRows(): DailyReportRow[] {
-    const groups = new Map<string, AdminBooking[]>();
-
-    this.filteredBookings.forEach(item => {
-      const list = groups.get(item.date) || [];
-      list.push(item);
-      groups.set(item.date, list);
-    });
-
-    return Array.from(groups.entries())
-      .map(([date, bookings]) => ({
-        date,
-        bookings: bookings.length,
-        completed: bookings.filter(item => item.status === 'Completed').length,
-        cancelled: bookings.filter(item => item.status === 'Cancelled').length,
-        revenue: bookings
-          .filter(item => item.status === 'Completed')
-          .reduce((sum, item) => sum + item.amount, 0),
-        bookedValue: bookings
-          .filter(item => item.status !== 'Cancelled')
-          .reduce((sum, item) => sum + item.amount, 0)
-      }))
-      .sort((a, b) => b.date.localeCompare(a.date));
   }
 
   resetFilters(): void {
@@ -188,6 +136,7 @@ export class AdminReportsComponent {
     this.dateTo = this.todayKey();
     this.selectedBarber = 'All';
     this.selectedStatus = 'All';
+    this.loadReport();
   }
 
   exportCsv(): void {
@@ -213,11 +162,13 @@ export class AdminReportsComponent {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
+
     const businessSlug = (this.settingsService.current.businessName || 'salon')
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'salon';
+
     anchor.download = businessSlug + '-report-' + this.dateFrom + '-to-' + this.dateTo + '.csv';
     anchor.click();
     URL.revokeObjectURL(url);
