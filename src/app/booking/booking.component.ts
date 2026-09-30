@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, map } from 'rxjs';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 import { AdminServiceService } from '../admin/services/admin-service.service';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { AdminBookingService } from '../admin/bookings/admin-booking.service';
 import { CatalogApiService } from '../core/catalog-api.service';
+import { BookingApiService } from '../core/booking-api.service';
 
 interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
@@ -70,6 +72,7 @@ export class BookingComponent implements OnInit {
   participants: BookingPerson[] = [this.createPerson(1, 'You')];
   activeParticipantIndex = 0;
   private nextPersonId = 2;
+  private availabilityGeneration = 0;
 
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
@@ -90,6 +93,7 @@ export class BookingComponent implements OnInit {
     private readonly serviceService: AdminServiceService,
     private readonly settingsService: AdminSettingsService,
     private readonly bookingService: AdminBookingService,
+    private readonly bookingApi: BookingApiService,
     private readonly catalogApi?: CatalogApiService
   ) {}
 
@@ -556,6 +560,8 @@ export class BookingComponent implements OnInit {
   }
 
   generateAvailableTimes(): void {
+    const generation = ++this.availabilityGeneration;
+
     if (!this.selectedDate || this.isDateDisabled(this.selectedDate.date) || !this.allParticipantsReady) {
       this.availableTimes = [];
       return;
@@ -578,6 +584,54 @@ export class BookingComponent implements OnInit {
 
         if (valid) slots.push(time);
       }
+    }
+
+    // For a normal single booking, the API is the final source of truth.
+    // This prevents stale client-side booking snapshots from advertising an occupied slot.
+    if (this.bookingService.apiEnabled && this.bookingMode === 'single') {
+      if (!slots.length) {
+        this.availableTimes = [];
+        this.clearSelectedTime();
+        return;
+      }
+
+      const person = this.activeParticipant;
+      const duration = this.getPersonDuration(person);
+      const service = person.selectedServices.map(item => item.name).join(', ') || 'Custom Home Service';
+      const barber = person.selectedBarber && person.selectedBarber !== 'any'
+        ? person.selectedBarber.name
+        : undefined;
+
+      this.availableTimes = [];
+
+      forkJoin(slots.map(time =>
+        this.bookingApi.checkAvailability({
+          service,
+          date: this.selectedDate!.fullDate,
+          time,
+          duration,
+          barber
+        }).pipe(map(result => ({ time, available: result.available })))
+      )).subscribe({
+        next: results => {
+          if (generation !== this.availabilityGeneration) return;
+
+          this.availableTimes = results
+            .filter(result => result.available)
+            .map(result => result.time);
+
+          if (this.selectedTime && !this.availableTimes.includes(this.selectedTime)) {
+            this.clearSelectedTime();
+          }
+        },
+        error: () => {
+          if (generation !== this.availabilityGeneration) return;
+          this.availableTimes = [];
+          this.clearSelectedTime();
+          this.bookingValidationMessage = 'Could not load current availability. Please try again.';
+        }
+      });
+      return;
     }
 
     this.availableTimes = slots;

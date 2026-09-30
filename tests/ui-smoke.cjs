@@ -191,6 +191,33 @@ let browser, activePage;
               }))
           ));
         }
+        if(req.method()==='POST'&&pathname==='/api/bookings/availability'){
+          const toMinutes=value=>{
+            const [clock,modifier]=String(value||'').split(' ');
+            let [hours,minutes]=clock.split(':').map(Number);
+            if(modifier==='PM'&&hours!==12)hours+=12;
+            if(modifier==='AM'&&hours===12)hours=0;
+            return hours*60+minutes;
+          };
+          const requestedStart=toMinutes(body.time),requestedEnd=requestedStart+Number(body.duration||0);
+          const serviceNames=String(body.service||'').split(',').map(x=>x.trim()).filter(Boolean);
+          const candidates=apiBarbers.filter(barber=>
+            barber.accountStatus==='Active'
+            && (!body.barber||barber.name===body.barber)
+            && (serviceNames.length===1&&serviceNames[0]==='Custom Home Service'
+              || serviceNames.every(name=>(barber.specialties||[]).includes(name)))
+          );
+          const eligible=candidates.filter(barber=>!apiBookings.some(item=>{
+            if(item.status==='Cancelled'||item.barber!==barber.name||item.date!==body.date)return false;
+            const existingStart=toMinutes(item.time),existingEnd=existingStart+Number(item.duration||0);
+            return requestedStart<existingEnd&&requestedEnd>existingStart;
+          }));
+          return await route.fulfill(apiResponse({
+            available:eligible.length>0,
+            message:eligible.length?'Available.':'No eligible barber is available for this appointment window.',
+            eligibleBarbers:eligible.map(x=>x.name)
+          }));
+        }
         if(req.method()==='GET'&&pathname==='/api/bookings')return await route.fulfill(apiResponse(apiBookings));
         if(req.method()==='POST'&&pathname==='/api/bookings/online'){
           const items=body;

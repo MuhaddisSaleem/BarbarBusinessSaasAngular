@@ -284,12 +284,17 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
             return new(false, schedule.Message, []);
 
         var serviceNames = SplitServices(request.Service);
-        var serviceIds = await db.Services
-            .Where(x => x.SalonId == salon.Id && x.IsActive && serviceNames.Contains(x.Name))
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
+        var customHomeService = serviceNames.Count == 1
+            && string.Equals(serviceNames[0], "Custom Home Service", StringComparison.OrdinalIgnoreCase);
 
-        if (serviceNames.Count > 0 && serviceIds.Count != serviceNames.Count)
+        var serviceIds = customHomeService
+            ? []
+            : await db.Services
+                .Where(x => x.SalonId == salon.Id && x.IsActive && serviceNames.Contains(x.Name))
+                .Select(x => x.Id)
+                .ToListAsync(cancellationToken);
+
+        if (!customHomeService && serviceNames.Count > 0 && serviceIds.Count != serviceNames.Count)
             return new(false, "One or more selected services are not available.", []);
 
         var candidates = await db.Barbers
