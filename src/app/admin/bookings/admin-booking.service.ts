@@ -3,7 +3,8 @@ import { AdminBarberService } from '../barbers/admin-barber.service';
 import { AdminServiceService } from '../services/admin-service.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 import { NotificationService } from '../notifications/notification.service';
-import { BookingApiService } from '../../core/booking-api.service';
+import { BookingApiService, BookingBusySlot } from '../../core/booking-api.service';
+import { AuthService } from '../../core/auth.service';
 
 export type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
 
@@ -47,14 +48,20 @@ export class AdminBookingService {
     private readonly serviceService: AdminServiceService,
     private readonly settingsService: AdminSettingsService,
     private readonly notificationService: NotificationService,
-    private readonly api?: BookingApiService
+    private readonly api?: BookingApiService,
+    private readonly auth?: AuthService
   ) {
     if (this.api) {
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(this.storageKey);
         window.localStorage.removeItem(this.demoCleanupKey);
       }
-      this.refreshFromApi();
+
+      if (this.auth) {
+        this.auth.currentUser$.subscribe(() => this.refreshFromApi());
+      } else {
+        this.refreshFromApi();
+      }
     } else {
       this.bookings = this.loadBookings();
     }
@@ -184,11 +191,21 @@ export class AdminBookingService {
   refreshFromApi(): void {
     if (!this.api) return;
 
-    this.api.getAll().subscribe({
-      next: bookings => {
-        this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+    if (this.auth?.isAuthenticated()) {
+      this.api.getAll().subscribe({
+        next: bookings => {
+          this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+        },
+        error: error => this.notifyApiError('Could not load bookings from the API.', error)
+      });
+      return;
+    }
+
+    this.api.getBusySlots().subscribe({
+      next: slots => {
+        this.bookings = Array.isArray(slots) ? slots.map(item => this.busySlotBooking(item)) : [];
       },
-      error: error => this.notifyApiError('Could not load bookings from the API.', error)
+      error: error => this.notifyApiError('Could not load booking availability from the API.', error)
     });
   }
 
@@ -236,12 +253,23 @@ export class AdminBookingService {
       return;
     }
 
-    this.api.getAll().subscribe({
-      next: bookings => {
-        this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+    if (this.auth?.isAuthenticated()) {
+      this.api.getAll().subscribe({
+        next: bookings => {
+          this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+          onSuccess(response);
+        },
+        error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but the booking list could not be refreshed.'))
+      });
+      return;
+    }
+
+    this.api.getBusySlots().subscribe({
+      next: slots => {
+        this.bookings = Array.isArray(slots) ? slots.map(item => this.busySlotBooking(item)) : [];
         onSuccess(response);
       },
-      error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but the booking list could not be refreshed.'))
+      error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but availability could not be refreshed.'))
     });
   }
 
@@ -894,6 +922,29 @@ export class AdminBookingService {
     } catch {
       return false;
     }
+  }
+
+  private busySlotBooking(item: BookingBusySlot): AdminBooking {
+    return {
+      id: Number(item.id),
+      code: '',
+      customerName: '',
+      phone: '',
+      service: '',
+      duration: Number(item.duration) || 0,
+      barber: item.barber,
+      date: item.date,
+      time: item.time,
+      amount: 0,
+      status: item.status,
+      source: 'Online',
+      notes: '',
+      groupSize: 1,
+      serviceLocation: 'Salon',
+      serviceAddress: '',
+      specialService: '',
+      specialServiceAmount: 0
+    };
   }
 
   private normalizeBooking(item: AdminBooking): AdminBooking {
