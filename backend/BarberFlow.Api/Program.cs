@@ -17,7 +17,10 @@ builder.Services.AddScoped<BookingApplicationService>();
 builder.Services.AddScoped<CustomerApplicationService>();
 builder.Services.AddScoped<NotificationApplicationService>();
 builder.Services.AddScoped<WhatsAppMessagingService>();
-builder.Services.AddHttpClient<WhatsAppCloudApiClient>();
+builder.Services.AddHttpClient<WhatsAppCloudApiClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddScoped<CatalogApplicationService>();
 builder.Services.AddScoped<AuthApplicationService>();
 builder.Services.AddScoped<IPasswordHasher<SalonUser>, PasswordHasher<SalonUser>>();

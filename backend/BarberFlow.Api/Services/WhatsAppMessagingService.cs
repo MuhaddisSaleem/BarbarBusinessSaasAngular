@@ -1,6 +1,7 @@
 using System.Globalization;
 using BarberFlow.Api.Contracts.WhatsApp;
 using BarberFlow.Api.Data;
+using BarberFlow.Api.Domain.Entities;
 using BarberFlow.Api.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -76,7 +77,7 @@ public sealed class WhatsAppMessagingService(
             var templateName = configuration["WhatsApp:ConfirmationTemplateName"] ?? "booking_confirmation";
             var languageCode = configuration["WhatsApp:TemplateLanguageCode"] ?? "en_US";
 
-            var log = new Domain.Entities.WhatsAppMessage
+            var log = new WhatsAppMessage
             {
                 SalonId = booking.SalonId,
                 BookingId = booking.Id,
