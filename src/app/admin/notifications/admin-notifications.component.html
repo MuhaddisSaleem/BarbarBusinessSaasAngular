@@ -51,7 +51,7 @@
               <i class="unread-dot" *ngIf="notification.unread"></i>
             </span>
             <span class="notification-message">{{ notification.message }}</span>
-            <small>
+            <small class="d-flex">
               <i class="bi bi-clock"></i>{{ notification.time }}
               <span *ngIf="notification.dateLabel"> · {{ notification.dateLabel }}</span>
             </small>
