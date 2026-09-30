@@ -1,6 +1,11 @@
 using BarberFlow.Api.Data;
+using System.Text;
+using BarberFlow.Api.Domain.Entities;
 using BarberFlow.Api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +15,37 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddScoped<BookingApplicationService>();
 builder.Services.AddScoped<CatalogApplicationService>();
+builder.Services.AddScoped<AuthApplicationService>();
+builder.Services.AddScoped<IPasswordHasher<SalonUser>, PasswordHasher<SalonUser>>();
+
+var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey is required and must contain at least 32 characters.");
+}
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "BarberFlow.Api";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "BarberFlow.Admin";
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -50,7 +86,8 @@ if (app.Environment.IsDevelopment())
 
     if (builder.Configuration.GetValue<bool>("SeedData:Enabled"))
     {
-        await DevelopmentDataSeeder.SeedAsync(db);
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<SalonUser>>();
+        await DevelopmentDataSeeder.SeedAsync(db, builder.Configuration, passwordHasher);
     }
 }
 
@@ -63,6 +100,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("Frontend");
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
