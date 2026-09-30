@@ -287,7 +287,7 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
         var customHomeService = serviceNames.Count == 1
             && string.Equals(serviceNames[0], "Custom Home Service", StringComparison.OrdinalIgnoreCase);
 
-        var serviceIds = customHomeService
+        List<Guid> serviceIds = customHomeService
             ? []
             : await db.Services
                 .Where(x => x.SalonId == salon.Id && x.IsActive && serviceNames.Contains(x.Name))
