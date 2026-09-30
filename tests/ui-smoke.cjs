@@ -327,25 +327,74 @@ let browser, activePage;
         }
         if(req.method()==='POST'&&pathname==='/api/bookings/availability'){
           const toMinutes=value=>{
-            const [clock,modifier]=String(value||'').split(' ');
-            let [hours,minutes]=clock.split(':').map(Number);
-            if(modifier==='PM'&&hours!==12)hours+=12;
-            if(modifier==='AM'&&hours===12)hours=0;
+            const match=String(value||'').trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+            if(!match)return Number.NaN;
+            let hours=Number(match[1]),minutes=Number(match[2]||0);
+            const modifier=match[3]?.toUpperCase();
+            if(minutes>59||(!modifier&&!match[2]))return Number.NaN;
+            if(modifier){
+              if(hours<1||hours>12)return Number.NaN;
+              hours=hours%12+(modifier==='PM'?12:0);
+            }else if(hours>23)return Number.NaN;
             return hours*60+minutes;
+          };
+          const workingWindow=value=>{
+            const normalized=String(value||'').replace(/[–—]/g,'-').replace(/\s+to\s+/i,' - ').trim();
+            if(!normalized)return null;
+            const match=normalized.match(/^(.+?)\s*-\s*(.+)$/);
+            if(!match)return null;
+            const start=toMinutes(match[1]),end=toMinutes(match[2]);
+            return Number.isFinite(start)&&Number.isFinite(end)&&end>start?{start,end}:null;
           };
           const requestedStart=toMinutes(body.time),requestedEnd=requestedStart+Number(body.duration||0);
           const serviceNames=String(body.service||'').split(',').map(x=>x.trim()).filter(Boolean);
-          const candidates=apiBarbers.filter(barber=>
-            barber.accountStatus==='Active'
-            && (!body.barber||barber.name===body.barber)
-            && (serviceNames.length===1&&serviceNames[0]==='Custom Home Service'
-              || serviceNames.every(name=>(barber.specialties||[]).includes(name)))
-          );
+
+          // Mirror the production availability endpoint: salon hours are checked first,
+          // then barber leave/overrides/working hours, then overlap protection.
+          const selectedDate=new Date(body.date+'T12:00:00');
+          const dayKey=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][selectedDate.getDay()];
+          const salonDay=(apiSettings.businessHours||[]).find(day=>String(day.key||'').toLowerCase()===dayKey);
+          const salonStart=salonDay?.enabled?toMinutes(salonDay.open):Number.NaN;
+          const salonEnd=salonDay?.enabled?toMinutes(salonDay.close):Number.NaN;
+          const salonWindowValid=Number.isFinite(requestedStart)
+            && Number.isFinite(requestedEnd)
+            && Number.isFinite(salonStart)
+            && Number.isFinite(salonEnd)
+            && requestedStart>=salonStart
+            && requestedEnd<=salonEnd;
+
+          if(!salonWindowValid){
+            return await route.fulfill(apiResponse({
+              available:false,
+              message:'This appointment falls outside the configured business hours.',
+              eligibleBarbers:[]
+            }));
+          }
+
+          const candidates=apiBarbers.filter(barber=>{
+            if(barber.accountStatus!=='Active')return false;
+            if(body.barber&&barber.name!==body.barber)return false;
+            if(!(serviceNames.length===1&&serviceNames[0]==='Custom Home Service')
+              && !serviceNames.every(name=>(barber.specialties||[]).includes(name)))return false;
+
+            if(barber.availability==='Not Available Today'&&body.date==='2026-09-28')return false;
+            if((barber.availability==='On Leave'||barber.availability==='Vacation')
+              && barber.leaveFrom&&barber.leaveTo
+              && body.date>=barber.leaveFrom&&body.date<=barber.leaveTo)return false;
+
+            const shift=workingWindow(barber.workingHours);
+            if(String(barber.workingHours||'').trim()&&!shift)return false;
+            if(shift&&(requestedStart<shift.start||requestedEnd>shift.end))return false;
+
+            return true;
+          });
+
           const eligible=candidates.filter(barber=>!apiBookings.some(item=>{
             if(item.status==='Cancelled'||item.barber!==barber.name||item.date!==body.date)return false;
             const existingStart=toMinutes(item.time),existingEnd=existingStart+Number(item.duration||0);
             return requestedStart<existingEnd&&requestedEnd>existingStart;
           }));
+
           return await route.fulfill(apiResponse({
             available:eligible.length>0,
             message:eligible.length?'Available.':'No eligible barber is available for this appointment window.',
