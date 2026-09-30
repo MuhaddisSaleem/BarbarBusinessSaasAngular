@@ -22,6 +22,7 @@ export class AdminCustomersComponent {
   drawerOpen = false;
   noteDraft = '';
   feedbackMessage = '';
+  noteSaving = false;
 
   constructor(
     public readonly customerService: AdminCustomerService,
@@ -74,15 +75,19 @@ export class AdminCustomersComponent {
     this.customerBookings = [];
     this.noteDraft = '';
     this.feedbackMessage = '';
+    this.noteSaving = false;
   }
 
   saveNote(): void {
-    if (!this.selectedCustomer) return;
+    if (!this.selectedCustomer || this.noteSaving) return;
 
     const customerId = this.selectedCustomer.id;
+    this.noteSaving = true;
 
     this.customerService.saveNote(customerId, this.noteDraft).subscribe({
       next: result => {
+        this.noteSaving = false;
+
         if (result.success && result.customer) {
           this.selectedCustomer = result.customer;
           this.customerBookings = this.customerService.bookingsForCustomer(result.customer);
@@ -92,11 +97,14 @@ export class AdminCustomersComponent {
         this.showFeedback(result.message);
       },
       error: error => {
-        this.showFeedback(
-          (error as any)?.error?.message || 'Could not save the customer note.'
-        );
+        this.noteSaving = false;
+        this.showFeedback((error as any)?.error?.message || 'Could not save the customer note.');
       }
     });
+  }
+
+  refreshCustomers(): void {
+    this.customerService.refresh();
   }
 
   private showFeedback(message: string): void {

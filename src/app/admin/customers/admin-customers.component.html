@@ -6,6 +6,11 @@
         <h2>Customers</h2>
         <p>See customer history, upcoming appointments, visit activity and internal notes in one place.</p>
       </div>
+
+      <button type="button" class="refresh-customers-btn" (click)="refreshCustomers()" [disabled]="customerService.loading">
+        <i class="bi bi-arrow-clockwise" [class.spin]="customerService.loading"></i>
+        Refresh
+      </button>
     </section>
 
     <section class="row g-3 customer-stats">
@@ -39,6 +44,17 @@
     </section>
 
     <section class="customers-card">
+      <div class="customer-error" *ngIf="customerService.errorMessage">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span>{{ customerService.errorMessage }}</span>
+        <button type="button" (click)="refreshCustomers()">Retry</button>
+      </div>
+
+      <div class="customer-loading" *ngIf="customerService.loading && !customerService.all.length">
+        <i class="bi bi-arrow-clockwise spin"></i>
+        Loading customers...
+      </div>
+
       <div class="filter-bar row g-2 g-lg-3">
         <div class="col-12 col-lg">
           <label class="search-box d-flex align-items-center">
@@ -227,11 +243,19 @@
           <span class="saved-note" *ngIf="feedbackMessage">{{ feedbackMessage }}</span>
         </div>
 
-        <textarea [(ngModel)]="noteDraft" placeholder="Add preferences, requests or useful customer notes..."></textarea>
+        <textarea
+          [(ngModel)]="noteDraft"
+          maxlength="2000"
+          placeholder="Add preferences, requests or useful customer notes..."></textarea>
 
-        <button type="button" class="save-note-btn" (click)="saveNote()">
-          <i class="bi bi-check2-circle"></i>
-          Save Note
+        <div class="note-meta d-flex justify-content-between">
+          <span>Private admin note</span>
+          <span>{{ noteDraft.length }}/2000</span>
+        </div>
+
+        <button type="button" class="save-note-btn" (click)="saveNote()" [disabled]="noteSaving">
+          <i class="bi" [ngClass]="noteSaving ? 'bi-arrow-clockwise spin' : 'bi-check2-circle'"></i>
+          {{ noteSaving ? 'Saving...' : 'Save Note' }}
         </button>
       </section>
 

@@ -26,6 +26,9 @@ export interface AdminCustomer {
 export class AdminCustomerService {
   private customers: AdminCustomer[] = [];
 
+  loading = false;
+  errorMessage = '';
+
   constructor(
     private readonly api: CustomerApiService,
     private readonly bookingService: AdminBookingService
@@ -73,14 +76,19 @@ export class AdminCustomerService {
   }
 
   refresh(): void {
+    this.loading = true;
+    this.errorMessage = '';
+
     this.api.getAll().subscribe({
       next: customers => {
         this.customers = Array.isArray(customers)
           ? customers.map(item => this.normalizeCustomer(item))
           : [];
+        this.loading = false;
       },
       error: () => {
-        // Keep the last successful SQL snapshot visible if a refresh temporarily fails.
+        this.loading = false;
+        this.errorMessage = 'Could not load customers from the database.';
       }
     });
   }

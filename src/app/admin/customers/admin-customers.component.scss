@@ -321,3 +321,73 @@ button,input,select,textarea { font:inherit; }
   .filter-bar select { min-width:0; }
   .customer-drawer { width:100%; }
 }
+
+
+.refresh-customers-btn {
+  min-height:38px;
+  padding:0 12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  border:1px solid #303c41;
+  border-radius:7px;
+  background:#0e1518;
+  color:#aeb7ba;
+  font-size:9px;
+
+  &:hover:not(:disabled) {
+    border-color:rgba(242,191,90,.45);
+    color:$gold-soft;
+  }
+
+  &:disabled { opacity:.55; cursor:not-allowed; }
+}
+
+.customer-error,
+.customer-loading {
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-bottom:1px solid #202b30;
+  font-size:8px;
+}
+
+.customer-error {
+  color:#ff9b9b;
+  background:rgba(255,119,119,.05);
+
+  button {
+    margin-left:auto;
+    padding:5px 9px;
+    border:1px solid rgba(255,119,119,.28);
+    border-radius:6px;
+    background:transparent;
+    color:#ffaaaa;
+  }
+}
+
+.customer-loading {
+  justify-content:center;
+  color:#849196;
+}
+
+.note-meta {
+  margin-top:5px;
+  color:#657278;
+  font-size:7px;
+}
+
+.save-note-btn:disabled { opacity:.55; cursor:not-allowed; }
+
+.spin { animation:customerSpin .8s linear infinite; }
+
+@keyframes customerSpin {
+  to { transform:rotate(360deg); }
+}
+
+@media (max-width:575.98px) {
+  .refresh-customers-btn { width:100%; }
+}
