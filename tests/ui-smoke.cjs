@@ -521,14 +521,14 @@ let browser, activePage;
     assert.equal(apiBarbers.some(x=>x.name==='Modal QA Barber'),false);scenarios++;
 
     // Isolated fixture: public tab starts with a short shift and no bookings.
-    apiBarbers[0].workingHours='9 AM - 5 PM';
+    apiBarbers.find(item=>item.name==='Falak Shair').workingHours='9 AM - 5 PM';
     apiBookings=[];
     await goto();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();
     await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
     await page.locator('.no-times').filter({hasText:'40-minute slot fits before 5:00 PM'}).waitFor();
     await page.locator('#customer-name-input').fill('Keep my details');
     const adminTab=await context.newPage();await adminTab.goto('http://127.0.0.1:4173/admin/barbers');
-    apiBarbers[0].workingHours='9 AM - 9 PM';
+    apiBarbers.find(item=>item.name==='Falak Shair').workingHours='9 AM - 9 PM';
     await page.bringToFront();
     await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor();
