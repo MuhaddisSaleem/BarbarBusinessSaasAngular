@@ -38,6 +38,15 @@ public sealed record BookingResponse(
     decimal SpecialServiceAmount
 );
 
+public sealed record BookingBusySlotResponse(
+    int Id,
+    string Barber,
+    string Date,
+    string Time,
+    int Duration,
+    string Status
+);
+
 public sealed record BookingMutationResponse(bool Success, string Message, BookingResponse? Booking = null);
 public sealed record StatusUpdateRequest(string Status);
 public sealed record BarberUpdateRequest(string Barber);
