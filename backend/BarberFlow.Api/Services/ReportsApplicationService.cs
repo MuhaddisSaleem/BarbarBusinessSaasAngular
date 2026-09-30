@@ -1,6 +1,7 @@
 using System.Globalization;
 using BarberFlow.Api.Contracts.Reports;
 using BarberFlow.Api.Data;
+using BarberFlow.Api.Domain.Entities;
 using BarberFlow.Api.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -100,7 +101,7 @@ public sealed class ReportsApplicationService(BarberFlowDbContext db)
     }
 
     private static IReadOnlyList<ServiceReportRowResponse> BuildServiceRows(
-        IReadOnlyList<Domain.Entities.Booking> bookings)
+        IReadOnlyList<Booking> bookings)
     {
         var groups = bookings
             .Where(x => x.Status != BookingStatus.Cancelled)
@@ -133,7 +134,7 @@ public sealed class ReportsApplicationService(BarberFlowDbContext db)
     }
 
     private static IReadOnlyList<BarberReportRowResponse> BuildBarberRows(
-        IReadOnlyList<Domain.Entities.Booking> bookings)
+        IReadOnlyList<Booking> bookings)
     {
         var groups = bookings
             .GroupBy(x => x.Barber.FullName, StringComparer.OrdinalIgnoreCase)
@@ -164,7 +165,7 @@ public sealed class ReportsApplicationService(BarberFlowDbContext db)
     }
 
     private static IReadOnlyList<DailyReportRowResponse> BuildDailyRows(
-        IReadOnlyList<Domain.Entities.Booking> bookings)
+        IReadOnlyList<Booking> bookings)
         => bookings
             .GroupBy(x => x.AppointmentDate)
             .Select(group => new DailyReportRowResponse(
