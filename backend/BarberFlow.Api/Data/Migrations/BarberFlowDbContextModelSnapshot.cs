@@ -406,6 +406,57 @@ namespace BarberFlow.Api.Data.Migrations
                     b.ToTable("Customers", (string)null);
                 });
 
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.SalonNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("SalonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalonId", "CreatedAtUtc");
+
+                    b.HasIndex("SalonId", "IsRead", "CreatedAtUtc");
+
+                    b.ToTable("Notifications", (string)null);
+                });
+
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.Salon", b =>
                 {
                     b.Property<Guid>("Id")
@@ -783,6 +834,17 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Navigation("Salon");
                 });
 
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.SalonNotification", b =>
+                {
+                    b.HasOne("BarberFlow.Api.Domain.Entities.Salon", "Salon")
+                        .WithMany("Notifications")
+                        .HasForeignKey("SalonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Salon");
+                });
+
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.SalonSettings", b =>
                 {
                     b.HasOne("BarberFlow.Api.Domain.Entities.Salon", "Salon")
@@ -848,6 +910,8 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Navigation("BusinessHours");
 
                     b.Navigation("Customers");
+
+                    b.Navigation("Notifications");
 
                     b.Navigation("Services");
 
