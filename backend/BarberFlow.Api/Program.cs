@@ -15,6 +15,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddScoped<BookingApplicationService>();
 builder.Services.AddScoped<CustomerApplicationService>();
+builder.Services.AddScoped<DashboardApplicationService>();
 builder.Services.AddScoped<NotificationApplicationService>();
 builder.Services.AddScoped<WhatsAppMessagingService>();
 builder.Services.AddHttpClient<WhatsAppCloudApiClient>(client =>
