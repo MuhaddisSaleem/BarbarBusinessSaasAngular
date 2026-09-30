@@ -128,7 +128,7 @@ public sealed class DashboardApplicationService(BarberFlowDbContext db)
                 nonCancelledToday.Count,
                 yesterdayBookings.Count(x => x.Status != BookingStatus.Cancelled),
                 todayBookings.Count(x =>
-                    x.Status is BookingStatus.Pending or BookingStatus.Confirmed
+                    (x.Status is BookingStatus.Pending or BookingStatus.Confirmed)
                     && x.StartTime >= nowTime),
                 customers.Count,
                 newCustomersThisMonth,
