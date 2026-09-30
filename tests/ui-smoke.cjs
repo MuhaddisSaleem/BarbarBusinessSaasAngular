@@ -57,6 +57,133 @@ let browser, activePage;
       const raw=req.postData();
       return raw ? JSON.parse(raw) : null;
     };
+    const qaMinutes=value=>{
+      const [clock,modifier]=String(value||'').split(' ');
+      let [hours,minutes]=clock.split(':').map(Number);
+      if(modifier==='PM'&&hours!==12)hours+=12;
+      if(modifier==='AM'&&hours===12)hours=0;
+      return hours*60+minutes;
+    };
+    const qaDashboardPayload=()=>{
+      const today='2026-09-28';
+      const todayBookings=apiBookings.filter(item=>item.date===today);
+      const active=todayBookings.filter(item=>item.status!=='Cancelled');
+      const completed=todayBookings.filter(item=>item.status==='Completed');
+      const customers=new Map();
+      for(const item of apiBookings){
+        const key=(item.phone||'').replace(/\D/g,'')||('walkin-'+item.id);
+        const bucket=customers.get(key)||[];
+        bucket.push(item);customers.set(key,bucket);
+      }
+      const serviceGroups=new Map();
+      for(const item of apiBookings.filter(item=>item.status!=='Cancelled'&&item.date>='2026-08-30'&&item.date<=today)){
+        const row=serviceGroups.get(item.service)||{name:item.service,bookings:0,revenue:0};
+        row.bookings++;
+        if(item.status==='Completed')row.revenue+=Number(item.amount)||0;
+        serviceGroups.set(item.service,row);
+      }
+      const topServices=[...serviceGroups.values()].sort((a,b)=>b.bookings-a.bookings||b.revenue-a.revenue).slice(0,4);
+      const maxService=Math.max(1,...topServices.map(x=>x.bookings));
+      const activeBarbers=apiBarbers.filter(item=>item.accountStatus==='Active');
+      const recentCustomers=[...customers.values()]
+        .sort((a,b)=>String(b.map(x=>x.date+' '+x.time).sort().at(-1)||'').localeCompare(String(a.map(x=>x.date+' '+x.time).sort().at(-1)||'')))
+        .slice(0,4)
+        .map(items=>({
+          id:String(items[0].id),
+          name:items.at(-1).customerName,
+          phone:items.at(-1).phone||'',
+          visits:items.filter(x=>x.status==='Completed').length,
+          spend:items.filter(x=>x.status==='Completed').reduce((sum,x)=>sum+(Number(x.amount)||0),0)
+        }));
+      return {
+        businessName:apiSettings.businessName||'Royal Barbers',
+        today,
+        summary:{
+          todayBookings:active.length,
+          yesterdayBookings:apiBookings.filter(item=>item.date==='2026-09-27'&&item.status!=='Cancelled').length,
+          upcomingToday:todayBookings.filter(item=>(item.status==='Pending'||item.status==='Confirmed')&&qaMinutes(item.time)>=16*60+30).length,
+          customers:customers.size,
+          newCustomersThisMonth:[...customers.values()].filter(items=>items.some(x=>x.date>='2026-09-01'&&x.date<=today)).length,
+          returningCustomers:[...customers.values()].filter(items=>items.filter(x=>x.status!=='Cancelled').length>1).length,
+          activeBarbers:activeBarbers.length,
+          availableBarbers:activeBarbers.filter(item=>item.availability==='Available Today').length
+        },
+        revenue:{
+          completedToday:completed.reduce((sum,x)=>sum+(Number(x.amount)||0),0),
+          completedYesterday:apiBookings.filter(item=>item.date==='2026-09-27'&&item.status==='Completed').reduce((sum,x)=>sum+(Number(x.amount)||0),0),
+          bookedToday:active.reduce((sum,x)=>sum+(Number(x.amount)||0),0),
+          openToday:todayBookings.filter(item=>item.status==='Pending'||item.status==='Confirmed').reduce((sum,x)=>sum+(Number(x.amount)||0),0),
+          averageBookingToday:active.length?active.reduce((sum,x)=>sum+(Number(x.amount)||0),0)/active.length:0
+        },
+        appointments:todayBookings.slice().sort((a,b)=>qaMinutes(a.time)-qaMinutes(b.time)).map(item=>({
+          id:item.id,time:item.time,customer:item.customerName,phone:item.phone||'',service:item.service,
+          barber:item.barber,price:Number(item.amount)||0,status:item.status
+        })),
+        barberLoad:activeBarbers.map(barber=>{
+          const appointments=active.filter(item=>item.barber===barber.name);
+          const bookedMinutes=appointments.reduce((sum,x)=>sum+(Number(x.duration)||0),0);
+          const available=barber.availability==='Available Today';
+          return {id:barber.id,name:barber.name,percent:available?Math.min(100,Math.round(bookedMinutes*100/780)):0,appointments:appointments.length,available};
+        }),
+        topServices:topServices.map(item=>({...item,percent:Math.round(item.bookings*100/maxService)})),
+        recentCustomers
+      };
+    };
+    const qaReportsPayload=url=>{
+      const parsed=new URL(url);
+      const from=parsed.searchParams.get('from')||'0000-01-01';
+      const to=parsed.searchParams.get('to')||'9999-12-31';
+      const barber=parsed.searchParams.get('barber');
+      const status=parsed.searchParams.get('status');
+      const range=apiBookings.filter(item=>item.date>=from&&item.date<=to);
+      const filtered=range
+        .filter(item=>!barber||item.barber===barber)
+        .filter(item=>!status||item.status===status);
+      const completed=filtered.filter(item=>item.status==='Completed');
+      const nonCancelled=filtered.filter(item=>item.status!=='Cancelled');
+      const serviceGroups=new Map();
+      for(const item of nonCancelled){
+        const row=serviceGroups.get(item.service)||{name:item.service,bookings:0,completed:0,value:0};
+        row.bookings++;row.completed+=item.status==='Completed'?1:0;row.value+=Number(item.amount)||0;
+        serviceGroups.set(item.service,row);
+      }
+      const services=[...serviceGroups.values()].sort((a,b)=>b.bookings-a.bookings||b.value-a.value);
+      const maxService=Math.max(1,...services.map(x=>x.bookings));
+      const barberGroups=new Map();
+      for(const item of filtered){
+        const row=barberGroups.get(item.barber)||{name:item.barber,bookings:0,completed:0,cancelled:0,value:0};
+        row.bookings++;row.completed+=item.status==='Completed'?1:0;row.cancelled+=item.status==='Cancelled'?1:0;
+        if(item.status!=='Cancelled')row.value+=Number(item.amount)||0;
+        barberGroups.set(item.barber,row);
+      }
+      const barberPerformance=[...barberGroups.values()].sort((a,b)=>b.bookings-a.bookings||b.value-a.value);
+      const maxBarber=Math.max(1,...barberPerformance.map(x=>x.bookings));
+      const dailyGroups=new Map();
+      for(const item of filtered){
+        const row=dailyGroups.get(item.date)||{date:item.date,bookings:0,completed:0,cancelled:0,revenue:0,bookedValue:0};
+        row.bookings++;row.completed+=item.status==='Completed'?1:0;row.cancelled+=item.status==='Cancelled'?1:0;
+        if(item.status==='Completed')row.revenue+=Number(item.amount)||0;
+        if(item.status!=='Cancelled')row.bookedValue+=Number(item.amount)||0;
+        dailyGroups.set(item.date,row);
+      }
+      return {
+        dateFrom:from,dateTo:to,
+        barbers:[...new Set(range.map(item=>item.barber))].sort(),
+        summary:{
+          totalBookings:filtered.length,
+          completedBookings:completed.length,
+          cancelledBookings:filtered.filter(item=>item.status==='Cancelled').length,
+          bookedValue:nonCancelled.reduce((sum,x)=>sum+(Number(x.amount)||0),0),
+          completedRevenue:completed.reduce((sum,x)=>sum+(Number(x.amount)||0),0),
+          averageCompletedTicket:completed.length?completed.reduce((sum,x)=>sum+(Number(x.amount)||0),0)/completed.length:0,
+          completionRate:nonCancelled.length?Math.round(completed.length*100/nonCancelled.length):0
+        },
+        services:services.map(item=>({...item,percent:Math.round(item.bookings*100/maxService)})),
+        barberPerformance:barberPerformance.map(item=>({...item,percent:Math.round(item.bookings*100/maxBarber)})),
+        daily:[...dailyGroups.values()].sort((a,b)=>b.date.localeCompare(a.date)),
+        bookings:filtered.slice().sort((a,b)=>(b.date+' '+b.time).localeCompare(a.date+' '+a.time))
+      };
+    };
     await context.route(/\/api\//,async route=>{
       const req=route.request();
       try{
@@ -175,6 +302,13 @@ let browser, activePage;
         }
         if(pathname==='/api/settings/reset'&&req.method()==='POST'){
           return await route.fulfill(apiResponse({success:true,message:'Settings reset to defaults.',item:apiSettings}));
+        }
+
+        if(req.method()==='GET'&&pathname==='/api/dashboard'){
+          return await route.fulfill(apiResponse(qaDashboardPayload()));
+        }
+        if(req.method()==='GET'&&pathname==='/api/reports'){
+          return await route.fulfill(apiResponse(qaReportsPayload(req.url())));
         }
 
         if(req.method()==='GET'&&pathname==='/api/bookings/busy-slots'){
@@ -308,6 +442,25 @@ let browser, activePage;
     await goto();await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
     const group=(await stored()).slice(0,2);assert.equal(new Set(group.map(x=>x.barber)).size,2);assert.ok(group.every(x=>x.time==='7:00 PM'));scenarios++;
     await page.locator('.home-service-selector').click();await page.getByPlaceholder('Example: Groom styling for an event, special beard treatment, etc.').fill('Event styling');await day();await page.locator('.time-slot').filter({hasText:/^8:00 PM$/}).click();await details();await page.locator('#home-service-address').fill('QA test address');await finish();assert.equal((await stored())[0].status,'Pending');assert.equal((await stored())[0].specialService,'Event styling');scenarios++;
+    // Dashboard and reports are read-only projections over the same persisted booking data.
+    await goto('/admin');
+    await page.locator('.dashboard-sync-note').waitFor();
+    assert.equal(await page.locator('.dashboard-alert').count(),0,'Dashboard must render the SQL-backed QA projection without API errors');
+    const expectedToday=apiBookings.filter(item=>item.date==='2026-09-28'&&item.status!=='Cancelled').length;
+    const dashboardBookings=page.locator('.stat-card').filter({hasText:"Today's Bookings"});
+    assert.equal((await dashboardBookings.locator('.stat-value').innerText()).trim(),String(expectedToday),'Dashboard booking total must match persisted bookings');
+    scenarios++;
+
+    await goto('/admin/reports');
+    await page.locator('.report-sync-note').waitFor();
+    assert.equal(await page.locator('.report-alert').count(),0,'Reports must render the SQL-backed QA projection without API errors');
+    const reportStatus=page.locator('.report-filters select').nth(1);
+    await reportStatus.selectOption('Confirmed');
+    await page.locator('.refresh-report-btn').filter({hasText:'Refresh'}).waitFor();
+    const expectedConfirmed=apiBookings.filter(item=>item.date>='2026-09-01'&&item.date<='2026-09-28'&&item.status==='Confirmed').length;
+    const reportBookings=page.locator('.report-stats .stat-card').filter({hasText:'Total Bookings'});
+    assert.equal((await reportBookings.locator('strong').innerText()).trim(),String(expectedConfirmed),'Report status filter must reflect persisted bookings');
+    scenarios++;
     for(const route of ['/admin','/admin/bookings','/admin/calendar','/admin/barbers','/admin/services','/admin/customers','/admin/reports','/admin/settings','/admin/notifications']){
       await goto(route);await page.screenshot({path:`test-results/${route.replaceAll('/','-')}-${width}.png`,fullPage:true});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false,'Horizontal overflow at '+route+' '+width);scenarios++;

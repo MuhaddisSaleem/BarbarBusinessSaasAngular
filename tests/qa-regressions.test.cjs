@@ -1,7 +1,29 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const { fixture, DAY, NEXT } = require('./harness.cjs');
 const equal = (a,b) => assert.equal(JSON.stringify(a),JSON.stringify(b));
+
+test('dashboard and reports stay read-only and cannot mutate booking state', () => {
+  for (const file of [
+    'backend/BarberFlow.Api/Services/DashboardApplicationService.cs',
+    'backend/BarberFlow.Api/Services/ReportsApplicationService.cs'
+  ]) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /AsNoTracking\(\)/, file + ' should query read-only data');
+    assert.doesNotMatch(source, /SaveChanges(?:Async)?\s*\(/, file + ' must not write through DbContext');
+    assert.doesNotMatch(source, /db\.(?:Add|AddRange|Remove|RemoveRange|Update|UpdateRange)\s*\(/, file + ' must remain projection-only');
+  }
+
+  for (const file of [
+    'backend/BarberFlow.Api/Controllers/DashboardController.cs',
+    'backend/BarberFlow.Api/Controllers/ReportsController.cs'
+  ]) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /\[HttpGet/, file + ' should expose GET only');
+    assert.doesNotMatch(source, /\[Http(?:Post|Put|Patch|Delete)/, file + ' must not expose booking mutations');
+  }
+});
 
 for (const hours of ['9:00 AM - 9:00 PM','9 AM - 9 PM','09:00 - 21:00','9am to 9pm','9:00AM – 9:00PM','9:00 a.m. — 9:00 p.m.','']) {
   test('legacy working hours allow matching customer/admin slots: ' + (hours || '(salon hours)'), () => {

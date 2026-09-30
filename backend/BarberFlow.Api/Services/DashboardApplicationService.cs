@@ -98,8 +98,7 @@ public sealed class DashboardApplicationService(BarberFlowDbContext db)
 
         var recentCustomers = customers
             .Where(x => x.Bookings.Count != 0)
-            .OrderByDescending(x => x.Bookings.Max(b => b.AppointmentDate))
-            .ThenByDescending(x => x.Bookings.Max(b => b.StartTime))
+            .OrderByDescending(x => x.Bookings.Max(b => b.AppointmentDate.ToDateTime(b.StartTime)))
             .ThenBy(x => x.FullName)
             .Take(4)
             .Select(x => new DashboardRecentCustomerResponse(

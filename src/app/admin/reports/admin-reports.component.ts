@@ -27,6 +27,7 @@ export class AdminReportsComponent implements OnInit {
   loading = true;
   errorMessage = '';
   lastRefreshedAt: Date | null = null;
+  private reportRequestId = 0;
 
   constructor(
     private readonly reportsApi: ReportsApiService,
@@ -98,6 +99,8 @@ export class AdminReportsComponent implements OnInit {
     if (!this.dateFrom || !this.dateTo) return;
 
     if (this.dateTo < this.dateFrom) {
+      this.reportRequestId++;
+      this.loading = false;
       this.errorMessage = 'Report end date cannot be before the start date.';
       return;
     }
@@ -108,6 +111,7 @@ export class AdminReportsComponent implements OnInit {
   loadReport(): void {
     if (!this.dateFrom || !this.dateTo) return;
 
+    const requestId = ++this.reportRequestId;
     this.loading = true;
     this.errorMessage = '';
 
@@ -118,11 +122,15 @@ export class AdminReportsComponent implements OnInit {
       this.selectedStatus
     ).subscribe({
       next: response => {
+        if (requestId !== this.reportRequestId) return;
+
         this.report = response;
         this.loading = false;
         this.lastRefreshedAt = new Date();
       },
       error: error => {
+        if (requestId !== this.reportRequestId) return;
+
         this.loading = false;
         this.errorMessage = (error as any)?.error?.message
           || (error as any)?.error?.detail
