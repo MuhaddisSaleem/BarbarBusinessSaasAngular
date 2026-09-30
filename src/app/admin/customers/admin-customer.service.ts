@@ -1,7 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { AdminBooking, AdminBookingService } from '../bookings/admin-booking.service';
-import { CustomerApiService, CustomerMutationResult } from '../../core/customer-api.service';
+import {
+  CustomerApiService,
+  CustomerMutationResult,
+  CustomerProfileUpdate
+} from '../../core/customer-api.service';
 
 export type CustomerType = 'New' | 'Returning';
 
@@ -9,6 +13,7 @@ export interface AdminCustomer {
   id: string;
   name: string;
   phone: string;
+  email: string;
   bookingCount: number;
   completedVisits: number;
   cancelledCount: number;
@@ -52,6 +57,30 @@ export class AdminCustomerService {
       .sort((a, b) =>
         b.date.localeCompare(a.date) || this.timeToMinutes(b.time) - this.timeToMinutes(a.time)
       );
+  }
+
+  updateProfile(
+    customerId: string,
+    profile: CustomerProfileUpdate
+  ): Observable<CustomerMutationResult> {
+    return this.api.updateProfile(customerId, profile).pipe(
+      tap(result => {
+        if (!result.success || !result.customer) return;
+
+        const normalized = this.normalizeCustomer(result.customer);
+        const index = this.customers.findIndex(item => item.id === customerId);
+
+        if (index >= 0) {
+          this.customers = [
+            ...this.customers.slice(0, index),
+            normalized,
+            ...this.customers.slice(index + 1)
+          ];
+        } else {
+          this.customers = [normalized, ...this.customers];
+        }
+      })
+    );
   }
 
   saveNote(customerId: string, note: string): Observable<CustomerMutationResult> {
@@ -100,6 +129,7 @@ export class AdminCustomerService {
       completedVisits: Number(customer.completedVisits) || 0,
       cancelledCount: Number(customer.cancelledCount) || 0,
       totalSpend: Number(customer.totalSpend) || 0,
+      email: customer.email || '',
       notes: customer.notes || '',
       bookings: Array.isArray(customer.bookings)
         ? customer.bookings.map(booking => this.normalizeBooking(booking))

@@ -9,6 +9,12 @@ export interface CustomerMutationResult {
   customer?: AdminCustomer;
 }
 
+export interface CustomerProfileUpdate {
+  name: string;
+  phone: string;
+  email: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CustomerApiService {
   private readonly baseUrl = '/api/customers';
@@ -21,6 +27,13 @@ export class CustomerApiService {
 
   getById(id: string): Observable<AdminCustomer> {
     return this.http.get<AdminCustomer>(this.baseUrl + '/' + encodeURIComponent(id));
+  }
+
+  updateProfile(id: string, profile: CustomerProfileUpdate): Observable<CustomerMutationResult> {
+    return this.http.patch<CustomerMutationResult>(
+      this.baseUrl + '/' + encodeURIComponent(id) + '/profile',
+      profile
+    );
   }
 
   saveNote(id: string, notes: string): Observable<CustomerMutationResult> {

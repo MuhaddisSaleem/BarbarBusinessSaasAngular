@@ -24,6 +24,15 @@ export class AdminCustomersComponent {
   feedbackMessage = '';
   noteSaving = false;
 
+  profileEditing = false;
+  profileSaving = false;
+  profileMessage = '';
+  profileDraft = {
+    name: '',
+    phone: '',
+    email: ''
+  };
+
   constructor(
     public readonly customerService: AdminCustomerService,
     private readonly router: Router
@@ -39,7 +48,8 @@ export class AdminCustomersComponent {
 
         return [
           item.name,
-          item.phone
+          item.phone,
+          item.email
         ].some(value => value.toLowerCase().includes(term));
       });
   }
@@ -65,6 +75,10 @@ export class AdminCustomersComponent {
     this.selectedCustomer = fresh;
     this.customerBookings = this.customerService.bookingsForCustomer(fresh);
     this.noteDraft = fresh.notes;
+    this.setProfileDraft(fresh);
+    this.profileEditing = false;
+    this.profileSaving = false;
+    this.profileMessage = '';
     this.drawerOpen = true;
     this.feedbackMessage = '';
   }
@@ -76,6 +90,68 @@ export class AdminCustomersComponent {
     this.noteDraft = '';
     this.feedbackMessage = '';
     this.noteSaving = false;
+    this.profileEditing = false;
+    this.profileSaving = false;
+    this.profileMessage = '';
+    this.profileDraft = { name: '', phone: '', email: '' };
+  }
+
+  startProfileEdit(): void {
+    if (!this.selectedCustomer) return;
+
+    this.setProfileDraft(this.selectedCustomer);
+    this.profileMessage = '';
+    this.profileEditing = true;
+  }
+
+  cancelProfileEdit(): void {
+    if (this.selectedCustomer) {
+      this.setProfileDraft(this.selectedCustomer);
+    }
+
+    this.profileEditing = false;
+    this.profileSaving = false;
+    this.profileMessage = '';
+  }
+
+  saveProfile(): void {
+    if (!this.selectedCustomer || this.profileSaving) return;
+
+    const name = this.profileDraft.name.trim();
+    if (!name) {
+      this.showProfileMessage('Customer name is required.');
+      return;
+    }
+
+    const customerId = this.selectedCustomer.id;
+    this.profileSaving = true;
+    this.profileMessage = '';
+
+    this.customerService.updateProfile(customerId, {
+      name,
+      phone: this.profileDraft.phone.trim(),
+      email: this.profileDraft.email.trim()
+    }).subscribe({
+      next: result => {
+        this.profileSaving = false;
+
+        if (result.success && result.customer) {
+          this.selectedCustomer = result.customer;
+          this.customerBookings = this.customerService.bookingsForCustomer(result.customer);
+          this.noteDraft = result.customer.notes;
+          this.setProfileDraft(result.customer);
+          this.profileEditing = false;
+        }
+
+        this.showProfileMessage(result.message);
+      },
+      error: error => {
+        this.profileSaving = false;
+        this.showProfileMessage(
+          (error as any)?.error?.message || 'Could not update the customer profile.'
+        );
+      }
+    });
   }
 
   saveNote(): void {
@@ -105,6 +181,22 @@ export class AdminCustomersComponent {
 
   refreshCustomers(): void {
     this.customerService.refresh();
+  }
+
+  private setProfileDraft(customer: AdminCustomer): void {
+    this.profileDraft = {
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email
+    };
+  }
+
+  private showProfileMessage(message: string): void {
+    this.profileMessage = message;
+
+    window.setTimeout(() => {
+      if (this.profileMessage === message) this.profileMessage = '';
+    }, 3000);
   }
 
   private showFeedback(message: string): void {

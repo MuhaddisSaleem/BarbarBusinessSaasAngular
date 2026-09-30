@@ -59,7 +59,7 @@
         <div class="col-12 col-lg">
           <label class="search-box d-flex align-items-center">
             <i class="bi bi-search"></i>
-            <input type="search" [(ngModel)]="searchTerm" placeholder="Search customer name or phone...">
+            <input type="search" [(ngModel)]="searchTerm" placeholder="Search customer name, phone or email...">
           </label>
         </div>
 
@@ -188,28 +188,105 @@
 
     <div class="drawer-body">
       <section class="profile-card">
-        <div class="d-flex align-items-center gap-3">
-          <span class="customer-avatar large">{{ selectedCustomer.name.slice(0,1) }}</span>
-          <div>
-            <strong>{{ selectedCustomer.name }}</strong>
-            <span>{{ selectedCustomer.phone || 'Walk-in · no phone' }}</span>
+        <div class="profile-card-head d-flex align-items-start justify-content-between gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <span class="customer-avatar large">{{ selectedCustomer.name.slice(0,1) }}</span>
+            <div class="profile-copy">
+              <strong>{{ selectedCustomer.name }}</strong>
+              <span>{{ selectedCustomer.phone || 'Walk-in · no phone' }}</span>
+              <span *ngIf="selectedCustomer.email">{{ selectedCustomer.email }}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="edit-profile-btn"
+            *ngIf="!profileEditing"
+            (click)="startProfileEdit()">
+            <i class="bi bi-pencil-square"></i>
+            Edit
+          </button>
+        </div>
+
+        <div class="profile-feedback" *ngIf="profileMessage">
+          {{ profileMessage }}
+        </div>
+
+        <div class="profile-edit-form" *ngIf="profileEditing">
+          <label>
+            <span>Customer Name *</span>
+            <input
+              type="text"
+              [(ngModel)]="profileDraft.name"
+              maxlength="160"
+              autocomplete="name"
+              placeholder="Customer name">
+          </label>
+
+          <label>
+            <span>Phone Number</span>
+            <input
+              type="tel"
+              [(ngModel)]="profileDraft.phone"
+              maxlength="20"
+              autocomplete="tel"
+              placeholder="+92 300 1234567">
+          </label>
+
+          <label>
+            <span>Email</span>
+            <input
+              type="email"
+              [(ngModel)]="profileDraft.email"
+              maxlength="254"
+              autocomplete="email"
+              placeholder="customer@example.com">
+          </label>
+
+          <div class="profile-edit-actions d-flex gap-2">
+            <button
+              type="button"
+              class="profile-cancel-btn flex-fill"
+              (click)="cancelProfileEdit()"
+              [disabled]="profileSaving">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="profile-save-btn flex-fill"
+              (click)="saveProfile()"
+              [disabled]="profileSaving">
+              <i class="bi" [ngClass]="profileSaving ? 'bi-arrow-clockwise spin' : 'bi-check2-circle'"></i>
+              {{ profileSaving ? 'Saving...' : 'Save Profile' }}
+            </button>
           </div>
         </div>
 
-        <div class="contact-actions d-flex gap-2" *ngIf="selectedCustomer.phone; else noPhoneContact">
-          <a class="contact-btn flex-fill" [href]="whatsappLink(selectedCustomer.phone)" target="_blank" rel="noopener">
-            <i class="bi bi-whatsapp"></i> WhatsApp
-          </a>
-          <a class="contact-btn flex-fill" [href]="'tel:' + selectedCustomer.phone">
-            <i class="bi bi-telephone"></i> Call
-          </a>
-        </div>
-        <ng-template #noPhoneContact>
-          <div class="no-phone-contact">
-            <i class="bi bi-person-walking"></i>
-            No phone number was provided for this walk-in.
+        <ng-container *ngIf="!profileEditing">
+          <div class="contact-actions d-flex gap-2" *ngIf="selectedCustomer.phone; else noPhoneContact">
+            <a class="contact-btn flex-fill" [href]="whatsappLink(selectedCustomer.phone)" target="_blank" rel="noopener">
+              <i class="bi bi-whatsapp"></i> WhatsApp
+            </a>
+            <a class="contact-btn flex-fill" [href]="'tel:' + selectedCustomer.phone">
+              <i class="bi bi-telephone"></i> Call
+            </a>
           </div>
-        </ng-template>
+
+          <a
+            class="email-contact-btn"
+            *ngIf="selectedCustomer.email"
+            [href]="'mailto:' + selectedCustomer.email">
+            <i class="bi bi-envelope"></i>
+            {{ selectedCustomer.email }}
+          </a>
+
+          <ng-template #noPhoneContact>
+            <div class="no-phone-contact">
+              <i class="bi bi-person-walking"></i>
+              No phone number was provided for this walk-in.
+            </div>
+          </ng-template>
+        </ng-container>
       </section>
 
       <section class="profile-metrics">
