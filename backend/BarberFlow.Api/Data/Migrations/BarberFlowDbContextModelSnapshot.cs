@@ -457,6 +457,71 @@ namespace BarberFlow.Api.Data.Migrations
                     b.ToTable("Notifications", (string)null);
                 });
 
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.WhatsAppMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RecipientPhone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("SalonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("SentAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("TemplateLanguage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TemplateName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId", "MessageType")
+                        .IsUnique()
+                        .HasFilter("[MessageType] = 'BookingConfirmation'");
+
+                    b.HasIndex("SalonId", "CreatedAtUtc");
+
+                    b.ToTable("WhatsAppMessages", (string)null);
+                });
+
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.Salon", b =>
                 {
                     b.Property<Guid>("Id")
@@ -845,6 +910,25 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Navigation("Salon");
                 });
 
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.WhatsAppMessage", b =>
+                {
+                    b.HasOne("BarberFlow.Api.Domain.Entities.Booking", "Booking")
+                        .WithMany("WhatsAppMessages")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BarberFlow.Api.Domain.Entities.Salon", "Salon")
+                        .WithMany("WhatsAppMessages")
+                        .HasForeignKey("SalonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("Salon");
+                });
+
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.SalonSettings", b =>
                 {
                     b.HasOne("BarberFlow.Api.Domain.Entities.Salon", "Salon")
@@ -894,6 +978,8 @@ namespace BarberFlow.Api.Data.Migrations
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.Booking", b =>
                 {
                     b.Navigation("Services");
+
+                    b.Navigation("WhatsAppMessages");
                 });
 
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.Customer", b =>
@@ -914,6 +1000,8 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Navigation("Notifications");
 
                     b.Navigation("Services");
+
+                    b.Navigation("WhatsAppMessages");
 
                     b.Navigation("Settings");
 
