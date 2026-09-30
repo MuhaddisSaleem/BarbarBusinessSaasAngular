@@ -49,4 +49,14 @@ export class AdminNotificationsComponent {
   markAllAsRead(): void {
     this.notificationService.markAllAsRead();
   }
+
+  refresh(): void {
+    this.notificationService.refresh();
+  }
+
+  clearAll(): void {
+    if (!this.notificationService.notifications.length) return;
+    if (!window.confirm('Clear all notifications? This cannot be undone.')) return;
+    this.notificationService.clearAll();
+  }
 }
