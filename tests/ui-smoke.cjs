@@ -214,14 +214,16 @@ let browser, activePage;
     });
     await page.clock.install({time:new Date('2026-09-28T16:30:00Z')});
     await page.addInitScript(seed=>{
-      localStorage.setItem('adminToken','qa-admin-token');
-      localStorage.setItem('adminTokenExpiresAt','2099-12-31T23:59:59.000Z');
-      localStorage.setItem('adminUser',JSON.stringify({
-        id:'00000000-0000-0000-0000-000000000001',
-        fullName:'QA Administrator',
-        email:'qa-admin@example.test',
-        role:'Owner'
-      }));
+      if(!localStorage.getItem('qa-auth-disabled')){
+        localStorage.setItem('adminToken','qa-admin-token');
+        localStorage.setItem('adminTokenExpiresAt','2099-12-31T23:59:59.000Z');
+        localStorage.setItem('adminUser',JSON.stringify({
+          id:'00000000-0000-0000-0000-000000000001',
+          fullName:'QA Administrator',
+          email:'qa-admin@example.test',
+          role:'Owner'
+        }));
+      }
       if(localStorage.getItem('qa-seeded'))return;
       for(const [key,value] of Object.entries(seed))localStorage.setItem(key,JSON.stringify(value));
       for(const type of ['barbers','services'])localStorage.setItem('royal-barbers.admin-'+type+'.demo-cleaned.v1','1');
