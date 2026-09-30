@@ -50,6 +50,9 @@ export class NotificationService {
   ) {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('royal-barbers.admin-notifications.v1');
+      window.addEventListener('focus', () => {
+        if (this.auth.isAuthenticated()) this.refresh();
+      });
     }
 
     this.auth.currentUser$.subscribe(user => {

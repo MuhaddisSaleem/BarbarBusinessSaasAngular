@@ -135,15 +135,22 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
                 firstCreated ??= validation.Booking;
             }
 
-            if (source == BookingSource.Online
-                && salon.Settings?.NotifyOwnerOnNewBooking != false
-                && firstCreated is not null)
+            var shouldNotifyNewBooking = firstCreated is not null
+                && (source == BookingSource.WalkIn
+                    || (source == BookingSource.Online && salon.Settings?.NotifyOwnerOnNewBooking != false));
+
+            if (shouldNotifyNewBooking)
             {
                 var firstRequest = requests[0];
-                var notificationTitle = staged.Count > 1 ? "New group booking" : "New online booking";
-                var notificationMessage = staged.Count > 1
-                    ? $"{firstCreated.CustomerName} booked {staged.Count} appointments for {firstCreated.AppointmentDate:yyyy-MM-dd}."
-                    : $"{firstCreated.CustomerName} booked {firstRequest.Service} with {firstCreated.Barber.FullName} for {firstCreated.AppointmentDate:yyyy-MM-dd} at {firstCreated.StartTime.ToString("h:mm tt", CultureInfo.InvariantCulture)}.";
+                var notificationTitle = source == BookingSource.WalkIn
+                    ? "Walk-in booking created"
+                    : (staged.Count > 1 ? "New group booking" : "New online booking");
+
+                var notificationMessage = source == BookingSource.WalkIn
+                    ? $"{firstCreated!.CustomerName} booked {firstRequest.Service} with {firstCreated.Barber.FullName} for {firstCreated.StartTime.ToString("h:mm tt", CultureInfo.InvariantCulture)}."
+                    : (staged.Count > 1
+                        ? $"{firstCreated!.CustomerName} booked {staged.Count} appointments for {firstCreated.AppointmentDate:yyyy-MM-dd}."
+                        : $"{firstCreated!.CustomerName} booked {firstRequest.Service} with {firstCreated.Barber.FullName} for {firstCreated.AppointmentDate:yyyy-MM-dd} at {firstCreated.StartTime.ToString("h:mm tt", CultureInfo.InvariantCulture)}.");
 
                 db.Notifications.Add(new SalonNotification
                 {
@@ -151,8 +158,8 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
                     Type = "booking",
                     Title = notificationTitle,
                     Message = notificationMessage,
-                    Icon = "bi-calendar2-plus",
-                    Url = $"/admin/bookings?booking={firstCreated.PublicId}",
+                    Icon = source == BookingSource.WalkIn ? "bi-person-walking" : "bi-calendar2-plus",
+                    Url = $"/admin/bookings?booking={firstCreated!.PublicId}",
                     IsRead = false
                 });
             }
