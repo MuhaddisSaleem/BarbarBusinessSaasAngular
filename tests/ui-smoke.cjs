@@ -277,6 +277,8 @@ let browser, activePage;
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
     await goto();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
     assert.ok(await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).count());
+    assert.equal(await page.locator('.time-slot').filter({hasText:/^5:30 PM$/}).count(),0,'40-minute service must not use the old 30-minute slot cadence');
+    assert.ok(await page.locator('.time-slot').filter({hasText:/^5:40 PM$/}).count(),'40-minute service should advance the next slot by 40 minutes');
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();await details();
     await page.screenshot({path:`test-results/customer-${width}.png`,fullPage:true});await finish();
     assert.equal((await stored()).length,1);assert.equal((await stored())[0].status,'Confirmed');

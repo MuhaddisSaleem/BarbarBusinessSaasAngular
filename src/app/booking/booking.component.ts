@@ -165,7 +165,9 @@ export class BookingComponent implements OnInit {
     const now = new Date();
     const earliest = this.selectedDate.fullDate === this.formatDate(now)
       ? Math.max(hours.start, now.getHours() * 60 + now.getMinutes() + 1) : hours.start;
-    const interval = this.settingsService.bookingInterval;
+    const interval = this.bookingService.apiEnabled && this.bookingMode === 'single'
+      ? Math.max(1, this.getPersonDuration(this.activeParticipant))
+      : this.settingsService.bookingInterval;
     for (const person of this.participants) {
       const duration = this.getPersonDuration(person);
       if (!Number.isFinite(duration) || duration <= 0) return 'The selected service duration needs correcting. Please contact the salon.';
@@ -572,17 +574,40 @@ export class BookingComponent implements OnInit {
     const selectedDay = this.startOfDay(this.selectedDate.date);
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const apiSingleBooking = this.bookingService.apiEnabled && this.bookingMode === 'single';
+    const singleDuration = Math.max(1, this.getPersonDuration(this.activeParticipant));
 
     for (const window of this.businessWindows) {
+      if (apiSingleBooking) {
+        // Anchor the first visible time to the salon's normal booking grid, then advance
+        // by the actual selected service duration. Example: 40 min => 1:00, 1:40, 2:20.
+        let firstStart = window.start;
+
+        if (selectedDay.getTime() === today.getTime()) {
+          const earliest = Math.max(window.start, nowMinutes + 1);
+          const baseInterval = this.settingsService.bookingInterval;
+          firstStart = window.start
+            + Math.ceil((earliest - window.start) / baseInterval) * baseInterval;
+        }
+
+        for (
+          let minutes = firstStart;
+          minutes + singleDuration <= window.end;
+          minutes += singleDuration
+        ) {
+          slots.push(this.minutesToTime(minutes));
+        }
+
+        continue;
+      }
+
       for (let minutes = window.start; minutes < window.end; minutes += this.settingsService.bookingInterval) {
         if (selectedDay.getTime() === today.getTime() && minutes <= nowMinutes) continue;
 
         const time = this.minutesToTime(minutes);
-        const valid = this.bookingService.apiEnabled && this.bookingMode === 'single'
-          ? true
-          : (this.bookingMode === 'group' && this.groupStrategy === 'sequential'
-            ? !!this.buildSequentialSchedule(time)
-            : !!this.resolveParallelBarbers(time));
+        const valid = this.bookingMode === 'group' && this.groupStrategy === 'sequential'
+          ? !!this.buildSequentialSchedule(time)
+          : !!this.resolveParallelBarbers(time);
 
         if (valid) slots.push(time);
       }
