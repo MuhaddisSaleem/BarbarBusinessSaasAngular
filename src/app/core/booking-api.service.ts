@@ -19,7 +19,7 @@ export interface BookingBusySlot {
   date: string;
   time: string;
   duration: number;
-  status: 'Pending' | 'Confirmed';
+  status: 'Pending' | 'Confirmed' | 'Completed';
 }
 
 @Injectable({ providedIn: 'root' })

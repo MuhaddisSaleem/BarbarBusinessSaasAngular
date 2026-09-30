@@ -96,6 +96,10 @@ export class BookingComponent implements OnInit {
   ngOnInit(): void {
     this.buildCalendar();
 
+    this.bookingService.changes$.subscribe(() => {
+      queueMicrotask(() => this.reconcileAvailability());
+    });
+
     this.catalogApi?.changes$.subscribe(() => {
       queueMicrotask(() => this.reconcileAvailability());
     });
@@ -688,7 +692,10 @@ export class BookingComponent implements OnInit {
 
     const handleApiFailure = (message: string) => {
       this.clearSelectedTime();
-      this.generateAvailableTimes();
+      // The server is the source of truth for conflicts. Clear stale slots immediately,
+      // then rebuild them only after the latest busy-slot snapshot arrives.
+      this.availableTimes = [];
+      this.bookingService.refreshFromApi();
       this.showValidationError(message, 'date-time-section');
     };
 

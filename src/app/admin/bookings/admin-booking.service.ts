@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
 import { AdminBarberService } from '../barbers/admin-barber.service';
 import { AdminServiceService } from '../services/admin-service.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
@@ -43,6 +44,9 @@ export interface WalkInBarberOption {
 
 @Injectable({ providedIn: 'root' })
 export class AdminBookingService {
+  private readonly bookingsChangedSubject = new Subject<void>();
+  readonly changes$ = this.bookingsChangedSubject.asObservable();
+
   constructor(
     private readonly barberService: AdminBarberService,
     private readonly serviceService: AdminServiceService,
@@ -186,6 +190,7 @@ export class AdminBookingService {
       return;
     }
     this.bookings = this.loadBookings();
+    this.bookingsChangedSubject.next();
   }
 
   refreshFromApi(): void {
@@ -195,6 +200,7 @@ export class AdminBookingService {
       this.api.getAll().subscribe({
         next: bookings => {
           this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+          this.bookingsChangedSubject.next();
         },
         error: error => this.notifyApiError('Could not load bookings from the API.', error)
       });
@@ -204,6 +210,7 @@ export class AdminBookingService {
     this.api.getBusySlots().subscribe({
       next: slots => {
         this.bookings = Array.isArray(slots) ? slots.map(item => this.busySlotBooking(item)) : [];
+        this.bookingsChangedSubject.next();
       },
       error: error => this.notifyApiError('Could not load booking availability from the API.', error)
     });
@@ -258,6 +265,7 @@ export class AdminBookingService {
         next: bookings => {
           this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
           onSuccess(response);
+          this.bookingsChangedSubject.next();
         },
         error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but the booking list could not be refreshed.'))
       });
@@ -268,6 +276,7 @@ export class AdminBookingService {
       next: slots => {
         this.bookings = Array.isArray(slots) ? slots.map(item => this.busySlotBooking(item)) : [];
         onSuccess(response);
+        this.bookingsChangedSubject.next();
       },
       error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but availability could not be refreshed.'))
     });
@@ -918,6 +927,7 @@ export class AdminBookingService {
 
     try {
       window.localStorage.setItem(this.storageKey, JSON.stringify(this.bookings));
+      this.bookingsChangedSubject.next();
       return true;
     } catch {
       return false;

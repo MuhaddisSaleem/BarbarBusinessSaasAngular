@@ -40,7 +40,7 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
             .AsNoTracking()
             .Where(x => x.SalonId == salon.Id
                         && x.AppointmentDate >= today
-                        && (x.Status == BookingStatus.Pending || x.Status == BookingStatus.Confirmed))
+                        && x.Status != BookingStatus.Cancelled)
             .Include(x => x.Barber)
             .OrderBy(x => x.AppointmentDate)
             .ThenBy(x => x.StartTime)

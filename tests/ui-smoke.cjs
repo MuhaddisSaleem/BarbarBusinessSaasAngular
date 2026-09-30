@@ -180,7 +180,7 @@ let browser, activePage;
         if(req.method()==='GET'&&pathname==='/api/bookings/busy-slots'){
           return await route.fulfill(apiResponse(
             apiBookings
-              .filter(item=>item.status==='Pending'||item.status==='Confirmed')
+              .filter(item=>item.status!=='Cancelled')
               .map(item=>({
                 id:item.id,
                 barber:item.barber,
@@ -349,6 +349,14 @@ let browser, activePage;
     await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor();
     assert.equal(await page.locator('#customer-name-input').inputValue(),'Keep my details');
+
+    // A booking created elsewhere must disappear from this already-open customer's slot grid
+    // after the async busy-slot refresh completes.
+    apiBookings.push({id:901,code:'RB-ASYNC',customerName:'Other Client',phone:'+92 300 1111111',barber:'Falak Shair',service:'Haircut',duration:40,date:'2026-09-28',time:'5:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
+    nextBookingId=Math.max(nextBookingId,902);
+    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+    await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).waitFor({state:'detached'});
+
     await page.screenshot({path:`test-results/refreshed-slots-${width}.png`,fullPage:true});
     await adminTab.close();scenarios++;
     assert.deepEqual(errors,[]);console.log(`PASS ${width}px: customer, admin, group, home and all nine admin routes`);await context.close();
