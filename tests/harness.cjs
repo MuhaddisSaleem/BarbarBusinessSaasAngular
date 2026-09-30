@@ -36,11 +36,26 @@ function fixture(seed = {}) {
     subscribe() { return { unsubscribe() {} }; }
     asObservable() { return this; }
   }
+  const tapStub = handler => source => ({
+    subscribe(observer) {
+      return source.subscribe({
+        next(value) {
+          handler(value);
+          if (typeof observer === 'function') observer(value);
+          else observer?.next?.(value);
+        },
+        error(error) {
+          observer?.error?.(error);
+        }
+      });
+    }
+  });
   const globals = {
     Date: Clock,
     window,
     setTimeout: () => 0,
     Subject: SubjectStub,
+    tap: tapStub,
     document: { getElementById: () => null }
   };
   const make = (file, name, ...deps) => new (load(file, name, globals))(...deps);
