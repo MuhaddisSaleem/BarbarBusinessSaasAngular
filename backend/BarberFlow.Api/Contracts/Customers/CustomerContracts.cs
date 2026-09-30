@@ -6,6 +6,7 @@ public sealed record CustomerResponse(
     string Id,
     string Name,
     string Phone,
+    string Email,
     int BookingCount,
     int CompletedVisits,
     int CancelledCount,
@@ -20,6 +21,12 @@ public sealed record CustomerResponse(
 );
 
 public sealed record CustomerNotesRequest(string Notes);
+
+public sealed record CustomerProfileUpdateRequest(
+    string Name,
+    string? Phone,
+    string? Email
+);
 
 public sealed record CustomerMutationResponse(
     bool Success,

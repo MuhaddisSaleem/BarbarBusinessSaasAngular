@@ -102,6 +102,115 @@ public sealed class CustomerApplicationService(BarberFlowDbContext db)
         return booking is null ? null : MapLegacyWalkIn(booking, today, time);
     }
 
+    public async Task<CustomerMutationResponse> UpdateProfileAsync(
+        Guid salonId,
+        string id,
+        CustomerProfileUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var name = (request.Name ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            return new(false, "Customer name is required.");
+
+        if (name.Length > 160)
+            return new(false, "Customer name cannot exceed 160 characters.");
+
+        var phone = NormalizePhone(request.Phone);
+        if (!string.IsNullOrWhiteSpace(phone) && !IsValidPakistanPhone(phone))
+            return new(false, "Enter a valid Pakistan phone number.");
+
+        var email = (request.Email ?? string.Empty).Trim();
+        if (email.Length > 254)
+            return new(false, "Customer email cannot exceed 254 characters.");
+
+        if (!string.IsNullOrWhiteSpace(email) && !IsValidEmail(email))
+            return new(false, "Enter a valid email address.");
+
+        if (Guid.TryParse(id, out var customerId))
+        {
+            var customer = await db.Customers
+                .FirstOrDefaultAsync(
+                    x => x.SalonId == salonId && x.Id == customerId,
+                    cancellationToken);
+
+            if (customer is null)
+                return new(false, "Customer not found.");
+
+            if (!string.IsNullOrWhiteSpace(phone))
+            {
+                var duplicatePhone = await db.Customers
+                    .AnyAsync(
+                        x => x.SalonId == salonId
+                             && x.Id != customer.Id
+                             && x.Phone == phone,
+                        cancellationToken);
+
+                if (duplicatePhone)
+                    return new(false, "Another customer already uses this phone number.");
+            }
+
+            customer.FullName = name;
+            customer.Phone = string.IsNullOrWhiteSpace(phone) ? null : phone;
+            customer.Email = string.IsNullOrWhiteSpace(email) ? null : email;
+            customer.UpdatedAtUtc = DateTimeOffset.UtcNow;
+
+            await db.SaveChangesAsync(cancellationToken);
+
+            var response = await GetByIdAsync(
+                salonId,
+                customer.Id.ToString(),
+                cancellationToken);
+
+            return new(true, "Customer profile updated.", response);
+        }
+
+        if (!TryParseLegacyWalkInId(id, out var publicId))
+            return new(false, "Customer not found.");
+
+        var legacyBooking = await db.Bookings
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salonId
+                     && x.PublicId == publicId
+                     && x.CustomerId == null
+                     && (x.CustomerPhone == null || x.CustomerPhone == ""),
+                cancellationToken);
+
+        if (legacyBooking is null)
+            return new(false, "Customer not found.");
+
+        if (!string.IsNullOrWhiteSpace(phone))
+        {
+            var duplicatePhone = await db.Customers
+                .AnyAsync(
+                    x => x.SalonId == salonId && x.Phone == phone,
+                    cancellationToken);
+
+            if (duplicatePhone)
+                return new(false, "Another customer already uses this phone number.");
+        }
+
+        var createdCustomer = new Customer
+        {
+            SalonId = salonId,
+            FullName = name,
+            Phone = string.IsNullOrWhiteSpace(phone) ? null : phone,
+            Email = string.IsNullOrWhiteSpace(email) ? null : email
+        };
+
+        db.Customers.Add(createdCustomer);
+        legacyBooking.Customer = createdCustomer;
+        legacyBooking.CustomerId = createdCustomer.Id;
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var upgraded = await GetByIdAsync(
+            salonId,
+            createdCustomer.Id.ToString(),
+            cancellationToken);
+
+        return new(true, "Customer profile updated.", upgraded);
+    }
+
     public async Task<CustomerMutationResponse> UpdateNotesAsync(
         Guid salonId,
         string id,
@@ -197,6 +306,7 @@ public sealed class CustomerApplicationService(BarberFlowDbContext db)
             customer.Id.ToString(),
             customer.FullName,
             customer.Phone ?? string.Empty,
+            customer.Email ?? string.Empty,
             nonCancelled.Count,
             completed.Count,
             ordered.Count(x => x.Status == BookingStatus.Cancelled),
@@ -229,6 +339,7 @@ public sealed class CustomerApplicationService(BarberFlowDbContext db)
         return new CustomerResponse(
             $"walkin-{booking.PublicId}",
             booking.CustomerName,
+            string.Empty,
             string.Empty,
             cancelled ? 0 : 1,
             completed ? 1 : 0,
@@ -270,6 +381,35 @@ public sealed class CustomerApplicationService(BarberFlowDbContext db)
             booking.SpecialService ?? string.Empty,
             booking.SpecialServiceAmount ?? 0
         );
+    }
+
+    private static string NormalizePhone(string? value)
+    {
+        var digits = new string((value ?? string.Empty).Where(char.IsDigit).ToArray());
+
+        if (digits.StartsWith("92") && digits.Length == 12)
+            return "+" + digits;
+
+        if (digits.StartsWith("3") && digits.Length == 10)
+            return "+92" + digits;
+
+        return string.IsNullOrWhiteSpace(digits) ? string.Empty : "+" + digits;
+    }
+
+    private static bool IsValidPakistanPhone(string phone)
+        => phone.Length == 13
+           && phone.StartsWith("+923", StringComparison.Ordinal)
+           && phone[1..].All(char.IsDigit);
+
+    private static bool IsValidEmail(string email)
+    {
+        var at = email.IndexOf('@');
+        var lastAt = email.LastIndexOf('@');
+
+        return at > 0
+               && at == lastAt
+               && at < email.Length - 1
+               && email[(at + 1)..].Contains('.');
     }
 
     private static bool TryParseLegacyWalkInId(string id, out int publicId)

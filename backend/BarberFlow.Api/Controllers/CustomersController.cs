@@ -33,6 +33,29 @@ public sealed class CustomersController(CustomerApplicationService service) : Co
         return customer is null ? NotFound() : Ok(customer);
     }
 
+    [HttpPatch("{id}/profile")]
+    public async Task<ActionResult<CustomerMutationResponse>> UpdateProfile(
+        string id,
+        [FromBody] CustomerProfileUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetSalonId(out var salonId))
+            return Unauthorized();
+
+        var result = await service.UpdateProfileAsync(
+            salonId,
+            id,
+            request,
+            cancellationToken);
+
+        if (result.Success)
+            return Ok(result);
+
+        return string.Equals(result.Message, "Customer not found.", StringComparison.Ordinal)
+            ? NotFound(result)
+            : BadRequest(result);
+    }
+
     [HttpPatch("{id}/notes")]
     public async Task<ActionResult<CustomerMutationResponse>> UpdateNotes(
         string id,

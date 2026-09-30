@@ -440,10 +440,10 @@ public sealed class BookingApplicationService(BarberFlowDbContext db)
                 };
                 db.Customers.Add(customer);
             }
-            else if (!string.Equals(customer.FullName, request.CustomerName.Trim(), StringComparison.Ordinal))
-            {
-                customer.FullName = request.CustomerName.Trim();
-            }
+
+            // Existing customer profiles are intentionally not overwritten by booking
+            // form values. Each booking keeps its own customer-name snapshot, while
+            // profile changes are explicit admin actions in the Customers section.
         }
         else
         {
