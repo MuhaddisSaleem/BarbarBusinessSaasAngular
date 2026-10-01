@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const { fixture, DAY, NEXT } = require('./harness.cjs');
 const equal = (a,b) => assert.equal(JSON.stringify(a),JSON.stringify(b));
 const syncObservable = (value, error = null) => ({
@@ -405,4 +406,27 @@ test('cancelling either photo picker preserves its approved photo and validation
   assert.equal(c.newBarber.image, 'data:image/png;base64,existing'); assert.equal(c.imageValidationState, 'valid');
   c.openEditModal(b); await c.onEditImageSelected({target:{files:[]}});
   assert.equal(c.editBarber.image, b.image); assert.equal(c.editImageValidationState, 'valid');
+});
+
+
+test('final admin lock keeps UI, booking, services and barbers unchanged', () => {
+  const manifest = JSON.parse(fs.readFileSync('tests/admin-lock.manifest.json', 'utf8'));
+
+  const gitBlobSha = filePath => {
+    const content = fs.readFileSync(filePath);
+    const header = Buffer.from('blob ' + content.length + '\0');
+    return crypto.createHash('sha1').update(header).update(content).digest('hex');
+  };
+
+  const entries = Object.entries(manifest.protected_files);
+  assert.ok(entries.length >= 40, 'Admin lock should protect the complete admin surface and booking/service/barber core.');
+
+  for (const [filePath, expectedSha] of entries) {
+    assert.ok(fs.existsSync(filePath), filePath + ' must still exist.');
+    assert.equal(
+      gitBlobSha(filePath),
+      expectedSha,
+      filePath + ' changed after the admin lock baseline. Review the change explicitly before updating tests/admin-lock.manifest.json.'
+    );
+  }
 });
