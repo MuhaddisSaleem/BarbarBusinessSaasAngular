@@ -1287,9 +1287,17 @@ button { -webkit-tap-highlight-color: transparent; }
 
 
 /* Separate Salon / Home service catalogs */
+.salon-service-choice {
+  display:grid;
+  grid-template-columns:minmax(250px,.95fr) minmax(0,1.45fr);
+  align-items:stretch;
+  gap:18px;
+  margin:4px 0 18px;
+}
+
 .service-subheading {
   gap:12px;
-  margin:4px 0 12px;
+  margin:0;
   padding:10px 12px;
   border:1px solid #2d393e;
   border-radius:8px;
@@ -1302,14 +1310,59 @@ button { -webkit-tap-highlight-color: transparent; }
   }
 }
 
+.service-subheading.salon-service-intro {
+  min-width:0;
+  gap:16px;
+  padding:4px 8px 4px 0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+
+  h3 {
+    margin:5px 0 4px;
+    color:#f7f4ec;
+    font-family:Georgia, 'Times New Roman', serif;
+    font-size:20px;
+    font-weight:700;
+    line-height:1.12;
+  }
+
+  p {
+    margin:0;
+    color:#b3babd;
+    font-size:11px;
+    line-height:1.4;
+  }
+}
+
+.salon-service-icon {
+  width:58px;
+  height:58px;
+  flex:0 0 58px;
+  border:1.5px solid $gold;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,rgba(242,191,90,.12),rgba(242,191,90,.025));
+  color:$gold-soft;
+  box-shadow:inset 0 0 0 3px rgba(242,191,90,.025);
+
+  i {
+    font-size:26px;
+    line-height:1;
+  }
+}
+
+.salon-service-copy {
+  min-width:0;
+}
+
 .service-type-label {
   display:inline-flex;
   align-items:center;
   gap:6px;
   color:$gold-soft;
-  font-size:8px;
+  font-size:9px;
   font-weight:800;
-  letter-spacing:.08em;
+  letter-spacing:.2em;
 }
 
 .selected-service-type {
@@ -1320,6 +1373,39 @@ button { -webkit-tap-highlight-color: transparent; }
   color:#67d49a;
   font-size:7px;
   font-weight:800;
+}
+
+@media (max-width:1199.98px) {
+  .salon-service-choice {
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+
+  .service-subheading.salon-service-intro {
+    padding:5px 2px;
+  }
+}
+
+@media (max-width:575.98px) {
+  .service-subheading.salon-service-intro {
+    gap:12px;
+  }
+
+  .salon-service-icon {
+    width:48px;
+    height:48px;
+    flex-basis:48px;
+
+    i { font-size:21px; }
+  }
+
+  .service-subheading.salon-service-intro h3 {
+    font-size:18px;
+  }
+
+  .service-subheading.salon-service-intro p {
+    font-size:10px;
+  }
 }
 
 .home-services-section {

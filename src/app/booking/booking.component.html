@@ -39,24 +39,36 @@
               <p>Choose salon services or select Home Services below with separate home-service pricing.</p>
             </div>
 
-            <div class="service-subheading d-flex align-items-center justify-content-between">
-              <div>
-                <span class="service-type-label"><i class="bi bi-shop"></i> SALON SERVICES</span>
-                <h3>Book at the salon</h3>
+            <div class="salon-service-choice">
+              <div class="service-subheading salon-service-intro d-flex align-items-center">
+                <span class="salon-service-icon d-flex align-items-center justify-content-center">
+                  <i class="bi bi-shop"></i>
+                </span>
+
+                <div class="salon-service-copy">
+                  <span class="service-type-label">SALON SERVICES</span>
+                  <h3>Book at the salon</h3>
+                  <p>Premium grooming services at our salon.</p>
+                </div>
               </div>
-              <span class="selected-service-type" *ngIf="serviceLocation === 'salon'">Selected</span>
-            </div>
 
-            <div class="booking-for-toggle d-flex">
-              <button type="button" class="flex-fill d-flex align-items-center" [class.active]="serviceLocation === 'salon' && bookingMode === 'single'" (click)="setServiceLocation('salon'); setBookingMode('single')">
-                <span class="mode-icon d-flex align-items-center justify-content-center"><i class="bi bi-person-fill"></i></span>
-                <span><strong>Just Me</strong><small>One appointment</small></span>
-              </button>
+              <div class="booking-for-toggle d-flex">
+                <button type="button" class="flex-fill d-flex align-items-center" [class.active]="serviceLocation === 'salon' && bookingMode === 'single'" (click)="setServiceLocation('salon'); setBookingMode('single')">
+                  <span class="mode-icon d-flex align-items-center justify-content-center"><i class="bi bi-person-fill"></i></span>
+                  <span class="mode-copy"><strong>Just Me</strong><small>One appointment</small></span>
+                  <span class="mode-selection d-flex align-items-center justify-content-center" aria-hidden="true">
+                    <i class="bi bi-check-lg" *ngIf="serviceLocation === 'salon' && bookingMode === 'single'"></i>
+                  </span>
+                </button>
 
-              <button type="button" class="flex-fill d-flex align-items-center" [class.active]="serviceLocation === 'salon' && bookingMode === 'group'" (click)="setServiceLocation('salon'); setBookingMode('group')">
-                <span class="mode-icon people-mode d-flex align-items-center justify-content-center"><i class="bi bi-people-fill"></i></span>
-                <span><strong>Me + Someone Else</strong><small>Book more than one person</small></span>
-              </button>
+                <button type="button" class="flex-fill d-flex align-items-center" [class.active]="serviceLocation === 'salon' && bookingMode === 'group'" (click)="setServiceLocation('salon'); setBookingMode('group')">
+                  <span class="mode-icon people-mode d-flex align-items-center justify-content-center"><i class="bi bi-people-fill"></i></span>
+                  <span class="mode-copy"><strong>Me + Someone Else</strong><small>Book more than one person</small></span>
+                  <span class="mode-selection d-flex align-items-center justify-content-center" aria-hidden="true">
+                    <i class="bi bi-check-lg" *ngIf="serviceLocation === 'salon' && bookingMode === 'group'"></i>
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div class="group-schedule-options d-flex" *ngIf="serviceLocation === 'salon' && bookingMode === 'group'">
