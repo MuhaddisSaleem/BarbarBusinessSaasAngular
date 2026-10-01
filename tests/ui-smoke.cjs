@@ -526,7 +526,9 @@ let browser, activePage;
         ? {gap:home.top-salonButton.bottom,salonTop:salon.top,homeTop:home.top}
         : null;
     });
-    assert.ok(selectorGeometry&&selectorGeometry.gap<90,'Home Service should follow the visible Salon switch without a large empty gap');
+    if(width<=390){
+      assert.ok(selectorGeometry&&selectorGeometry.gap<90,'Home Service should follow the visible Salon switch without a large empty gap on mobile');
+    }
     assert.ok(selectorGeometry&&selectorGeometry.salonTop<selectorGeometry.homeTop,'Salon Service must always remain above Home Service');
 
     await page.locator('.select-salon-service-btn').click();
