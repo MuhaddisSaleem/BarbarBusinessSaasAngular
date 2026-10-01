@@ -41,6 +41,7 @@ let browser, activePage;
       businessHours:['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
         .map(key=>({key,label:key[0].toUpperCase()+key.slice(1),enabled:true,open:'08:00',close:'21:00'}))
     };
+    const defaultApiSettings=JSON.parse(JSON.stringify(apiSettings));
     let nextBookingId=1,nextServiceId=3,nextBarberId=3;
     const apiResponse=(body,status=200)=>({
       status,
@@ -301,6 +302,7 @@ let browser, activePage;
           return await route.fulfill(apiResponse({success:true,message:'Settings saved successfully.',item:apiSettings}));
         }
         if(pathname==='/api/settings/reset'&&req.method()==='POST'){
+          apiSettings=JSON.parse(JSON.stringify(defaultApiSettings));
           return await route.fulfill(apiResponse({success:true,message:'Settings reset to defaults.',item:apiSettings}));
         }
 
@@ -609,7 +611,32 @@ let browser, activePage;
 
     await page.screenshot({path:`test-results/refreshed-slots-${width}.png`,fullPage:true});
     await adminTab.close();scenarios++;
-    assert.deepEqual(errors,[]);console.log(`PASS ${width}px: customer, admin, group, home and all nine admin routes`);await context.close();
+
+    // Settings finalization: SQL persistence, deferred integrations and reset behavior.
+    await goto('/admin/settings');
+    assert.equal(await page.locator('.deferred-feature').count(),3,'Deferred customer messaging options must not render as live toggles');
+    const businessNameInput=page.getByPlaceholder('Enter business name');
+    await businessNameInput.fill('Royal QA Barbers');
+    await page.locator('.save-settings-btn').first().click();
+    await page.locator('.feedback-toast').filter({hasText:'Settings saved successfully.'}).waitFor();
+    assert.equal(apiSettings.businessName,'Royal QA Barbers');
+    assert.equal(apiSettings.sendWhatsappConfirmation,false);
+    assert.equal(apiSettings.sendSmsFallback,false);
+    assert.equal(apiSettings.sendAppointmentReminder,false);
+
+    await page.reload();
+    await page.locator('app-admin-shell').waitFor();
+    assert.equal(await page.getByPlaceholder('Enter business name').inputValue(),'Royal QA Barbers','Settings must reload from the API-backed SQL snapshot');
+
+    await page.locator('.reset-settings-btn').click();
+    const resetDialog=page.locator('.reset-dialog');
+    await resetDialog.waitFor();
+    await resetDialog.getByRole('button',{name:'Reset Settings'}).click();
+    await resetDialog.waitFor({state:'hidden'});
+    assert.equal(apiSettings.businessName,'Royal Barbers');
+    scenarios++;
+
+    assert.deepEqual(errors,[]);console.log(`PASS ${width}px: customer, admin, group, home, settings and all nine admin routes`);await context.close();
   }
   console.log(`PASS ${scenarios} browser scenarios`);
 })().catch(async error=>{console.error(error);if(activePage&&!activePage.isClosed()){await activePage.screenshot({path:'test-results/failure.png',fullPage:true});fs.writeFileSync('test-results/failure.html',await activePage.content());console.error((await activePage.locator('body').innerText()).slice(-4000));}process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();server.close();});

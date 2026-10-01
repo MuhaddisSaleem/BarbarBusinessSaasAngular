@@ -51,6 +51,36 @@ test('dashboard and reports stay read-only and cannot mutate booking state', () 
   }
 });
 
+test('settings business-hour saves protect active bookings and deferred messaging stays off by default', () => {
+  const source = fs.readFileSync('backend/BarberFlow.Api/Services/CatalogApplicationService.cs', 'utf8');
+  assert.match(source, /ValidateBusinessHoursAgainstActiveBookingsAsync/);
+  assert.match(source, /BookingStatus\.Pending/);
+  assert.match(source, /BookingStatus\.Confirmed/);
+  assert.match(source, /Reschedule or cancel that booking first/);
+
+  const entity = fs.readFileSync('backend/BarberFlow.Api/Domain/Entities/Salon.cs', 'utf8');
+  assert.doesNotMatch(entity, /SendWhatsappConfirmation\s*\{[^}]*\}\s*=\s*true/);
+  assert.doesNotMatch(entity, /SendAppointmentReminder\s*\{[^}]*\}\s*=\s*true/);
+});
+
+test('settings reject unsafe limits and duplicate weekdays before persistence', () => {
+  const f = fixture();
+  const base = {
+    ...f.settings.current,
+    businessName: 'QA Salon',
+    businessPhone: '+92 300 1234567',
+    whatsappNumber: '+92 300 1234567'
+  };
+
+  assert.equal(f.settings.save({...base,maxAdvanceDays:366}).success,false);
+  assert.equal(f.settings.save({...base,cancellationHours:169}).success,false);
+  assert.equal(f.settings.save({...base,lateArrivalMinutes:241}).success,false);
+
+  const duplicateHours = base.businessHours.map(day=>({...day}));
+  duplicateHours[1].key = duplicateHours[0].key;
+  assert.equal(f.settings.save({...base,businessHours:duplicateHours}).success,false);
+});
+
 for (const hours of ['9:00 AM - 9:00 PM','9 AM - 9 PM','09:00 - 21:00','9am to 9pm','9:00AM – 9:00PM','9:00 a.m. — 9:00 p.m.','']) {
   test('legacy working hours allow matching customer/admin slots: ' + (hours || '(salon hours)'), () => {
     const f = fixture(), b = f.barber({workingHours:hours}), s = f.service();f.select(b,s);
