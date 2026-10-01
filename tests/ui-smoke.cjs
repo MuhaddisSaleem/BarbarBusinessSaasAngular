@@ -612,6 +612,8 @@ let browser, activePage;
     await page.screenshot({path:`test-results/refreshed-slots-${width}.png`,fullPage:true});
     await adminTab.close();scenarios++;
 
+    // Settings finalization: SQL persistence, deferred integrations and reset behavior.
+    await goto('/admin/settings');
     // Desktop readability: verify the shared admin typography pass without touching mobile.
     if(width >= 992){
       const navFont=Number.parseFloat(await page.locator('.admin-sidebar .nav-item').first().evaluate(el=>getComputedStyle(el).fontSize));
@@ -625,8 +627,6 @@ let browser, activePage;
       scenarios++;
     }
 
-    // Settings finalization: SQL persistence, deferred integrations and reset behavior.
-    await goto('/admin/settings');
     assert.equal(await page.locator('.deferred-feature').count(),3,'Deferred customer messaging options must not render as live toggles');
     const businessNameInput=page.getByPlaceholder('Enter business name');
     await businessNameInput.fill('Royal QA Barbers');
