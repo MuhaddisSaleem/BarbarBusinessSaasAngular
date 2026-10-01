@@ -37,6 +37,29 @@
   background:#080b0c;
 }
 
+.hero-photo,
+.hero-media {
+  animation: heroBackgroundEnter 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes heroBackgroundEnter {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-photo,
+  .hero-media {
+    animation: none;
+  }
+}
+
 .hero-overlay {
   position: absolute;
   inset: 0;
