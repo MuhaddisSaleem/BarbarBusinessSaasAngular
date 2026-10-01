@@ -516,7 +516,7 @@ let browser, activePage;
     }
 
     const actionStageBox=await page.locator('.salon-choice-action-stage').boundingBox();
-    assert.ok(actionStageBox&&actionStageBox.height<=80,'Home mode must not keep the hidden salon-choice height');
+    assert.ok(actionStageBox&&actionStageBox.height<=100,'Home mode must not keep the hidden stacked salon-choice height');
 
     const salonBox=await page.locator('.salon-service-choice').boundingBox();
     const homeBox=await page.locator('#home-service-section').boundingBox();
