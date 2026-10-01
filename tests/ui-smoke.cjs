@@ -520,7 +520,7 @@ let browser, activePage;
 
     const salonBox=await page.locator('.salon-service-choice').boundingBox();
     const homeBox=await page.locator('#home-service-section').boundingBox();
-    assert.ok(salonBox&&homeBox&&(homeBox.y-(salonBox.y+salonBox.height))<90,'Home Service should follow the Salon selector without a large empty gap');
+    assert.ok(salonButtonBox&&homeBox&&(homeBox.y-(salonButtonBox.y+salonButtonBox.height))<90,'Home Service should follow the visible Salon switch without a large empty gap');
     assert.ok(salonBox&&homeBox&&salonBox.y<homeBox.y,'Salon Service must always remain above Home Service');
 
     await page.locator('.select-salon-service-btn').click();
