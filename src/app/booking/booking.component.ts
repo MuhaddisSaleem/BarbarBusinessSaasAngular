@@ -271,6 +271,27 @@ export class BookingComponent implements OnInit {
   onPhoneBlur(): void { this.phoneTouched = true; }
   clearValidationMessage(): void { this.bookingValidationMessage = ''; }
 
+  activateHomeService(): void {
+    const changed = this.serviceLocation !== 'home';
+    this.setServiceLocation('home');
+
+    if (!changed || typeof document === 'undefined') return;
+
+    const scrollToServices = () => {
+      document.getElementById('service-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => requestAnimationFrame(scrollToServices));
+      return;
+    }
+
+    setTimeout(scrollToServices, 0);
+  }
+
   setServiceLocation(location: 'salon' | 'home'): void {
     if (this.serviceLocation === location) return;
 

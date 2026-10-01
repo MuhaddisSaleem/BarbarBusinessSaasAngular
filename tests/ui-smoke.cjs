@@ -460,7 +460,7 @@ let browser, activePage;
     const stored=async()=>apiBookings.map(item=>({...item}));
     const details=async()=>{await page.locator('#customer-name-input').fill('QA Customer');await page.locator('#customer-phone-input').fill('3001234567');};
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
-    await goto();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
+    await goto();await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
     const firstSlot=page.locator('.time-slot').filter({hasText:/^5:00 PM$/});
     await firstSlot.waitFor();
     assert.ok(await firstSlot.count());
@@ -492,18 +492,23 @@ let browser, activePage;
     await form.locator('.submit-booking-btn').click();await form.waitFor({state:'hidden'});
     assert.equal((await stored()).length,3);assert.equal((await stored())[0].source,'Walk-in');assert.equal((await stored())[0].phone,'');assert.equal((await stored())[0].barber,'Second Barber');assert.equal((await stored())[0].time,'4:55 PM');assert.equal((await stored())[0].notes,'');scenarios++;
     // Specialist matching must select two different barbers for parallel Any Barber bookings.
-    await goto();await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
+    await goto();await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.salon-services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
     const group=(await stored()).slice(0,2);assert.equal(new Set(group.map(x=>x.barber)).size,2);assert.ok(group.every(x=>x.time==='7:00 PM'));scenarios++;
     await page.locator('.home-service-selector').click();
-    await page.locator('.select-salon-service-btn').waitFor();
-    assert.equal(await page.locator('.salon-services-grid').count(),0,'Salon service cards must be hidden while Home Service is active');
-    assert.equal(await page.locator('.booking-for-toggle').count(),0,'Just Me / group choices must be hidden while Home Service is active');
-    assert.equal(await page.locator('.home-service-content').count(),1,'Home Service catalog must be expanded when Home Service is active');
+    await page.locator('.select-salon-service-btn').waitFor({state:'visible'});
+    await page.locator('.home-catalog-motion.expanded').waitFor();
+    assert.equal(await page.locator('.salon-catalog-motion.expanded').count(),0,'Salon service catalog must be collapsed while Home Service is active');
+    assert.equal(await page.locator('.salon-choice-action-panel.visible .booking-for-toggle').count(),0,'Just Me / group choices must be visually hidden while Home Service is active');
+    assert.equal(await page.locator('.home-catalog-motion.expanded .home-service-content').count(),1,'Home Service catalog must be expanded when Home Service is active');
+
+    const salonBox=await page.locator('.salon-service-choice').boundingBox();
+    const homeBox=await page.locator('#home-service-section').boundingBox();
+    assert.ok(salonBox&&homeBox&&salonBox.y<homeBox.y,'Salon Service must always remain above Home Service');
 
     await page.locator('.select-salon-service-btn').click();
-    await page.locator('.salon-services-grid').waitFor();
-    assert.equal(await page.locator('.booking-for-toggle').count(),1,'Salon booking mode choices must return when Salon Service is selected');
-    assert.equal(await page.locator('.home-service-content').count(),0,'Home Service catalog must collapse after switching back to Salon Service');
+    await page.locator('.salon-catalog-motion.expanded').waitFor();
+    assert.equal(await page.locator('.salon-choice-action-panel.visible .booking-for-toggle').count(),1,'Salon booking mode choices must return when Salon Service is selected');
+    assert.equal(await page.locator('.home-catalog-motion.expanded').count(),0,'Home Service catalog must collapse after switching back to Salon Service');
 
     await page.locator('.home-service-selector').click();await page.getByPlaceholder('Example: Groom styling for an event, special beard treatment, etc.').fill('Event styling');await day();await page.locator('.time-slot').filter({hasText:/^8:00 PM$/}).click();await details();await page.locator('#home-service-address').fill('QA test address');await finish();assert.equal((await stored())[0].status,'Pending');assert.equal((await stored())[0].specialService,'Event styling');scenarios++;
     // Dashboard and reports are read-only projections over the same persisted booking data.
@@ -585,7 +590,7 @@ let browser, activePage;
     // Isolated fixture: public tab starts with a short shift and no bookings.
     apiBarbers.find(item=>item.name==='Falak Shair').workingHours='9 AM - 5 PM';
     apiBookings=[];
-    await goto();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();
+    await goto();await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();
     await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
     await page.locator('.no-times').filter({hasText:'40-minute slot fits before 5:00 PM'}).waitFor();
     await page.locator('#customer-name-input').fill('Keep my details');

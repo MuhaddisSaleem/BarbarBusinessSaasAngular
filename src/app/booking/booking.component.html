@@ -52,35 +52,48 @@
                 </div>
               </div>
 
-              <div class="booking-for-toggle d-flex" *ngIf="serviceLocation === 'salon'">
-                <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'single'" (click)="setBookingMode('single')">
-                  <span class="mode-icon d-flex align-items-center justify-content-center"><i class="bi bi-person-fill"></i></span>
-                  <span class="mode-copy"><strong>Just Me</strong><small>One appointment</small></span>
-                  <span class="mode-selection d-flex align-items-center justify-content-center" aria-hidden="true">
-                    <i class="bi bi-check-lg" *ngIf="bookingMode === 'single'"></i>
-                  </span>
-                </button>
+              <div class="salon-choice-action-stage">
+                <div
+                  class="salon-choice-action-panel"
+                  [class.visible]="serviceLocation === 'salon'"
+                  [attr.aria-hidden]="serviceLocation !== 'salon'"
+                  [attr.inert]="serviceLocation !== 'salon' ? '' : null">
+                  <div class="booking-for-toggle d-flex">
+                    <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'single'" (click)="setBookingMode('single')">
+                      <span class="mode-icon d-flex align-items-center justify-content-center"><i class="bi bi-person-fill"></i></span>
+                      <span class="mode-copy"><strong>Just Me</strong><small>One appointment</small></span>
+                      <span class="mode-selection d-flex align-items-center justify-content-center" aria-hidden="true">
+                        <i class="bi bi-check-lg" *ngIf="bookingMode === 'single'"></i>
+                      </span>
+                    </button>
 
-                <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'group'" (click)="setBookingMode('group')">
-                  <span class="mode-icon people-mode d-flex align-items-center justify-content-center"><i class="bi bi-people-fill"></i></span>
-                  <span class="mode-copy"><strong>Me + Someone Else</strong><small>Book more than one person</small></span>
-                  <span class="mode-selection d-flex align-items-center justify-content-center" aria-hidden="true">
-                    <i class="bi bi-check-lg" *ngIf="bookingMode === 'group'"></i>
-                  </span>
-                </button>
+                    <button type="button" class="flex-fill d-flex align-items-center" [class.active]="bookingMode === 'group'" (click)="setBookingMode('group')">
+                      <span class="mode-icon people-mode d-flex align-items-center justify-content-center"><i class="bi bi-people-fill"></i></span>
+                      <span class="mode-copy"><strong>Me + Someone Else</strong><small>Book more than one person</small></span>
+                      <span class="mode-selection d-flex align-items-center justify-content-center" aria-hidden="true">
+                        <i class="bi bi-check-lg" *ngIf="bookingMode === 'group'"></i>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  class="salon-choice-action-panel"
+                  [class.visible]="serviceLocation === 'home'"
+                  [attr.aria-hidden]="serviceLocation !== 'home'"
+                  [attr.inert]="serviceLocation !== 'home' ? '' : null">
+                  <button
+                    type="button"
+                    class="select-salon-service-btn"
+                    (click)="setServiceLocation('salon')">
+                    <span>
+                      <strong>Select Salon Service</strong>
+                      <small>Book your appointment at the salon</small>
+                    </span>
+                    <i class="bi bi-arrow-right"></i>
+                  </button>
+                </div>
               </div>
-
-              <button
-                type="button"
-                class="select-salon-service-btn"
-                *ngIf="serviceLocation === 'home'"
-                (click)="setServiceLocation('salon')">
-                <span>
-                  <strong>Select Salon Service</strong>
-                  <small>Book your appointment at the salon</small>
-                </span>
-                <i class="bi bi-arrow-right"></i>
-              </button>
             </div>
 
             <div class="group-schedule-options d-flex" *ngIf="serviceLocation === 'salon' && bookingMode === 'group'">
@@ -118,7 +131,13 @@
               </div>
             </div>
 
-            <div class="services-grid salon-services-grid row g-3" *ngIf="serviceLocation === 'salon'">
+            <div
+              class="catalog-motion salon-catalog-motion"
+              [class.expanded]="serviceLocation === 'salon'"
+              [attr.aria-hidden]="serviceLocation !== 'salon'"
+              [attr.inert]="serviceLocation !== 'salon' ? '' : null">
+              <div class="catalog-motion-inner">
+                <div class="services-grid salon-services-grid row g-3">
               <div class="service-col col-12 col-sm-6 col-md-4" *ngFor="let service of salonServices">
                 <button type="button" class="service-card h-100"
                   [class.selected]="isServiceSelectedForLocation(service.id, 'salon')"
@@ -141,17 +160,19 @@
                   </div>
                 </button>
               </div>
+                </div>
+              </div>
             </div>
 
-            <div class="home-services-section" [class.active]="serviceLocation === 'home'">
+            <div id="home-service-section" class="home-services-section" [class.active]="serviceLocation === 'home'">
               <div
                 class="home-service-selector w-100"
                 role="button"
                 tabindex="0"
                 [class.active]="serviceLocation === 'home'"
-                (click)="setServiceLocation('home')"
-                (keydown.enter)="setServiceLocation('home')"
-                (keydown.space)="setServiceLocation('home'); $event.preventDefault()">
+                (click)="activateHomeService()"
+                (keydown.enter)="activateHomeService()"
+                (keydown.space)="activateHomeService(); $event.preventDefault()">
                 <div class="home-service-photo" aria-hidden="true">
                   <img src="assets/images/services/haircut.webp" alt="">
                 </div>
@@ -197,8 +218,14 @@
 
             </div>
 
-            <div class="home-service-content" *ngIf="serviceLocation === 'home'">
-                <div class="services-grid row g-3 home-services-grid">
+            <div
+              class="catalog-motion home-catalog-motion"
+              [class.expanded]="serviceLocation === 'home'"
+              [attr.aria-hidden]="serviceLocation !== 'home'"
+              [attr.inert]="serviceLocation !== 'home' ? '' : null">
+              <div class="catalog-motion-inner">
+                <div class="home-service-content">
+                  <div class="services-grid row g-3 home-services-grid">
                   <div class="service-col col-12 col-sm-6 col-md-4" *ngFor="let service of homeServices">
                     <button type="button" class="service-card home-service-card h-100"
                       [class.selected]="isServiceSelectedForLocation(service.id, 'home')"
@@ -246,6 +273,7 @@
                     A custom service request reserves 60 extra minutes and will remain pending until the salon confirms it.
                   </small>
                 </div>
+              </div>
             </div>
           </section>
         </div>

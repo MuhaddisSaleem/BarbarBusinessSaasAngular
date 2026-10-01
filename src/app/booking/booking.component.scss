@@ -1807,10 +1807,11 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 
-/* Location-mode layout: keep only the active service catalog in focus. */
+/* Location-mode layout: Salon always stays above Home Service. */
 .service-section {
   display:flex;
   flex-direction:column;
+  scroll-margin-top:18px;
 }
 
 .service-section > .section-heading { order:0; }
@@ -1818,23 +1819,81 @@ button { -webkit-tap-highlight-color: transparent; }
 .service-section > .group-schedule-options { order:2; }
 .service-section > .participant-bar { order:3; }
 .service-section > .active-person-note { order:4; }
-.service-section > .salon-services-grid { order:5; }
+.service-section > .salon-catalog-motion { order:5; }
 .service-section > .home-services-section { order:6; }
-.service-section > .home-service-content { order:7; }
+.service-section > .home-catalog-motion { order:7; }
 
-.service-section.home-mode-active > .home-services-section {
-  order:1;
-  margin-top:4px;
+.salon-choice-action-stage {
+  position:relative;
+  min-width:0;
+  min-height:78px;
 }
 
-.service-section.home-mode-active > .salon-service-choice {
-  order:2;
-  margin-top:14px;
-  margin-bottom:14px;
+.salon-choice-action-panel {
+  position:absolute;
+  inset:0;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transform:translateY(7px) scale(.992);
+  transition:
+    opacity .24s ease,
+    transform .34s cubic-bezier(.2,.8,.2,1),
+    visibility 0s linear .34s;
+
+  &.visible {
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transform:translateY(0) scale(1);
+    transition:
+      opacity .28s ease,
+      transform .36s cubic-bezier(.2,.8,.2,1),
+      visibility 0s linear 0s;
+  }
 }
 
-.service-section.home-mode-active > .home-service-content {
-  order:3;
+.catalog-motion {
+  display:grid;
+  grid-template-rows:0fr;
+  min-width:0;
+  opacity:0;
+  visibility:hidden;
+  transform:translateY(-5px);
+  transition:
+    grid-template-rows .42s cubic-bezier(.2,.78,.2,1),
+    opacity .24s ease,
+    transform .42s cubic-bezier(.2,.78,.2,1),
+    visibility 0s linear .42s;
+
+  &.expanded {
+    grid-template-rows:1fr;
+    opacity:1;
+    visibility:visible;
+    transform:translateY(0);
+    transition:
+      grid-template-rows .46s cubic-bezier(.2,.78,.2,1),
+      opacity .3s ease .04s,
+      transform .46s cubic-bezier(.2,.78,.2,1),
+      visibility 0s linear 0s;
+  }
+}
+
+.catalog-motion-inner {
+  min-height:0;
+  overflow:hidden;
+}
+
+.salon-catalog-motion.expanded {
+  margin-bottom:0;
+}
+
+.home-catalog-motion.expanded {
+  margin-top:0;
+}
+
+#home-service-section {
+  scroll-margin-top:18px;
 }
 
 .select-salon-service-btn {
@@ -1893,25 +1952,38 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 @media (max-width:1199.98px) {
-  .service-section.home-mode-active > .salon-service-choice {
-    grid-template-columns:1fr;
-  }
-
   .select-salon-service-btn {
     min-height:64px;
   }
 }
 
 @media (max-width:575.98px) {
-  .service-section.home-mode-active > .salon-service-choice {
-    margin-top:12px;
-  }
-
   .select-salon-service-btn {
     min-height:60px;
     padding:11px 14px;
 
     strong { font-size:13px; }
     small { font-size:9px; }
+  }
+}
+
+
+@media (max-width:1199.98px) {
+  .salon-choice-action-stage {
+    min-height:74px;
+  }
+}
+
+@media (max-width:575.98px) {
+  .salon-choice-action-stage {
+    min-height:70px;
+  }
+
+  .catalog-motion {
+    transition-duration:.36s;
+  }
+
+  .catalog-motion.expanded {
+    transition-duration:.4s;
   }
 }
