@@ -1,6 +1,6 @@
 {
-  "baseline_commit": "6bcb76734c9ba486c22fecf950e9ac6de9a3ee24",
-  "purpose": "Final admin/booking lock. Group scheduling choices stay side-by-side on small screens and Home Service no longer leaves a blank gap beneath the Salon switcher; booking, service, barber, pricing and availability logic remain locked.",
+  "baseline_commit": "b3710d3c26fe00358e244cfafea35688ece0bf2b",
+  "purpose": "Final admin/booking lock. Public landing page no longer reserves an extra viewport after the booking footer; booking, service, barber, pricing and availability logic remain locked.",
   "protected_files": {
     "backend/BarberFlow.Api/Services/BookingApplicationService.cs": "1d10ac0390692f1fbb0f89f7a81ea21a58c7120e",
     "backend/BarberFlow.Api/Services/CatalogApplicationService.cs": "aedd79ad0cc23e0b3e6f22e0bcfddf4e04b47bc5",
@@ -42,7 +42,7 @@
     "src/app/admin/shared/admin-shell.component.scss": "5605534eeb2bc9e6c757de03e901dd7168c45177",
     "src/app/admin/shared/admin-shell.component.ts": "c41ddcbba3ee5b03349a4b19d221b131f7adc0c5",
     "src/app/booking/booking.component.html": "fb9e7b4b69bc296f81cb24a443d71b1906b93ed7",
-    "src/app/booking/booking.component.scss": "4faa19b908f6ea2baf3e57fabb1385b27bf108d5",
+    "src/app/booking/booking.component.scss": "6ff96716aea32fc7543f0a0f040178dc18716365",
     "src/app/booking/booking.component.ts": "c76baa819b3da6be9987f3ce3cfb602056cc4f24",
     "src/app/core/booking-api.service.ts": "8a6c5bc2364857dd41d60450a61c503266b63510",
     "src/styles.scss": "89291f85786f518a981e9ae8053d7851aa9626ba",

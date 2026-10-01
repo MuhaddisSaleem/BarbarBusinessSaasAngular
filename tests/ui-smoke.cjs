@@ -468,6 +468,16 @@ let browser, activePage;
     assert.ok(await page.locator('.time-slot').filter({hasText:/^5:40 PM$/}).count(),'40-minute service should advance the next slot by 40 minutes');
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();await details();
     await page.screenshot({path:`test-results/customer-${width}.png`,fullPage:true});await finish();
+
+    await page.locator('.booking-footer').scrollIntoViewIfNeeded();
+    const footerGap=await page.evaluate(()=>{
+      const footer=document.querySelector('.booking-footer');
+      if(!footer)return Number.POSITIVE_INFINITY;
+      const bottom=footer.getBoundingClientRect().bottom+window.scrollY;
+      return Math.max(0,document.documentElement.scrollHeight-bottom);
+    });
+    assert.ok(footerGap<=2,'Landing page must not leave a large blank scroll area after the booking footer');
+
     assert.equal((await stored()).length,1);assert.equal((await stored())[0].status,'Confirmed');
     assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-bookings.v1')),null,'Bookings must not be persisted to localStorage when API mode is active');
     assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-services.v1')),null,'Services must be migrated out of localStorage');

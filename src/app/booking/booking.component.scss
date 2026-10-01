@@ -16,7 +16,7 @@ textarea { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 
 .booking-page {
-  min-height: 100vh;
+  min-height: 0;
   color: $text;
   background:
     radial-gradient(circle at 32% 18%, rgba(33, 46, 51, .22), transparent 28%),
