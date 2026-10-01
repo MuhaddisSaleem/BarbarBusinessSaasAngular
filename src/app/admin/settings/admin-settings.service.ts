@@ -78,9 +78,9 @@ const DEFAULT_SETTINGS: AdminSettings = {
   allowSameDayBooking: true,
   autoConfirmBookings: true,
 
-  sendWhatsappConfirmation: true,
+  sendWhatsappConfirmation: false,
   sendSmsFallback: false,
-  sendAppointmentReminder: true,
+  sendAppointmentReminder: false,
   reminderHoursBefore: 2,
   notifyOwnerOnNewBooking: true,
 
@@ -351,6 +351,10 @@ export class AdminSettingsService {
       return { success: false, message: 'Business name is required.' };
     }
 
+    if (settings.businessName.trim().length > 160) {
+      return { success: false, message: 'Business name must be 160 characters or fewer.' };
+    }
+
     if (!this.validPakistanPhone(settings.businessPhone)) {
       return { success: false, message: 'Enter a valid Pakistan business phone number.' };
     }
@@ -359,8 +363,27 @@ export class AdminSettingsService {
       return { success: false, message: 'Enter a valid Pakistan WhatsApp number.' };
     }
 
-    if (settings.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.email)) {
+    if (
+      settings.email
+      && (settings.email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.email))
+    ) {
       return { success: false, message: 'Enter a valid email address.' };
+    }
+
+    if (settings.address.trim().length > 500) {
+      return { success: false, message: 'Address must be 500 characters or fewer.' };
+    }
+
+    if (settings.city.trim().length > 120) {
+      return { success: false, message: 'City must be 120 characters or fewer.' };
+    }
+
+    if (settings.currency.trim().length !== 3) {
+      return { success: false, message: 'Currency must use a 3-letter code.' };
+    }
+
+    if (!settings.timezone.trim()) {
+      return { success: false, message: 'Select a valid timezone.' };
     }
 
     if (settings.brandSubtitle.length > 60) {
@@ -379,20 +402,36 @@ export class AdminSettingsService {
       return { success: false, message: 'Hero tagline must be 140 characters or fewer.' };
     }
 
-    if (!Number.isInteger(Number(settings.bookingInterval)) || Number(settings.bookingInterval) < 5) {
-      return { success: false, message: 'Booking interval must be a whole number of at least 5 minutes.' };
+    if (
+      !Number.isInteger(Number(settings.bookingInterval))
+      || Number(settings.bookingInterval) < 5
+      || Number(settings.bookingInterval) > 240
+    ) {
+      return { success: false, message: 'Booking interval must be a whole number from 5 to 240 minutes.' };
     }
 
-    if (!Number.isInteger(Number(settings.maxAdvanceDays)) || Number(settings.maxAdvanceDays) < 1) {
-      return { success: false, message: 'Advance booking window must be a whole number of at least 1 day.' };
+    if (
+      !Number.isInteger(Number(settings.maxAdvanceDays))
+      || Number(settings.maxAdvanceDays) < 1
+      || Number(settings.maxAdvanceDays) > 365
+    ) {
+      return { success: false, message: 'Advance booking window must be a whole number from 1 to 365 days.' };
     }
 
-    if (!Number.isInteger(Number(settings.cancellationHours)) || Number(settings.cancellationHours) < 0) {
-      return { success: false, message: 'Cancellation notice must be a whole number of 0 hours or more.' };
+    if (
+      !Number.isInteger(Number(settings.cancellationHours))
+      || Number(settings.cancellationHours) < 0
+      || Number(settings.cancellationHours) > 168
+    ) {
+      return { success: false, message: 'Cancellation notice must be a whole number from 0 to 168 hours.' };
     }
 
-    if (!Number.isInteger(Number(settings.lateArrivalMinutes)) || Number(settings.lateArrivalMinutes) < 0) {
-      return { success: false, message: 'Late arrival grace must be a whole number of 0 minutes or more.' };
+    if (
+      !Number.isInteger(Number(settings.lateArrivalMinutes))
+      || Number(settings.lateArrivalMinutes) < 0
+      || Number(settings.lateArrivalMinutes) > 240
+    ) {
+      return { success: false, message: 'Late arrival grace must be a whole number from 0 to 240 minutes.' };
     }
 
     if (
@@ -402,6 +441,25 @@ export class AdminSettingsService {
         || Number(settings.reminderHoursBefore) > 72)
     ) {
       return { success: false, message: 'Reminder time must be a whole number from 1 to 72 hours.' };
+    }
+
+    const validDayKeys = new Set([
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday'
+    ]);
+    const hourKeys = settings.businessHours.map(item => String(item.key || '').toLowerCase());
+
+    if (
+      settings.businessHours.length !== 7
+      || hourKeys.some(key => !validDayKeys.has(key))
+      || new Set(hourKeys).size !== 7
+    ) {
+      return { success: false, message: 'Business hours must contain each weekday exactly once.' };
     }
 
     for (const day of settings.businessHours.filter(item => item.enabled)) {
