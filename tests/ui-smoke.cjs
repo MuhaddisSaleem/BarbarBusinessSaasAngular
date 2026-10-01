@@ -494,6 +494,17 @@ let browser, activePage;
     // Specialist matching must select two different barbers for parallel Any Barber bookings.
     await goto();await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
     const group=(await stored()).slice(0,2);assert.equal(new Set(group.map(x=>x.barber)).size,2);assert.ok(group.every(x=>x.time==='7:00 PM'));scenarios++;
+    await page.locator('.home-service-selector').click();
+    await page.locator('.select-salon-service-btn').waitFor();
+    assert.equal(await page.locator('.salon-services-grid').count(),0,'Salon service cards must be hidden while Home Service is active');
+    assert.equal(await page.locator('.booking-for-toggle').count(),0,'Just Me / group choices must be hidden while Home Service is active');
+    assert.equal(await page.locator('.home-service-content').count(),1,'Home Service catalog must be expanded when Home Service is active');
+
+    await page.locator('.select-salon-service-btn').click();
+    await page.locator('.salon-services-grid').waitFor();
+    assert.equal(await page.locator('.booking-for-toggle').count(),1,'Salon booking mode choices must return when Salon Service is selected');
+    assert.equal(await page.locator('.home-service-content').count(),0,'Home Service catalog must collapse after switching back to Salon Service');
+
     await page.locator('.home-service-selector').click();await page.getByPlaceholder('Example: Groom styling for an event, special beard treatment, etc.').fill('Event styling');await day();await page.locator('.time-slot').filter({hasText:/^8:00 PM$/}).click();await details();await page.locator('#home-service-address').fill('QA test address');await finish();assert.equal((await stored())[0].status,'Pending');assert.equal((await stored())[0].specialService,'Event styling');scenarios++;
     // Dashboard and reports are read-only projections over the same persisted booking data.
     await goto('/admin');

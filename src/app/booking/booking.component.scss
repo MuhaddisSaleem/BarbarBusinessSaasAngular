@@ -1805,3 +1805,113 @@ button { -webkit-tap-highlight-color: transparent; }
 .steps.home-service-steps {
   grid-template-columns:repeat(4,minmax(0,1fr));
 }
+
+
+/* Location-mode layout: keep only the active service catalog in focus. */
+.service-section {
+  display:flex;
+  flex-direction:column;
+}
+
+.service-section > .section-heading { order:0; }
+.service-section > .salon-service-choice { order:1; }
+.service-section > .group-schedule-options { order:2; }
+.service-section > .participant-bar { order:3; }
+.service-section > .active-person-note { order:4; }
+.service-section > .salon-services-grid { order:5; }
+.service-section > .home-services-section { order:6; }
+.service-section > .home-service-content { order:7; }
+
+.service-section.home-mode-active > .home-services-section {
+  order:1;
+  margin-top:4px;
+}
+
+.service-section.home-mode-active > .salon-service-choice {
+  order:2;
+  margin-top:14px;
+  margin-bottom:14px;
+}
+
+.service-section.home-mode-active > .home-service-content {
+  order:3;
+}
+
+.select-salon-service-btn {
+  min-height:72px;
+  padding:12px 18px;
+  border:1px solid rgba(242,191,90,.72);
+  border-radius:11px;
+  background:
+    radial-gradient(circle at 14% 50%,rgba(242,191,90,.13),transparent 38%),
+    linear-gradient(145deg,rgba(242,191,90,.055),#0c1316 68%);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:inset 0 0 0 1px rgba(255,209,111,.08);
+  transition:border-color .18s ease,background .18s ease,transform .18s ease,box-shadow .18s ease;
+
+  &:hover {
+    border-color:$gold-soft;
+    background:
+      radial-gradient(circle at 14% 50%,rgba(242,191,90,.18),transparent 40%),
+      linear-gradient(145deg,rgba(242,191,90,.08),#0c1316 68%);
+    box-shadow:inset 0 0 0 1px rgba(255,209,111,.12),0 8px 22px rgba(0,0,0,.16);
+    transform:translateY(-1px);
+  }
+
+  strong,
+  small {
+    display:block;
+  }
+
+  strong {
+    color:#fff4d1;
+    font-size:14px;
+    font-weight:800;
+  }
+
+  small {
+    margin-top:4px;
+    color:#aeb6b9;
+    font-size:10px;
+  }
+
+  > i {
+    flex:0 0 auto;
+    color:$gold-soft;
+    font-size:20px;
+  }
+}
+
+.home-service-content {
+  min-width:0;
+}
+
+@media (max-width:1199.98px) {
+  .service-section.home-mode-active > .salon-service-choice {
+    grid-template-columns:1fr;
+  }
+
+  .select-salon-service-btn {
+    min-height:64px;
+  }
+}
+
+@media (max-width:575.98px) {
+  .service-section.home-mode-active > .salon-service-choice {
+    margin-top:12px;
+  }
+
+  .select-salon-service-btn {
+    min-height:60px;
+    padding:11px 14px;
+
+    strong { font-size:13px; }
+    small { font-size:9px; }
+  }
+}
