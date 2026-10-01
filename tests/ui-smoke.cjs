@@ -617,7 +617,7 @@ let browser, activePage;
     assert.equal(await page.locator('.deferred-feature').count(),3,'Deferred customer messaging options must not render as live toggles');
     const businessNameInput=page.getByPlaceholder('Enter business name');
     await businessNameInput.fill('Royal QA Barbers');
-    await page.locator('.save-settings-btn').first().click();
+    await page.locator('.save-settings-btn:visible').click();
     await page.locator('.feedback-toast').filter({hasText:'Settings saved successfully.'}).waitFor();
     assert.equal(apiSettings.businessName,'Royal QA Barbers');
     assert.equal(apiSettings.sendWhatsappConfirmation,false);
