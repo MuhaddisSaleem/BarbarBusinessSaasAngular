@@ -43,9 +43,9 @@ public sealed class SalonSettings : BaseEntity
     public string HeroHeadline { get; set; } = "";
     public string HeroTagline { get; set; } = "More Than a Haircut. It's a Lifestyle.";
 
-    public bool SendWhatsappConfirmation { get; set; } = true;
+    public bool SendWhatsappConfirmation { get; set; }
     public bool SendSmsFallback { get; set; }
-    public bool SendAppointmentReminder { get; set; } = true;
+    public bool SendAppointmentReminder { get; set; }
     public int ReminderHoursBefore { get; set; } = 2;
     public bool NotifyOwnerOnNewBooking { get; set; } = true;
 }

@@ -26,5 +26,8 @@ public sealed class SettingsController(CatalogApplicationService catalog) : Cont
 
     [HttpPost("reset")]
     public async Task<ActionResult<MutationResponse<SettingsDto>>> Reset(CancellationToken cancellationToken)
-        => Ok(await catalog.ResetSettingsAsync(cancellationToken));
+    {
+        var result = await catalog.ResetSettingsAsync(cancellationToken);
+        return result.Success ? Ok(result) : Conflict(result);
+    }
 }

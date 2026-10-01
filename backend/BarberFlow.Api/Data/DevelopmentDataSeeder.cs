@@ -41,9 +41,9 @@ public static class DevelopmentDataSeeder
                 HeroEyebrow = "PREMIUM BARBERSHOP",
                 HeroHeadline = "",
                 HeroTagline = "More Than a Haircut. It's a Lifestyle.",
-                SendWhatsappConfirmation = true,
+                SendWhatsappConfirmation = false,
                 SendSmsFallback = false,
-                SendAppointmentReminder = true,
+                SendAppointmentReminder = false,
                 ReminderHoursBefore = 2,
                 NotifyOwnerOnNewBooking = true
             }

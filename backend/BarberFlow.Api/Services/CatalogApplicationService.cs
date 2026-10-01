@@ -393,6 +393,17 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         var validation = ValidateSettings(request);
         if (validation is not null) return new(false, validation);
 
+        if (BusinessHoursChanged(salon, request))
+        {
+            var bookingConflict = await ValidateBusinessHoursAgainstActiveBookingsAsync(
+                salon,
+                request,
+                cancellationToken);
+
+            if (bookingConflict is not null)
+                return new(false, bookingConflict);
+        }
+
         ApplySettings(salon, request);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -403,6 +414,18 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
     {
         var salon = await GetSalonAsync(cancellationToken, includeSettings: true);
         var defaults = DefaultSettings();
+
+        if (BusinessHoursChanged(salon, defaults))
+        {
+            var bookingConflict = await ValidateBusinessHoursAgainstActiveBookingsAsync(
+                salon,
+                defaults,
+                cancellationToken);
+
+            if (bookingConflict is not null)
+                return new(false, bookingConflict);
+        }
+
         ApplySettings(salon, defaults);
         await db.SaveChangesAsync(cancellationToken);
         return new(true, "Settings reset to defaults.", MapSettings(salon));
@@ -996,9 +1019,9 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         10,
         true,
         true,
-        true,
         false,
-        true,
+        false,
+        false,
         2,
         true,
         Enum.GetValues<DayOfWeek>()
@@ -1063,17 +1086,61 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
     private static string? ValidateSettings(SettingsDto request)
     {
         if (string.IsNullOrWhiteSpace(request.BusinessName)) return "Business name is required.";
+        if (request.BusinessName.Trim().Length > 160) return "Business name must be 160 characters or fewer.";
         if (!IsValidPakistanPhone(request.BusinessPhone)) return "Enter a valid Pakistan business phone number.";
         if (!IsValidPakistanPhone(request.WhatsappNumber)) return "Enter a valid Pakistan WhatsApp number.";
-        if (!string.IsNullOrWhiteSpace(request.Email)
-            && !request.Email.Contains('@')) return "Enter a valid email address.";
-        if (request.BookingInterval < 5) return "Booking interval must be at least 5 minutes.";
-        if (request.MaxAdvanceDays < 1) return "Advance booking window must be at least 1 day.";
-        if (request.CancellationHours < 0) return "Cancellation notice cannot be negative.";
-        if (request.LateArrivalMinutes < 0) return "Late arrival grace cannot be negative.";
+
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            if (request.Email.Trim().Length > 254
+                || !request.Email.Contains('@')
+                || request.Email.StartsWith('@')
+                || request.Email.EndsWith('@'))
+                return "Enter a valid email address.";
+        }
+
+        if (request.Address?.Trim().Length > 500) return "Address must be 500 characters or fewer.";
+        if (request.City?.Trim().Length > 120) return "City must be 120 characters or fewer.";
+
+        var currency = request.Currency?.Trim().ToUpperInvariant() ?? "";
+        if (currency.Length != 3) return "Currency must use a 3-letter code.";
+
+        if (string.IsNullOrWhiteSpace(request.Timezone) || !IsValidTimeZone(request.Timezone.Trim()))
+            return "Select a valid timezone.";
+
+        if (request.BrandSubtitle?.Trim().Length > 60) return "Header subtitle must be 60 characters or fewer.";
+        if (request.HeroEyebrow?.Trim().Length > 60) return "Hero eyebrow text must be 60 characters or fewer.";
+        if (request.HeroHeadline?.Trim().Length > 90) return "Hero headline must be 90 characters or fewer.";
+        if (request.HeroTagline?.Trim().Length > 140) return "Hero tagline must be 140 characters or fewer.";
+
+        if (request.BookingInterval < 5 || request.BookingInterval > 240)
+            return "Booking interval must be from 5 to 240 minutes.";
+        if (request.MaxAdvanceDays < 1 || request.MaxAdvanceDays > 365)
+            return "Advance booking window must be from 1 to 365 days.";
+        if (request.CancellationHours < 0 || request.CancellationHours > 168)
+            return "Cancellation notice must be from 0 to 168 hours.";
+        if (request.LateArrivalMinutes < 0 || request.LateArrivalMinutes > 240)
+            return "Late arrival grace must be from 0 to 240 minutes.";
+
         if (request.SendAppointmentReminder
             && (request.ReminderHoursBefore < 1 || request.ReminderHoursBefore > 72))
             return "Reminder time must be from 1 to 72 hours.";
+
+        if (request.BusinessHours is null || request.BusinessHours.Count != 7)
+            return "Business hours must contain all seven days.";
+
+        var validKeys = Enum.GetValues<DayOfWeek>()
+            .Select(x => x.ToString().ToLowerInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var normalizedKeys = request.BusinessHours
+            .Select(x => (x.Key ?? "").Trim().ToLowerInvariant())
+            .ToList();
+
+        if (normalizedKeys.Any(string.IsNullOrWhiteSpace)
+            || normalizedKeys.Any(key => !validKeys.Contains(key))
+            || normalizedKeys.Distinct(StringComparer.OrdinalIgnoreCase).Count() != 7)
+            return "Business hours contain an invalid or duplicate weekday.";
 
         foreach (var day in request.BusinessHours.Where(x => x.Enabled))
         {
@@ -1084,6 +1151,101 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         }
 
         return null;
+    }
+
+    private static bool BusinessHoursChanged(Salon salon, SettingsDto request)
+    {
+        var byKey = request.BusinessHours.ToDictionary(
+            x => x.Key.Trim().ToLowerInvariant(),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var day in Enum.GetValues<DayOfWeek>())
+        {
+            var key = day.ToString().ToLowerInvariant();
+            if (!byKey.TryGetValue(key, out var incoming)) return true;
+
+            var saved = salon.BusinessHours.FirstOrDefault(x => x.DayOfWeek == day);
+            if (saved is null || saved.IsOpen != incoming.Enabled) return true;
+
+            if (!incoming.Enabled) continue;
+
+            if (!TimeOnly.TryParseExact(incoming.Open, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var open)
+                || !TimeOnly.TryParseExact(incoming.Close, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var close)
+                || saved.OpenTime != open
+                || saved.CloseTime != close)
+                return true;
+        }
+
+        return false;
+    }
+
+    private async Task<string?> ValidateBusinessHoursAgainstActiveBookingsAsync(
+        Salon salon,
+        SettingsDto request,
+        CancellationToken cancellationToken)
+    {
+        var today = DateOnly.FromDateTime(GetSalonNow(salon).DateTime);
+        var hoursByKey = request.BusinessHours.ToDictionary(
+            x => x.Key.Trim().ToLowerInvariant(),
+            StringComparer.OrdinalIgnoreCase);
+
+        var activeBookings = await db.Bookings
+            .AsNoTracking()
+            .Where(x => x.SalonId == salon.Id
+                        && x.AppointmentDate >= today
+                        && (x.Status == BookingStatus.Pending || x.Status == BookingStatus.Confirmed))
+            .OrderBy(x => x.AppointmentDate)
+            .ThenBy(x => x.StartTime)
+            .Select(x => new
+            {
+                x.BookingCode,
+                x.AppointmentDate,
+                x.StartTime,
+                x.TotalDurationMinutes
+            })
+            .ToListAsync(cancellationToken);
+
+        foreach (var booking in activeBookings)
+        {
+            var key = booking.AppointmentDate.DayOfWeek.ToString().ToLowerInvariant();
+            if (!hoursByKey.TryGetValue(key, out var day) || !day.Enabled)
+            {
+                return $"Cannot close {booking.AppointmentDate:dddd} while active booking {booking.BookingCode} exists on {booking.AppointmentDate:dd MMM yyyy}.";
+            }
+
+            if (!TimeOnly.TryParseExact(day.Open, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var open)
+                || !TimeOnly.TryParseExact(day.Close, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var close))
+                continue;
+
+            var bookingStart = booking.StartTime.Hour * 60 + booking.StartTime.Minute;
+            var bookingEnd = bookingStart + booking.TotalDurationMinutes;
+            var opening = open.Hour * 60 + open.Minute;
+            var closing = close.Hour * 60 + close.Minute;
+
+            if (bookingStart < opening || bookingEnd > closing)
+            {
+                return $"Business hours would exclude active booking {booking.BookingCode} on {booking.AppointmentDate:dd MMM yyyy} at {booking.StartTime.ToString("h:mm tt", CultureInfo.InvariantCulture)}. Reschedule or cancel that booking first.";
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsValidTimeZone(string value)
+    {
+        try
+        {
+            _ = TimeZoneInfo.FindSystemTimeZoneById(value);
+            return true;
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return false;
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return false;
+        }
     }
 
     private async Task<Salon> GetSalonAsync(
