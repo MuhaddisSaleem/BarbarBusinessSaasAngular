@@ -1824,14 +1824,13 @@ button { -webkit-tap-highlight-color: transparent; }
 .service-section > .home-catalog-motion { order:7; }
 
 .salon-choice-action-stage {
-  position:relative;
   min-width:0;
   min-height:78px;
+  display:grid;
 }
 
 .salon-choice-action-panel {
-  position:absolute;
-  inset:0;
+  grid-area:1 / 1;
   opacity:0;
   visibility:hidden;
   pointer-events:none;
@@ -1968,17 +1967,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 
-@media (max-width:1199.98px) {
-  .salon-choice-action-stage {
-    min-height:74px;
-  }
-}
-
 @media (max-width:575.98px) {
-  .salon-choice-action-stage {
-    min-height:70px;
-  }
-
   .catalog-motion {
     transition-duration:.36s;
   }
