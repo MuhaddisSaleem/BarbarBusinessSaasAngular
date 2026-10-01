@@ -612,6 +612,19 @@ let browser, activePage;
     await page.screenshot({path:`test-results/refreshed-slots-${width}.png`,fullPage:true});
     await adminTab.close();scenarios++;
 
+    // Desktop readability: verify the shared admin typography pass without touching mobile.
+    if(width >= 992){
+      const navFont=Number.parseFloat(await page.locator('.admin-sidebar .nav-item').first().evaluate(el=>getComputedStyle(el).fontSize));
+      const headingFont=Number.parseFloat(await page.locator('.page-heading h2').evaluate(el=>getComputedStyle(el).fontSize));
+      const bodyFont=Number.parseFloat(await page.locator('.page-heading p').evaluate(el=>getComputedStyle(el).fontSize));
+      const controlFont=Number.parseFloat(await page.locator('.save-settings-btn:visible').evaluate(el=>getComputedStyle(el).fontSize));
+      assert.ok(navFont>=13,'desktop admin navigation should be at least 13px');
+      assert.ok(headingFont>=32,'desktop admin page heading should be at least 32px');
+      assert.ok(bodyFont>=13,'desktop admin explanatory copy should be at least 13px');
+      assert.ok(controlFont>=12,'desktop admin controls should be at least 12px');
+      scenarios++;
+    }
+
     // Settings finalization: SQL persistence, deferred integrations and reset behavior.
     await goto('/admin/settings');
     assert.equal(await page.locator('.deferred-feature').count(),3,'Deferred customer messaging options must not render as live toggles');
