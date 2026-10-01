@@ -515,8 +515,12 @@ let browser, activePage;
       );
     }
 
+    const actionStageBox=await page.locator('.salon-choice-action-stage').boundingBox();
+    assert.ok(actionStageBox&&actionStageBox.height<=80,'Home mode must not keep the hidden salon-choice height');
+
     const salonBox=await page.locator('.salon-service-choice').boundingBox();
     const homeBox=await page.locator('#home-service-section').boundingBox();
+    assert.ok(salonBox&&homeBox&&(homeBox.y-(salonBox.y+salonBox.height))<90,'Home Service should follow the Salon selector without a large empty gap');
     assert.ok(salonBox&&homeBox&&salonBox.y<homeBox.y,'Salon Service must always remain above Home Service');
 
     await page.locator('.select-salon-service-btn').click();

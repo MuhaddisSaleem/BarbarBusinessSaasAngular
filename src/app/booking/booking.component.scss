@@ -1824,16 +1824,17 @@ button { -webkit-tap-highlight-color: transparent; }
 .service-section > .home-catalog-motion { order:7; }
 
 .salon-choice-action-stage {
+  position:relative;
   min-width:0;
   min-height:78px;
-  display:grid;
+  transition:min-height .34s cubic-bezier(.2,.8,.2,1);
 }
 
 .salon-choice-action-panel {
-  grid-area:1 / 1;
+  position:absolute;
+  inset:0;
   width:100%;
   min-width:0;
-  justify-self:stretch;
   opacity:0;
   visibility:hidden;
   pointer-events:none;
@@ -1971,7 +1972,21 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 
+@media (max-width:720px) {
+  .salon-choice-action-stage.salon-active {
+    min-height:154px;
+  }
+
+  .salon-choice-action-stage.home-active {
+    min-height:64px;
+  }
+}
+
 @media (max-width:575.98px) {
+  .salon-choice-action-stage.home-active {
+    min-height:60px;
+  }
+
   .catalog-motion {
     transition-duration:.36s;
   }

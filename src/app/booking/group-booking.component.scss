@@ -560,11 +560,33 @@ $muted: #a6adb0;
 }
 
 @media (max-width: 720px) {
-  .group-schedule-options { grid-template-columns: 1fr; }
+  .group-schedule-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .schedule-option {
+    min-height: 82px;
+    padding: 10px 8px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .schedule-option-icon {
+    width: 32px;
+    height: 32px;
+
+    i { font-size: 15px; }
+  }
+
+  .schedule-option {
+    strong { font-size: 10px; line-height: 1.2; }
+    small { margin-top: 4px; font-size: 8px; line-height: 1.2; }
+  }
+
   .participant-bar { align-items: stretch; flex-direction: column; }
   .add-person-btn { min-height: 42px; }
   .group-progress { grid-template-columns: 1fr; }
-  .schedule-option { min-height: 72px; }
 }
 
 /* Consistent professional iconography */
