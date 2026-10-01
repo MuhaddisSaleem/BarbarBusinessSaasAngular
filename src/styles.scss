@@ -194,7 +194,11 @@ body {
 
   app-admin-shell .nav-item {
     min-height: 48px;
-    font-size: 13px !important;
+    font-size: 15px !important;
+  }
+
+  app-admin-shell .nav-icon {
+    font-size: 17px !important;
   }
 
   app-admin-shell .nav-count {
