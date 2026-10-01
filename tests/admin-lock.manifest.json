@@ -1,6 +1,6 @@
 {
-  "baseline_commit": "ab17a96069e7fd64b60a10c29a75abdf7e46c638",
-  "purpose": "Final admin/booking lock. Salon stays above Home Service; catalog visibility animates smoothly and Home selection scrolls smoothly. Booking, service, barber, pricing and availability logic remain locked.",
+  "baseline_commit": "e7c333b75611ccab272f64462d3590245c49b761",
+  "purpose": "Final admin/booking lock. Salon switch-back CTA is full width and Salon/Home selector has approved small-screen responsiveness; booking, service, barber, pricing and availability logic remain locked.",
   "protected_files": {
     "backend/BarberFlow.Api/Services/BookingApplicationService.cs": "1d10ac0390692f1fbb0f89f7a81ea21a58c7120e",
     "backend/BarberFlow.Api/Services/CatalogApplicationService.cs": "aedd79ad0cc23e0b3e6f22e0bcfddf4e04b47bc5",
@@ -42,7 +42,7 @@
     "src/app/admin/shared/admin-shell.component.scss": "5605534eeb2bc9e6c757de03e901dd7168c45177",
     "src/app/admin/shared/admin-shell.component.ts": "c41ddcbba3ee5b03349a4b19d221b131f7adc0c5",
     "src/app/booking/booking.component.html": "9e2f9b1f6d2bc3a7d73133f3703db75726a34902",
-    "src/app/booking/booking.component.scss": "a33145fa01442bacaecc82a4b73afbd15123517b",
+    "src/app/booking/booking.component.scss": "ca410379eee142e368a0806fcc57e79d3882724a",
     "src/app/booking/booking.component.ts": "c76baa819b3da6be9987f3ce3cfb602056cc4f24",
     "src/app/core/booking-api.service.ts": "8a6c5bc2364857dd41d60450a61c503266b63510",
     "src/styles.scss": "e79f75a7f53bc531d78cfbdade08058f5976d39c",

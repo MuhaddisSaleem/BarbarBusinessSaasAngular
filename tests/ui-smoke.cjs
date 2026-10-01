@@ -501,6 +501,20 @@ let browser, activePage;
     assert.equal(await page.locator('.salon-choice-action-panel.visible .booking-for-toggle').count(),0,'Just Me / group choices must be visually hidden while Home Service is active');
     assert.equal(await page.locator('.home-catalog-motion.expanded .home-service-content').count(),1,'Home Service catalog must be expanded when Home Service is active');
 
+    const salonButtonBox=await page.locator('.select-salon-service-btn').boundingBox();
+    const salonActionBox=await page.locator('.salon-choice-action-stage').boundingBox();
+    assert.ok(
+      salonButtonBox&&salonActionBox&&Math.abs(salonButtonBox.width-salonActionBox.width)<2,
+      'Select Salon Service button must fill the full available action width'
+    );
+    if(width<=390){
+      assert.equal(
+        await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),
+        false,
+        'Salon / Home selector must not overflow the small-screen viewport'
+      );
+    }
+
     const salonBox=await page.locator('.salon-service-choice').boundingBox();
     const homeBox=await page.locator('#home-service-section').boundingBox();
     assert.ok(salonBox&&homeBox&&salonBox.y<homeBox.y,'Salon Service must always remain above Home Service');
