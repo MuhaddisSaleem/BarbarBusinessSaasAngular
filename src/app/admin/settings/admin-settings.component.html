@@ -13,19 +13,19 @@
       </div>
 
       <div class="heading-actions d-flex flex-wrap gap-2">
-        <button type="button" class="reset-settings-btn" (click)="requestReset()">
+        <button type="button" class="reset-settings-btn" (click)="requestReset()" [disabled]="savingSettings || resettingSettings">
           <i class="bi bi-arrow-counterclockwise"></i>
           Reset Defaults
         </button>
 
-        <button type="button" class="save-settings-btn" (click)="saveSettings()">
-          <i class="bi bi-check2-circle"></i>
-          Save Settings
+        <button type="button" class="save-settings-btn" (click)="saveSettings()" [disabled]="savingSettings || resettingSettings">
+          <i class="bi" [ngClass]="savingSettings ? 'bi-arrow-clockwise spin' : 'bi-check2-circle'"></i>
+          {{ savingSettings ? 'Saving...' : 'Save Settings' }}
         </button>
       </div>
     </section>
 
-    <div class="settings-grid">
+    <div class="settings-grid" [class.settings-busy]="savingSettings || resettingSettings">
       <section class="settings-card">
         <div class="card-head">
           <span class="section-icon"><i class="bi bi-shop"></i></span>
@@ -38,7 +38,7 @@
         <div class="card-body form-grid">
           <label class="full">
             <span>Business Name *</span>
-            <input type="text" [(ngModel)]="settings.businessName" placeholder="Enter business name">
+            <input type="text" maxlength="160" [(ngModel)]="settings.businessName" placeholder="Enter business name">
           </label>
 
           <label>
@@ -66,17 +66,17 @@
 
           <label>
             <span>Email</span>
-            <input type="email" [(ngModel)]="settings.email" placeholder="owner@example.com">
+            <input type="email" maxlength="254" [(ngModel)]="settings.email" placeholder="owner@example.com">
           </label>
 
           <label>
             <span>City</span>
-            <input type="text" [(ngModel)]="settings.city" placeholder="Enter city">
+            <input type="text" maxlength="120" [(ngModel)]="settings.city" placeholder="Enter city">
           </label>
 
           <label class="full">
             <span>Address</span>
-            <textarea [(ngModel)]="settings.address" placeholder="Enter salon address"></textarea>
+            <textarea maxlength="500" [(ngModel)]="settings.address" placeholder="Enter salon address"></textarea>
           </label>
 
           <label>
@@ -115,7 +115,7 @@
           <label>
             <span>Book Up To</span>
             <div class="suffix-field">
-              <input type="number" min="1" [(ngModel)]="settings.maxAdvanceDays">
+              <input type="number" min="1" max="365" step="1" [(ngModel)]="settings.maxAdvanceDays">
               <b>days ahead</b>
             </div>
           </label>
@@ -123,7 +123,7 @@
           <label>
             <span>Cancellation Notice</span>
             <div class="suffix-field">
-              <input type="number" min="0" [(ngModel)]="settings.cancellationHours">
+              <input type="number" min="0" max="168" step="1" [(ngModel)]="settings.cancellationHours">
               <b>hours</b>
             </div>
           </label>
@@ -131,7 +131,7 @@
           <label>
             <span>Late Arrival Grace</span>
             <div class="suffix-field">
-              <input type="number" min="0" [(ngModel)]="settings.lateArrivalMinutes">
+              <input type="number" min="0" max="240" step="1" [(ngModel)]="settings.lateArrivalMinutes">
               <b>minutes</b>
             </div>
           </label>
@@ -321,76 +321,52 @@
 
         <div class="integration-note">
           <i class="bi bi-info-circle"></i>
-          <span>WhatsApp and SMS sending are not connected yet. These settings are stored now and will be used when the messaging backend is integrated.</span>
+          <span>Customer messaging is paused while provider setup is deferred. WhatsApp, SMS fallback and appointment reminders cannot be enabled from Settings yet. Owner online-booking alerts remain active.</span>
         </div>
 
         <div class="notification-grid">
-          <div class="switch-row">
+          <div class="switch-row deferred-feature">
             <div>
               <strong>WhatsApp booking confirmation</strong>
-              <span>Send confirmation after a booking is successfully created.</span>
+              <span>Paused until the Meta WhatsApp provider setup is resumed.</span>
             </div>
-            <label class="switch">
-              <input type="checkbox" [(ngModel)]="settings.sendWhatsappConfirmation">
-              <span></span>
-            </label>
+            <span class="feature-badge paused">Paused</span>
           </div>
 
-          <div class="switch-row">
+          <div class="switch-row deferred-feature">
             <div>
               <strong>SMS fallback</strong>
-              <span>Use SMS if WhatsApp delivery is unavailable.</span>
+              <span>SMS delivery has not been integrated yet.</span>
             </div>
-            <label class="switch">
-              <input type="checkbox" [(ngModel)]="settings.sendSmsFallback">
-              <span></span>
-            </label>
+            <span class="feature-badge">Coming later</span>
           </div>
 
-          <div class="switch-row">
+          <div class="switch-row deferred-feature">
             <div>
               <strong>Appointment reminder</strong>
-              <span>Remind customers before their scheduled appointment.</span>
+              <span>Scheduled customer reminders will be added with messaging automation.</span>
             </div>
-            <label class="switch">
-              <input type="checkbox" [(ngModel)]="settings.sendAppointmentReminder">
-              <span></span>
-            </label>
+            <span class="feature-badge">Coming later</span>
           </div>
 
           <div class="switch-row">
             <div>
-              <strong>Owner new-booking alert</strong>
-              <span>Notify the salon owner whenever a new booking arrives.</span>
+              <strong>Owner online-booking alert</strong>
+              <span>Create an admin notification whenever a new online booking arrives.</span>
             </div>
             <label class="switch">
               <input type="checkbox" [(ngModel)]="settings.notifyOwnerOnNewBooking">
               <span></span>
             </label>
           </div>
-
-          <label class="reminder-field" *ngIf="settings.sendAppointmentReminder">
-            <span>Reminder Time</span>
-            <div class="suffix-field">
-              <input
-                type="text"
-                inputmode="numeric"
-                autocomplete="off"
-                maxlength="2"
-                [ngModel]="settings.reminderHoursBefore || ''"
-                (input)="onReminderHoursInput($event)"
-                placeholder="2">
-              <b>hours before</b>
-            </div>
-          </label>
         </div>
       </section>
     </div>
 
     <div class="mobile-save d-md-none">
-      <button type="button" class="save-settings-btn w-100" (click)="saveSettings()">
-        <i class="bi bi-check2-circle"></i>
-        Save Settings
+      <button type="button" class="save-settings-btn w-100" (click)="saveSettings()" [disabled]="savingSettings || resettingSettings">
+        <i class="bi" [ngClass]="savingSettings ? 'bi-arrow-clockwise spin' : 'bi-check2-circle'"></i>
+        {{ savingSettings ? 'Saving...' : 'Save Settings' }}
       </button>
     </div>
   </div>
@@ -402,8 +378,10 @@
     <p>This will restore the default admin configuration.</p>
 
     <div class="d-flex gap-2">
-      <button type="button" class="cancel-btn flex-fill" (click)="closeReset()">Cancel</button>
-      <button type="button" class="confirm-reset-btn flex-fill" (click)="confirmReset()">Reset Settings</button>
+      <button type="button" class="cancel-btn flex-fill" (click)="closeReset()" [disabled]="resettingSettings">Cancel</button>
+      <button type="button" class="confirm-reset-btn flex-fill" (click)="confirmReset()" [disabled]="resettingSettings">
+        {{ resettingSettings ? 'Resetting...' : 'Reset Settings' }}
+      </button>
     </div>
   </section>
 </app-admin-shell>

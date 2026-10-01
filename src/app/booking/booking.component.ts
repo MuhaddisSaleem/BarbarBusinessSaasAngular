@@ -1,10 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, map } from 'rxjs';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 import { AdminServiceService } from '../admin/services/admin-service.service';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { AdminBookingService } from '../admin/bookings/admin-booking.service';
+import { CatalogApiService } from '../core/catalog-api.service';
+import { BookingApiService } from '../core/booking-api.service';
 
 interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
@@ -69,6 +72,7 @@ export class BookingComponent implements OnInit {
   participants: BookingPerson[] = [this.createPerson(1, 'You')];
   activeParticipantIndex = 0;
   private nextPersonId = 2;
+  private availabilityGeneration = 0;
 
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
@@ -88,16 +92,34 @@ export class BookingComponent implements OnInit {
     private readonly barberService: AdminBarberService,
     private readonly serviceService: AdminServiceService,
     private readonly settingsService: AdminSettingsService,
-    private readonly bookingService: AdminBookingService
+    private readonly bookingService: AdminBookingService,
+    private readonly bookingApi: BookingApiService,
+    private readonly catalogApi?: CatalogApiService
   ) {}
 
   ngOnInit(): void {
     this.buildCalendar();
+
+    this.bookingService.changes$.subscribe(() => {
+      queueMicrotask(() => this.reconcileAvailability());
+    });
+
+    this.catalogApi?.changes$.subscribe(() => {
+      queueMicrotask(() => this.reconcileAvailability());
+    });
   }
 
   @HostListener('window:storage', ['$event'])
   @HostListener('window:focus')
   refreshAvailability(event?: StorageEvent): void {
+    if (this.catalogApi) {
+      if (event) return;
+
+      this.bookingService.refreshFromApi();
+      void this.catalogApi.refreshAllAndNotify();
+      return;
+    }
+
     if (event && event.storageArea !== window.localStorage) return;
     const keys = ['royal-barbers.admin-barbers.v1', 'royal-barbers.admin-services.v1',
       'royal-barbers.admin-settings.v1', 'royal-barbers.admin-bookings.v1'];
@@ -107,6 +129,10 @@ export class BookingComponent implements OnInit {
     this.serviceService.refreshFromStorage();
     this.settingsService.refreshFromStorage();
     this.bookingService.refreshFromStorage();
+    this.reconcileAvailability();
+  }
+
+  private reconcileAvailability(): void {
     if (this.bookingConfirmed) return;
 
     const services = new Map(this.services.map(service => [service.id, service]));
@@ -114,13 +140,18 @@ export class BookingComponent implements OnInit {
       person.selectedServices = person.selectedServices
         .map(service => services.get(service.id))
         .filter((service): service is Service => !!service);
+
       if (person.selectedBarber && person.selectedBarber !== 'any') {
-        person.selectedBarber = this.barbers.find(barber => barber.id === (person.selectedBarber as Barber).id) || null;
+        person.selectedBarber = this.barbers.find(
+          barber => barber.id === (person.selectedBarber as Barber).id
+        ) || null;
+
         if (person.selectedBarber && !this.barberSupportsPerson(person.selectedBarber, person)) {
           person.selectedBarber = null;
         }
       }
     }
+
     this.generateAvailableTimes();
   }
 
@@ -134,7 +165,9 @@ export class BookingComponent implements OnInit {
     const now = new Date();
     const earliest = this.selectedDate.fullDate === this.formatDate(now)
       ? Math.max(hours.start, now.getHours() * 60 + now.getMinutes() + 1) : hours.start;
-    const interval = this.settingsService.bookingInterval;
+    const interval = this.bookingService.apiEnabled && this.bookingMode === 'single'
+      ? Math.max(1, this.getPersonDuration(this.activeParticipant))
+      : this.settingsService.bookingInterval;
     for (const person of this.participants) {
       const duration = this.getPersonDuration(person);
       if (!Number.isFinite(duration) || duration <= 0) return 'The selected service duration needs correcting. Please contact the salon.';
@@ -237,6 +270,27 @@ export class BookingComponent implements OnInit {
 
   onPhoneBlur(): void { this.phoneTouched = true; }
   clearValidationMessage(): void { this.bookingValidationMessage = ''; }
+
+  activateHomeService(): void {
+    const changed = this.serviceLocation !== 'home';
+    this.setServiceLocation('home');
+
+    if (!changed || typeof document === 'undefined') return;
+
+    const scrollToServices = () => {
+      document.getElementById('service-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => requestAnimationFrame(scrollToServices));
+      return;
+    }
+
+    setTimeout(scrollToServices, 0);
+  }
 
   setServiceLocation(location: 'salon' | 'home'): void {
     if (this.serviceLocation === location) return;
@@ -529,6 +583,8 @@ export class BookingComponent implements OnInit {
   }
 
   generateAvailableTimes(): void {
+    const generation = ++this.availabilityGeneration;
+
     if (!this.selectedDate || this.isDateDisabled(this.selectedDate.date) || !this.allParticipantsReady) {
       this.availableTimes = [];
       return;
@@ -539,8 +595,33 @@ export class BookingComponent implements OnInit {
     const selectedDay = this.startOfDay(this.selectedDate.date);
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const apiSingleBooking = this.bookingService.apiEnabled && this.bookingMode === 'single';
+    const singleDuration = Math.max(1, this.getPersonDuration(this.activeParticipant));
 
     for (const window of this.businessWindows) {
+      if (apiSingleBooking) {
+        // Anchor the first visible time to the salon's normal booking grid, then advance
+        // by the actual selected service duration. Example: 40 min => 1:00, 1:40, 2:20.
+        let firstStart = window.start;
+
+        if (selectedDay.getTime() === today.getTime()) {
+          const earliest = Math.max(window.start, nowMinutes + 1);
+          const baseInterval = this.settingsService.bookingInterval;
+          firstStart = window.start
+            + Math.ceil((earliest - window.start) / baseInterval) * baseInterval;
+        }
+
+        for (
+          let minutes = firstStart;
+          minutes + singleDuration <= window.end;
+          minutes += singleDuration
+        ) {
+          slots.push(this.minutesToTime(minutes));
+        }
+
+        continue;
+      }
+
       for (let minutes = window.start; minutes < window.end; minutes += this.settingsService.bookingInterval) {
         if (selectedDay.getTime() === today.getTime() && minutes <= nowMinutes) continue;
 
@@ -551,6 +632,54 @@ export class BookingComponent implements OnInit {
 
         if (valid) slots.push(time);
       }
+    }
+
+    // For a normal single booking, the API is the final source of truth.
+    // This prevents stale client-side booking snapshots from advertising an occupied slot.
+    if (this.bookingService.apiEnabled && this.bookingMode === 'single') {
+      if (!slots.length) {
+        this.availableTimes = [];
+        this.clearSelectedTime();
+        return;
+      }
+
+      const person = this.activeParticipant;
+      const duration = this.getPersonDuration(person);
+      const service = person.selectedServices.map(item => item.name).join(', ') || 'Custom Home Service';
+      const barber = person.selectedBarber && person.selectedBarber !== 'any'
+        ? person.selectedBarber.name
+        : undefined;
+
+      this.availableTimes = [];
+
+      forkJoin(slots.map(time =>
+        this.bookingApi.checkAvailability({
+          service,
+          date: this.selectedDate!.fullDate,
+          time,
+          duration,
+          barber
+        }).pipe(map(result => ({ time, available: result.available })))
+      )).subscribe({
+        next: results => {
+          if (generation !== this.availabilityGeneration) return;
+
+          this.availableTimes = results
+            .filter(result => result.available)
+            .map(result => result.time);
+
+          if (this.selectedTime && !this.availableTimes.includes(this.selectedTime)) {
+            this.clearSelectedTime();
+          }
+        },
+        error: () => {
+          if (generation !== this.availabilityGeneration) return;
+          this.availableTimes = [];
+          this.clearSelectedTime();
+          this.bookingValidationMessage = 'Could not load current availability. Please try again.';
+        }
+      });
+      return;
     }
 
     this.availableTimes = slots;
@@ -600,7 +729,50 @@ export class BookingComponent implements OnInit {
     if (this.bookingConfirmed) return;
     if (!this.validateBookingBeforeConfirm() || !this.selectedTime || !this.selectedDate) return;
 
-    // Re-check against the latest availability immediately before confirming.
+    // API-backed single bookings must be re-checked asynchronously. generateAvailableTimes()
+    // itself uses async server validation, so calling it and immediately inspecting the array
+    // incorrectly made every valid selected slot look unavailable.
+    if (this.bookingService.apiEnabled && this.bookingMode === 'single') {
+      const time = this.selectedTime;
+      const date = this.selectedDate.fullDate;
+      const person = this.activeParticipant;
+      const service = person.selectedServices.map(item => item.name).join(', ') || 'Custom Home Service';
+      const requestedBarber = person.selectedBarber && person.selectedBarber !== 'any'
+        ? person.selectedBarber.name
+        : undefined;
+
+      this.bookingApi.checkAvailability({
+        service,
+        date,
+        time,
+        duration: this.getPersonDuration(person),
+        barber: requestedBarber
+      }).subscribe({
+        next: result => {
+          // Ignore an old response if the customer changed date/time while the request was running.
+          if (this.selectedTime !== time || this.selectedDate?.fullDate !== date) return;
+
+          if (!result.available) {
+            this.refreshAfterAvailabilityConflict('This time slot is no longer available. Please choose another time.');
+            return;
+          }
+
+          const barber = this.resolveSingleBarberFromServer(person, result.eligibleBarbers, date);
+          if (!barber) {
+            this.refreshAfterAvailabilityConflict('No eligible barber is available for this time. Please choose another time.');
+            return;
+          }
+
+          this.submitOnlineBooking(new Map([[person.id, barber]]));
+        },
+        error: () => {
+          this.showValidationError('Could not verify this time slot. Please try again.', 'date-time-section');
+        }
+      });
+      return;
+    }
+
+    // Group/local-mode availability is synchronous, so it can still be checked immediately.
     this.generateAvailableTimes();
     if (!this.selectedTime || !this.availableTimes.includes(this.selectedTime)) {
       this.showValidationError('This time slot is no longer available. Please choose another time.', 'date-time-section');
@@ -609,11 +781,40 @@ export class BookingComponent implements OnInit {
 
     const assignments = this.resolveBarberAssignments(this.selectedTime);
     if (!assignments) {
-      this.clearSelectedTime();
-      this.generateAvailableTimes();
-      this.showValidationError('This time slot is no longer available. Please choose another time.', 'date-time-section');
+      this.refreshAfterAvailabilityConflict('This time slot is no longer available. Please choose another time.');
       return;
     }
+
+    this.submitOnlineBooking(assignments);
+  }
+
+  private resolveSingleBarberFromServer(
+    person: BookingPerson,
+    eligibleBarbers: string[],
+    date: string
+  ): Barber | null {
+    const eligible = new Set(eligibleBarbers);
+    const selected = person.selectedBarber;
+
+    if (selected && selected !== 'any') {
+      return eligible.has(selected.name) ? selected : null;
+    }
+
+    return this.barbers
+      .filter(barber => eligible.has(barber.name) && this.barberSupportsPerson(barber, person))
+      .sort((a, b) => this.compareAutoAssignedBarbers(a, b, date))[0] || null;
+  }
+
+  private refreshAfterAvailabilityConflict(message: string): void {
+    this.clearSelectedTime();
+    this.availableTimes = [];
+    this.bookingService.refreshFromApi();
+    this.generateAvailableTimes();
+    this.showValidationError(message, 'date-time-section');
+  }
+
+  private submitOnlineBooking(assignments: Map<number, Barber>): void {
+    if (!this.selectedTime || !this.selectedDate) return;
 
     this.bookingValidationMessage = '';
 
@@ -646,28 +847,42 @@ export class BookingComponent implements OnInit {
       return;
     }
 
-    const bookingResult = this.bookingService.addOnlineBookings(onlineBookings);
-    if (!bookingResult.success) {
-      this.clearSelectedTime();
-      this.generateAvailableTimes();
-      this.showValidationError(bookingResult.message, 'date-time-section');
+    const completeBooking = () => {
+      this.bookingSubmittedStatus = this.hasHomeCustomService
+        ? 'Pending'
+        : (this.autoConfirmBookings ? 'Confirmed' : 'Pending');
+      this.confirmedAssignments = [];
+
+      this.participants.forEach((person, index) => {
+        const barber = assignments.get(person.id);
+        if (!barber) return;
+
+        const personStartTime = this.getPersonBookingTime(index);
+        this.confirmedAssignments.push({ person: person.label, barber: barber.name, time: personStartTime });
+      });
+
+      this.bookingConfirmed = this.confirmedAssignments.length === this.participants.length;
+    };
+
+    const handleApiFailure = (message: string) => {
+      this.refreshAfterAvailabilityConflict(message);
+    };
+
+    if (this.bookingService.createOnlineBookingsThroughApi(
+      onlineBookings,
+      result => result.success ? completeBooking() : handleApiFailure(result.message),
+      handleApiFailure
+    )) {
       return;
     }
 
-    this.bookingSubmittedStatus = this.hasHomeCustomService
-      ? 'Pending'
-      : (this.autoConfirmBookings ? 'Confirmed' : 'Pending');
-    this.confirmedAssignments = [];
+    const bookingResult = this.bookingService.addOnlineBookings(onlineBookings);
+    if (!bookingResult.success) {
+      handleApiFailure(bookingResult.message);
+      return;
+    }
 
-    this.participants.forEach((person, index) => {
-      const barber = assignments.get(person.id);
-      if (!barber) return;
-
-      const personStartTime = this.getPersonBookingTime(index);
-      this.confirmedAssignments.push({ person: person.label, barber: barber.name, time: personStartTime });
-    });
-
-    this.bookingConfirmed = this.confirmedAssignments.length === this.participants.length;
+    completeBooking();
   }
 
   private validateBookingBeforeConfirm(): boolean {

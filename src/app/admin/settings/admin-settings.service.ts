@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { NotificationService } from '../notifications/notification.service';
+import { CatalogApiService } from '../../core/catalog-api.service';
 
 export interface BusinessHoursDay {
   key: string;
@@ -77,9 +78,9 @@ const DEFAULT_SETTINGS: AdminSettings = {
   allowSameDayBooking: true,
   autoConfirmBookings: true,
 
-  sendWhatsappConfirmation: true,
+  sendWhatsappConfirmation: false,
   sendSmsFallback: false,
-  sendAppointmentReminder: true,
+  sendAppointmentReminder: false,
   reminderHoursBefore: 2,
   notifyOwnerOnNewBooking: true,
 
@@ -88,13 +89,49 @@ const DEFAULT_SETTINGS: AdminSettings = {
 
 @Injectable({ providedIn: 'root' })
 export class AdminSettingsService {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly notificationService: NotificationService,
+    private readonly api?: CatalogApiService
+  ) {
+    this.settings = this.api?.settingsSnapshot
+      ? this.normalizeSettings(this.api.settingsSnapshot)
+      : this.loadSettings();
+
+    if (this.api && typeof window !== 'undefined') {
+      window.localStorage.removeItem(this.storageKey);
+    }
+
+
+    this.api?.changes$.subscribe(changed => {
+      if (changed === 'settings' && this.api?.settingsSnapshot) {
+        this.settings = this.normalizeSettings(this.api.settingsSnapshot);
+      }
+    });  }
 
   private readonly storageKey = 'royal-barbers.admin-settings.v1';
-  private settings = this.loadSettings();
+  private settings: AdminSettings = this.clone(DEFAULT_SETTINGS);
 
   refreshFromStorage(): void {
+    if (this.api) {
+      this.refreshFromApi();
+      return;
+    }
     this.settings = this.loadSettings();
+  }
+
+  refreshFromApi(): void {
+    if (!this.api) return;
+
+    this.api.getSettings().subscribe({
+      next: settings => {
+        this.settings = this.normalizeSettings(settings);
+        this.api!.settingsSnapshot = this.clone(this.settings);
+      }
+    });
+  }
+
+  get apiEnabled(): boolean {
+    return !!this.api;
   }
 
   get current(): AdminSettings {
@@ -170,6 +207,68 @@ export class AdminSettingsService {
     return { start, end };
   }
 
+  saveThroughApi(
+    next: AdminSettings,
+    done: (result: SettingsSaveResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    const validation = this.validate(next);
+    if (!validation.success) {
+      done(validation);
+      return true;
+    }
+
+    const normalized = this.normalizeSettings(next);
+    this.api.saveSettings(normalized).subscribe({
+      next: response => {
+        if (response.item) {
+          const changed = JSON.stringify(this.settings) !== JSON.stringify(response.item);
+          this.settings = this.normalizeSettings(response.item);
+          this.api!.settingsSnapshot = this.clone(this.settings);
+
+          if (changed) {
+            this.notificationService.add({
+              type: 'system',
+              title: 'Settings updated',
+              message: 'Business, booking, hours or notification settings were updated.',
+              icon: 'bi-gear',
+              url: '/admin/settings'
+            });
+          }
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save settings.') })
+    });
+
+    return true;
+  }
+
+  resetThroughApi(done: (result: SettingsSaveResult) => void): boolean {
+    if (!this.api) return false;
+
+    this.api.resetSettings().subscribe({
+      next: response => {
+        if (response.item) {
+          this.settings = this.normalizeSettings(response.item);
+          this.api!.settingsSnapshot = this.clone(this.settings);
+          this.notificationService.add({
+            type: 'system',
+            title: 'Settings reset',
+            message: 'Admin settings were restored to their default configuration.',
+            icon: 'bi-arrow-counterclockwise',
+            url: '/admin/settings'
+          });
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not reset settings.') })
+    });
+
+    return true;
+  }
+
   save(next: AdminSettings): SettingsSaveResult {
     const validation = this.validate(next);
     if (!validation.success) return validation;
@@ -200,7 +299,7 @@ export class AdminSettingsService {
 
     const changed = JSON.stringify(this.settings) !== JSON.stringify(normalized);
 
-    if (typeof window !== 'undefined') {
+    if (!this.api && typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(this.storageKey, JSON.stringify(normalized));
       } catch {
@@ -226,7 +325,7 @@ export class AdminSettingsService {
   reset(): SettingsSaveResult {
     const next = this.clone(DEFAULT_SETTINGS);
 
-    if (typeof window !== 'undefined') {
+    if (!this.api && typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(this.storageKey, JSON.stringify(next));
       } catch {
@@ -252,6 +351,10 @@ export class AdminSettingsService {
       return { success: false, message: 'Business name is required.' };
     }
 
+    if (settings.businessName.trim().length > 160) {
+      return { success: false, message: 'Business name must be 160 characters or fewer.' };
+    }
+
     if (!this.validPakistanPhone(settings.businessPhone)) {
       return { success: false, message: 'Enter a valid Pakistan business phone number.' };
     }
@@ -260,8 +363,27 @@ export class AdminSettingsService {
       return { success: false, message: 'Enter a valid Pakistan WhatsApp number.' };
     }
 
-    if (settings.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.email)) {
+    if (
+      settings.email
+      && (settings.email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.email))
+    ) {
       return { success: false, message: 'Enter a valid email address.' };
+    }
+
+    if (settings.address.trim().length > 500) {
+      return { success: false, message: 'Address must be 500 characters or fewer.' };
+    }
+
+    if (settings.city.trim().length > 120) {
+      return { success: false, message: 'City must be 120 characters or fewer.' };
+    }
+
+    if (settings.currency.trim().length !== 3) {
+      return { success: false, message: 'Currency must use a 3-letter code.' };
+    }
+
+    if (!settings.timezone.trim()) {
+      return { success: false, message: 'Select a valid timezone.' };
     }
 
     if (settings.brandSubtitle.length > 60) {
@@ -280,20 +402,36 @@ export class AdminSettingsService {
       return { success: false, message: 'Hero tagline must be 140 characters or fewer.' };
     }
 
-    if (!Number.isInteger(Number(settings.bookingInterval)) || Number(settings.bookingInterval) < 5) {
-      return { success: false, message: 'Booking interval must be a whole number of at least 5 minutes.' };
+    if (
+      !Number.isInteger(Number(settings.bookingInterval))
+      || Number(settings.bookingInterval) < 5
+      || Number(settings.bookingInterval) > 240
+    ) {
+      return { success: false, message: 'Booking interval must be a whole number from 5 to 240 minutes.' };
     }
 
-    if (!Number.isInteger(Number(settings.maxAdvanceDays)) || Number(settings.maxAdvanceDays) < 1) {
-      return { success: false, message: 'Advance booking window must be a whole number of at least 1 day.' };
+    if (
+      !Number.isInteger(Number(settings.maxAdvanceDays))
+      || Number(settings.maxAdvanceDays) < 1
+      || Number(settings.maxAdvanceDays) > 365
+    ) {
+      return { success: false, message: 'Advance booking window must be a whole number from 1 to 365 days.' };
     }
 
-    if (!Number.isInteger(Number(settings.cancellationHours)) || Number(settings.cancellationHours) < 0) {
-      return { success: false, message: 'Cancellation notice must be a whole number of 0 hours or more.' };
+    if (
+      !Number.isInteger(Number(settings.cancellationHours))
+      || Number(settings.cancellationHours) < 0
+      || Number(settings.cancellationHours) > 168
+    ) {
+      return { success: false, message: 'Cancellation notice must be a whole number from 0 to 168 hours.' };
     }
 
-    if (!Number.isInteger(Number(settings.lateArrivalMinutes)) || Number(settings.lateArrivalMinutes) < 0) {
-      return { success: false, message: 'Late arrival grace must be a whole number of 0 minutes or more.' };
+    if (
+      !Number.isInteger(Number(settings.lateArrivalMinutes))
+      || Number(settings.lateArrivalMinutes) < 0
+      || Number(settings.lateArrivalMinutes) > 240
+    ) {
+      return { success: false, message: 'Late arrival grace must be a whole number from 0 to 240 minutes.' };
     }
 
     if (
@@ -303,6 +441,25 @@ export class AdminSettingsService {
         || Number(settings.reminderHoursBefore) > 72)
     ) {
       return { success: false, message: 'Reminder time must be a whole number from 1 to 72 hours.' };
+    }
+
+    const validDayKeys = new Set([
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday'
+    ]);
+    const hourKeys = settings.businessHours.map(item => String(item.key || '').toLowerCase());
+
+    if (
+      settings.businessHours.length !== 7
+      || hourKeys.some(key => !validDayKeys.has(key))
+      || new Set(hourKeys).size !== 7
+    ) {
+      return { success: false, message: 'Business hours must contain each weekday exactly once.' };
     }
 
     for (const day of settings.businessHours.filter(item => item.enabled)) {
@@ -361,6 +518,48 @@ export class AdminSettingsService {
     return /^(?:92)?3\d{9}$/.test(digits);
   }
 
+  private normalizeSettings(next: AdminSettings): AdminSettings {
+    const storedHours = Array.isArray(next.businessHours) ? next.businessHours : [];
+
+    return {
+      ...this.clone(DEFAULT_SETTINGS),
+      ...next,
+      businessName: String(next.businessName || '').trim(),
+      businessPhone: String(next.businessPhone || '').trim(),
+      whatsappNumber: String(next.whatsappNumber || '').trim(),
+      email: String(next.email || '').trim(),
+      address: String(next.address || '').trim(),
+      city: String(next.city || '').trim(),
+      currency: String(next.currency || 'PKR').trim(),
+      timezone: String(next.timezone || 'Asia/Karachi').trim(),
+      brandSubtitle: String(next.brandSubtitle || '').trim(),
+      heroEyebrow: String(next.heroEyebrow || '').trim(),
+      heroHeadline: String(next.heroHeadline || '').trim(),
+      heroTagline: String(next.heroTagline || '').trim(),
+      bookingInterval: Number(next.bookingInterval),
+      maxAdvanceDays: Number(next.maxAdvanceDays),
+      cancellationHours: Number(next.cancellationHours),
+      lateArrivalMinutes: Number(next.lateArrivalMinutes),
+      reminderHoursBefore: Number(next.reminderHoursBefore),
+      businessHours: DEFAULT_HOURS.map((defaultDay, index) => {
+        const savedDay = storedHours.find(day => day?.key === defaultDay.key)
+          || storedHours.find(day => day?.label?.toLowerCase() === defaultDay.label.toLowerCase())
+          || (storedHours.every(day => !day?.key && !day?.label) ? storedHours[index] : undefined);
+
+        return {
+          ...defaultDay,
+          ...(savedDay || {}),
+          key: defaultDay.key,
+          label: defaultDay.label
+        };
+      })
+    };
+  }
+
+  private apiError(error: unknown, fallback: string): string {
+    return (error as any)?.error?.message || fallback;
+  }
+
   private loadSettings(): AdminSettings {
     if (typeof window === 'undefined') return this.clone(DEFAULT_SETTINGS);
 
@@ -368,24 +567,8 @@ export class AdminSettingsService {
       const raw = window.localStorage.getItem(this.storageKey);
       if (!raw) return this.clone(DEFAULT_SETTINGS);
 
-      const parsed = JSON.parse(raw) as Partial<AdminSettings>;
-      const storedHours = Array.isArray(parsed.businessHours) ? parsed.businessHours : [];
-
-      return {
-        ...this.clone(DEFAULT_SETTINGS),
-        ...parsed,
-        businessHours: DEFAULT_HOURS.map((defaultDay, index) => {
-          const savedDay = storedHours.find(day => day?.key === defaultDay.key)
-            || storedHours.find(day => day?.label?.toLowerCase() === defaultDay.label.toLowerCase())
-            || (storedHours.every(day => !day?.key && !day?.label) ? storedHours[index] : undefined);
-          return {
-            ...defaultDay,
-            ...(savedDay || {}),
-            key: defaultDay.key,
-            label: defaultDay.label
-          };
-        })
-      };
+      const parsed = JSON.parse(raw) as AdminSettings;
+      return this.normalizeSettings(parsed);
     } catch {
       return this.clone(DEFAULT_SETTINGS);
     }

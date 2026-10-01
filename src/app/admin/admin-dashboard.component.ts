@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { AdminBarberService } from './barbers/admin-barber.service';
-import { AdminBooking, AdminBookingService, BookingStatus } from './bookings/admin-booking.service';
-import { AdminCustomerService } from './customers/admin-customer.service';
+import {
+  DashboardApiService,
+  DashboardOverview
+} from '../core/dashboard-api.service';
+import { BookingStatus } from './bookings/admin-booking.service';
 import { AdminSettingsService } from './settings/admin-settings.service';
 import { AdminShellComponent } from './shared/admin-shell.component';
 
@@ -15,7 +17,7 @@ interface DashboardStat {
   icon: string;
 }
 
-interface DashboardAppointment {
+interface DashboardAppointmentView {
   time: string;
   customer: string;
   service: string;
@@ -25,26 +27,12 @@ interface DashboardAppointment {
   initials: string;
 }
 
-interface DashboardService {
-  name: string;
-  bookings: number;
-  percent: number;
-  revenue: number;
-}
-
-interface DashboardCustomer {
+interface DashboardCustomerView {
   name: string;
   phone: string;
   visits: number;
   spend: number;
   initials: string;
-}
-
-interface DashboardBarberLoad {
-  name: string;
-  value: number;
-  appointments: number;
-  available: boolean;
 }
 
 @Component({
@@ -54,8 +42,12 @@ interface DashboardBarberLoad {
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.scss'
 })
-export class AdminDashboardComponent {
+export class AdminDashboardComponent implements OnInit {
   activeStatus: 'All' | BookingStatus = 'All';
+  dashboard: DashboardOverview | null = null;
+  loading = true;
+  errorMessage = '';
+  lastRefreshedAt: Date | null = null;
 
   readonly appointmentStatuses: Array<'All' | BookingStatus> = [
     'All',
@@ -67,11 +59,13 @@ export class AdminDashboardComponent {
 
   constructor(
     private readonly router: Router,
-    public readonly bookingService: AdminBookingService,
-    public readonly customerService: AdminCustomerService,
-    public readonly barberService: AdminBarberService,
+    private readonly dashboardApi: DashboardApiService,
     public readonly settingsService: AdminSettingsService
   ) {}
+
+  ngOnInit(): void {
+    this.refreshDashboard();
+  }
 
   get greeting(): string {
     const hour = new Date().getHours();
@@ -81,31 +75,32 @@ export class AdminDashboardComponent {
   }
 
   get currentDateLabel(): string {
+    const value = this.dashboard?.today;
+    const date = value ? new Date(value + 'T12:00:00') : new Date();
+
     return new Intl.DateTimeFormat('en-GB', {
       weekday: 'long',
       day: '2-digit',
       month: 'long',
       year: 'numeric'
-    }).format(new Date());
+    }).format(date);
   }
 
   get businessName(): string {
-    return this.settingsService.current.businessName || 'Salon';
+    return this.dashboard?.businessName
+      || this.settingsService.current.businessName
+      || 'Salon';
   }
 
   get stats(): DashboardStat[] {
-    const todayBookings = this.todayBookings.filter(item => item.status !== 'Cancelled');
-    const yesterdayBookings = this.bookingsForDate(this.dateKey(-1)).filter(item => item.status !== 'Cancelled');
-    const customers = this.customerService.all;
-    const activeBarbers = this.barberService.active;
-    const availableBarbers = this.barberService.availableToday.length;
+    const summary = this.dashboard?.summary;
 
     return [
       {
         label: 'Today\'s Bookings',
-        value: String(todayBookings.length),
-        detail: this.upcomingTodayCount + ' still upcoming',
-        trend: this.changeLabel(todayBookings.length, yesterdayBookings.length),
+        value: String(summary?.todayBookings ?? 0),
+        detail: (summary?.upcomingToday ?? 0) + ' still upcoming',
+        trend: this.changeLabel(summary?.todayBookings ?? 0, summary?.yesterdayBookings ?? 0),
         icon: 'bi-calendar2-check'
       },
       {
@@ -117,71 +112,57 @@ export class AdminDashboardComponent {
       },
       {
         label: 'Customers',
-        value: String(customers.length),
-        detail: this.newCustomersThisMonth + ' new this month',
+        value: String(summary?.customers ?? 0),
+        detail: (summary?.newCustomersThisMonth ?? 0) + ' new this month',
         trend: this.returningCustomerRate + '% returning',
         icon: 'bi-people'
       },
       {
         label: 'Active Barbers',
-        value: String(activeBarbers.length),
-        detail: availableBarbers + ' available today',
+        value: String(summary?.activeBarbers ?? 0),
+        detail: (summary?.availableBarbers ?? 0) + ' available today',
         trend: this.barberAvailabilityRate + '% available',
         icon: 'bi-person-badge'
       }
     ];
   }
 
-  get appointments(): DashboardAppointment[] {
-    return this.todayBookings
-      .slice()
-      .sort((a, b) => this.timeToMinutes(a.time) - this.timeToMinutes(b.time))
-      .map(item => ({
-        time: item.time,
-        customer: item.customerName,
-        service: item.service,
-        barber: item.barber,
-        price: item.amount,
-        status: item.status,
-        initials: this.initials(item.customerName)
-      }));
+  get appointments(): DashboardAppointmentView[] {
+    return (this.dashboard?.appointments ?? []).map(item => ({
+      time: item.time,
+      customer: item.customer,
+      service: item.service,
+      barber: item.barber,
+      price: Number(item.price) || 0,
+      status: item.status,
+      initials: this.initials(item.customer)
+    }));
   }
 
-  get filteredAppointments(): DashboardAppointment[] {
+  get filteredAppointments(): DashboardAppointmentView[] {
     return this.activeStatus === 'All'
       ? this.appointments
       : this.appointments.filter(item => item.status === this.activeStatus);
   }
 
   get completedRevenueToday(): number {
-    return this.todayBookings
-      .filter(item => item.status === 'Completed')
-      .reduce((sum, item) => sum + item.amount, 0);
+    return Number(this.dashboard?.revenue.completedToday) || 0;
   }
 
   get completedRevenueYesterday(): number {
-    return this.bookingsForDate(this.dateKey(-1))
-      .filter(item => item.status === 'Completed')
-      .reduce((sum, item) => sum + item.amount, 0);
+    return Number(this.dashboard?.revenue.completedYesterday) || 0;
   }
 
   get todayBookedValue(): number {
-    return this.todayBookings
-      .filter(item => item.status !== 'Cancelled')
-      .reduce((sum, item) => sum + item.amount, 0);
+    return Number(this.dashboard?.revenue.bookedToday) || 0;
   }
 
   get todayOpenValue(): number {
-    return this.todayBookings
-      .filter(item => item.status === 'Confirmed' || item.status === 'Pending')
-      .reduce((sum, item) => sum + item.amount, 0);
+    return Number(this.dashboard?.revenue.openToday) || 0;
   }
 
   get averageBookingToday(): number {
-    const activeBookings = this.todayBookings.filter(item => item.status !== 'Cancelled');
-    return activeBookings.length
-      ? Math.round(this.todayBookedValue / activeBookings.length)
-      : 0;
+    return Math.round(Number(this.dashboard?.revenue.averageBookingToday) || 0);
   }
 
   get revenueProgress(): number {
@@ -193,30 +174,13 @@ export class AdminDashboardComponent {
     return this.changeLabel(this.completedRevenueToday, this.completedRevenueYesterday) + ' vs yesterday';
   }
 
-  get barberLoad(): DashboardBarberLoad[] {
-    const today = this.dateKey(0);
-    const hours = this.settingsService.hoursForDate(new Date(today + 'T12:00:00'));
-
-    return this.barberService.active.map(barber => {
-      const available = this.barberService.isAvailableOnDate(barber.id, today);
-      const barberHours = this.barberService.workingWindowFor(barber.id);
-      const capacity = hours && barberHours
-        ? Math.max(0, Math.min(hours.end, barberHours.end) - Math.max(hours.start, barberHours.start))
-        : 0;
-      const bookings = this.todayBookings.filter(item =>
-        item.status !== 'Cancelled' && item.barber === barber.name
-      );
-      const bookedMinutes = bookings.reduce((sum, item) => sum + item.duration, 0);
-
-      return {
-        name: barber.name,
-        appointments: bookings.length,
-        available,
-        value: available && capacity
-          ? Math.min(100, Math.round((bookedMinutes / capacity) * 100))
-          : 0
-      };
-    });
+  get barberLoad() {
+    return (this.dashboard?.barberLoad ?? []).map(item => ({
+      name: item.name,
+      value: Number(item.percent) || 0,
+      appointments: Number(item.appointments) || 0,
+      available: item.available
+    }));
   }
 
   get overallBarberLoad(): number {
@@ -228,92 +192,65 @@ export class AdminDashboardComponent {
     );
   }
 
-  get topServices(): DashboardService[] {
-    const start = this.dateKey(-29);
-    const end = this.dateKey(0);
-    const groups = new Map<string, AdminBooking[]>();
-
-    this.bookingService.all
-      .filter(item =>
-        item.status !== 'Cancelled'
-        && item.date >= start
-        && item.date <= end
-      )
-      .forEach(item => {
-        const list = groups.get(item.service) || [];
-        list.push(item);
-        groups.set(item.service, list);
-      });
-
-    const rows = Array.from(groups.entries()).map(([name, bookings]) => ({
-      name,
-      bookings: bookings.length,
-      percent: 0,
-      revenue: bookings
-        .filter(item => item.status === 'Completed')
-        .reduce((sum, item) => sum + item.amount, 0)
+  get topServices() {
+    return (this.dashboard?.topServices ?? []).map(item => ({
+      ...item,
+      bookings: Number(item.bookings) || 0,
+      percent: Number(item.percent) || 0,
+      revenue: Number(item.revenue) || 0
     }));
-
-    const maxBookings = Math.max(1, ...rows.map(item => item.bookings));
-
-    return rows
-      .map(item => ({
-        ...item,
-        percent: Math.round((item.bookings / maxBookings) * 100)
-      }))
-      .sort((a, b) => b.bookings - a.bookings || b.revenue - a.revenue)
-      .slice(0, 4);
   }
 
-  get recentCustomers(): DashboardCustomer[] {
-    return this.customerService.all
-      .slice(0, 4)
-      .map(customer => ({
-        name: customer.name,
-        phone: customer.phone,
-        visits: customer.completedVisits,
-        spend: customer.totalSpend,
-        initials: this.initials(customer.name)
-      }));
-  }
-
-  get upcomingTodayCount(): number {
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-    return this.todayBookings.filter(item =>
-      (item.status === 'Confirmed' || item.status === 'Pending')
-      && this.timeToMinutes(item.time) >= nowMinutes
-    ).length;
-  }
-
-  get newCustomersThisMonth(): number {
-    const now = new Date();
-    const monthStart = [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, '0'),
-      '01'
-    ].join('-');
-    const today = this.dateKey(0);
-
-    return this.customerService.all.filter(customer =>
-      customer.firstBookingDate >= monthStart
-      && customer.firstBookingDate <= today
-    ).length;
+  get recentCustomers(): DashboardCustomerView[] {
+    return (this.dashboard?.recentCustomers ?? []).map(customer => ({
+      name: customer.name,
+      phone: customer.phone,
+      visits: Number(customer.visits) || 0,
+      spend: Number(customer.spend) || 0,
+      initials: this.initials(customer.name)
+    }));
   }
 
   get returningCustomerRate(): number {
-    const customers = this.customerService.all;
-    if (!customers.length) return 0;
-
-    const returning = customers.filter(item => item.customerType === 'Returning').length;
-    return Math.round((returning / customers.length) * 100);
+    const summary = this.dashboard?.summary;
+    if (!summary?.customers) return 0;
+    return Math.round((summary.returningCustomers / summary.customers) * 100);
   }
 
   get barberAvailabilityRate(): number {
-    const active = this.barberService.active.length;
-    if (!active) return 0;
-    return Math.round((this.barberService.availableToday.length / active) * 100);
+    const summary = this.dashboard?.summary;
+    if (!summary?.activeBarbers) return 0;
+    return Math.round((summary.availableBarbers / summary.activeBarbers) * 100);
+  }
+
+  get lastRefreshedLabel(): string {
+    if (!this.lastRefreshedAt) return '';
+
+    return new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(this.lastRefreshedAt);
+  }
+
+  refreshDashboard(): void {
+    if (this.loading && this.dashboard) return;
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.dashboardApi.getOverview().subscribe({
+      next: response => {
+        this.dashboard = response;
+        this.loading = false;
+        this.lastRefreshedAt = new Date();
+      },
+      error: error => {
+        this.loading = false;
+        this.errorMessage = (error as any)?.error?.detail
+          || (error as any)?.error?.message
+          || 'Could not load dashboard data. Please try again.';
+      }
+    });
   }
 
   setStatus(status: 'All' | BookingStatus): void {
@@ -332,14 +269,6 @@ export class AdminDashboardComponent {
     void this.router.navigateByUrl('/admin/customers');
   }
 
-  private get todayBookings(): AdminBooking[] {
-    return this.bookingsForDate(this.dateKey(0));
-  }
-
-  private bookingsForDate(date: string): AdminBooking[] {
-    return this.bookingService.all.filter(item => item.date === date);
-  }
-
   private changeLabel(current: number, previous: number): string {
     if (!previous) return current ? 'New' : '0%';
 
@@ -356,31 +285,5 @@ export class AdminDashboardComponent {
     if (!words.length) return 'C';
     if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-  }
-
-  private dateKey(offset: number): string {
-    const date = new Date();
-    date.setHours(12, 0, 0, 0);
-    date.setDate(date.getDate() + offset);
-
-    return [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, '0'),
-      String(date.getDate()).padStart(2, '0')
-    ].join('-');
-  }
-
-  private timeToMinutes(time: string): number {
-    const match = time.match(/^(\d{1,2}):(\d{2})\s(AM|PM)$/i);
-    if (!match) return 0;
-
-    let hour = Number(match[1]);
-    const minute = Number(match[2]);
-    const period = match[3].toUpperCase();
-
-    if (period === 'PM' && hour !== 12) hour += 12;
-    if (period === 'AM' && hour === 12) hour = 0;
-
-    return hour * 60 + minute;
   }
 }

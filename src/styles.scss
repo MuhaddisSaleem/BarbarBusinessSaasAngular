@@ -151,3 +151,307 @@ body {
 .booking-page img[alt='Hair Wash'] { content: url('/assets/images/services/hair-wash.webp'); }
 .booking-page img[alt='Hair Coloring'] { content: url('/assets/images/services/hair-color.webp'); }
 .booking-page img[alt='6 Step Face Massage'] { content: url('/assets/images/services/face-massage.webp'); }
+
+
+/*
+ * Admin desktop readability pass
+ * Keep the compact mobile/tablet treatment unchanged, but make the entire
+ * desktop management workspace comfortably readable at normal laptop zoom.
+ */
+@media (min-width: 992px) {
+  app-admin-shell .admin-shell {
+    font-size: 14px;
+  }
+
+  /* Sidebar hierarchy */
+  app-admin-shell .admin-sidebar {
+    width: 268px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  app-admin-shell .admin-main {
+    margin-left: 268px;
+  }
+
+  app-admin-shell .sidebar-brand strong {
+    font-size: 16px !important;
+  }
+
+  app-admin-shell .sidebar-brand small {
+    font-size: 10px !important;
+  }
+
+  app-admin-shell .brand-mark,
+  app-admin-shell .shop-avatar,
+  app-admin-shell .profile-avatar {
+    font-size: 11px !important;
+  }
+
+  app-admin-shell .nav-label {
+    font-size: 10px !important;
+  }
+
+  app-admin-shell .nav-item {
+    min-height: 48px;
+    font-size: 15px !important;
+  }
+
+  app-admin-shell .nav-icon {
+    font-size: 17px !important;
+  }
+
+  app-admin-shell .nav-count {
+    min-width: 25px;
+    height: 22px;
+    font-size: 10px !important;
+  }
+
+  app-admin-shell .sidebar-shop strong {
+    font-size: 13px !important;
+  }
+
+  app-admin-shell .sidebar-shop small {
+    font-size: 11px !important;
+  }
+
+  /* Top bar */
+  app-admin-shell .admin-topbar {
+    min-height: 82px;
+  }
+
+  app-admin-shell .topbar-title h1 {
+    font-size: 21px !important;
+  }
+
+  app-admin-shell .topbar-title .eyebrow {
+    font-size: 10px !important;
+  }
+
+  app-admin-shell .booking-site-link {
+    min-height: 39px;
+    font-size: 12px !important;
+  }
+
+  app-admin-shell .admin-profile strong,
+  app-admin-shell .profile-dropdown strong {
+    font-size: 12px !important;
+  }
+
+  app-admin-shell .admin-profile small,
+  app-admin-shell .profile-dropdown small {
+    font-size: 10.5px !important;
+  }
+
+  app-admin-shell .notification-panel-head strong {
+    font-size: 13px !important;
+  }
+
+  app-admin-shell .notification-panel-head small {
+    font-size: 10.5px !important;
+  }
+
+  app-admin-shell .notification-preview-title strong {
+    font-size: 12px !important;
+  }
+
+  app-admin-shell .notification-preview-copy > span:nth-child(2) {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+  }
+
+  app-admin-shell .notification-preview-copy > small,
+  app-admin-shell .mark-all-link {
+    font-size: 10px !important;
+  }
+
+  app-admin-shell .view-all-notifications {
+    font-size: 11.5px !important;
+  }
+
+  /* Page-level hierarchy shared by every admin route */
+  app-admin-shell .admin-main h2 {
+    font-size: 32px !important;
+    line-height: 1.15;
+  }
+
+  app-admin-shell .admin-main h3 {
+    font-size: 17px !important;
+    line-height: 1.25;
+  }
+
+  app-admin-shell .admin-main .eyebrow {
+    font-size: 10px !important;
+  }
+
+  app-admin-shell .admin-main p {
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+  }
+
+  app-admin-shell .admin-main small {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+  }
+
+  app-admin-shell .admin-main span {
+    font-size: 11.5px !important;
+    line-height: 1.4;
+  }
+
+  /* Controls should be easy to read and click without changing the workflow. */
+  app-admin-shell .admin-main button,
+  app-admin-shell .admin-main input,
+  app-admin-shell .admin-main select,
+  app-admin-shell .admin-main textarea {
+    font-size: 12px !important;
+  }
+
+  app-admin-shell .admin-main input,
+  app-admin-shell .admin-main select {
+    min-height: 42px;
+  }
+
+  app-admin-shell .admin-main textarea {
+    line-height: 1.5;
+  }
+
+  /* Tables are the most information-dense part of the admin. */
+  app-admin-shell .admin-main table th {
+    font-size: 11px !important;
+    line-height: 1.35;
+  }
+
+  app-admin-shell .admin-main table td {
+    font-size: 12px !important;
+    line-height: 1.45;
+  }
+
+  app-admin-shell .admin-main table td strong {
+    font-size: 12.5px !important;
+    line-height: 1.4;
+  }
+
+  app-admin-shell .admin-main table td small {
+    font-size: 10.5px !important;
+  }
+
+  /* Keep KPI numbers visually dominant after lifting the surrounding copy. */
+  app-admin-shell .admin-main .stat-value {
+    font-size: 30px !important;
+  }
+
+  app-admin-shell .admin-main .mini-stat > div > strong,
+  app-admin-shell .admin-main .schedule-stats .stat-card > div > strong,
+  app-admin-shell .admin-main .report-stats .stat-card > div > strong {
+    font-size: 22px !important;
+  }
+
+  app-admin-shell .admin-main .feedback-toast,
+  app-admin-shell .admin-main .dashboard-alert,
+  app-admin-shell .admin-main .report-alert,
+  app-admin-shell .admin-main .notification-error,
+  app-admin-shell .admin-main .integration-note,
+  app-admin-shell .admin-main .settings-state-note {
+    font-size: 11.5px !important;
+    line-height: 1.5 !important;
+  }
+
+  app-admin-shell .admin-main .status-pill,
+  app-admin-shell .admin-main .type-pill,
+  app-admin-shell .admin-main .barber-chip,
+  app-admin-shell .admin-main .feature-badge,
+  app-admin-shell .admin-main .trend,
+  app-admin-shell .admin-main .table-count {
+    font-size: 10.5px !important;
+  }
+}
+
+
+/* Booking Salon/Home responsive shell */
+@media (max-width: 767.98px) {
+  app-booking .service-section .salon-service-choice {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  app-booking .service-section .salon-choice-action-stage,
+  app-booking .service-section .salon-choice-action-panel,
+  app-booking .service-section .select-salon-service-btn,
+  app-booking .service-section .home-service-selector,
+  app-booking .service-section .home-selector-copy,
+  app-booking .service-section .home-selector-actions,
+  app-booking .service-section .home-address-prompt,
+  app-booking .service-section .home-selector-action {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  app-booking .service-section .select-salon-service-btn {
+    min-height: 64px;
+    padding: 12px 15px;
+  }
+
+  app-booking .service-section .select-salon-service-btn > span {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  app-booking .service-section .select-salon-service-btn small,
+  app-booking .service-section .home-address-copy small {
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  app-booking .service-section .home-service-selector {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 17px;
+  }
+
+  app-booking .service-section .home-selector-actions {
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 420px) {
+  app-booking .service-section .select-salon-service-btn {
+    min-height: 58px;
+    padding: 10px 13px;
+  }
+
+  app-booking .service-section .home-service-selector {
+    min-height: 0;
+    padding: 15px;
+    border-radius: 11px;
+  }
+
+  app-booking .service-section .home-service-photo {
+    left: auto;
+    right: 0;
+    width: 78%;
+    opacity: .24;
+  }
+
+  app-booking .service-section .home-service-features {
+    gap: 6px;
+    margin-top: 13px;
+  }
+
+  app-booking .service-section .home-service-features span {
+    min-height: 28px;
+    padding: 5px 8px;
+  }
+}
+
+
+/* Booking selector active-stage heights */
+@media (max-width:720px) {
+  app-booking .salon-choice-action-stage.salon-active { min-height:154px; }
+  app-booking .salon-choice-action-stage.home-active { min-height:64px; }
+}
+
+@media (max-width:575.98px) {
+  app-booking .salon-choice-action-stage.home-active { min-height:60px; }
+}

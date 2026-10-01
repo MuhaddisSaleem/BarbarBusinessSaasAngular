@@ -5,6 +5,7 @@ import { AdminNotification, NotificationService } from '../notifications/notific
 import { AdminBookingService } from '../bookings/admin-booking.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 import { BrandingMediaService } from '../settings/branding-media.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-admin-shell',
@@ -22,14 +23,9 @@ export class AdminShellComponent {
   notificationMenuOpen = false;
 
   get currentUser(): { name: string; role: string; initials: string } {
-    const stored = this.readStoredAdminUser();
-    const name = String(
-      stored?.['name']
-      || stored?.['fullName']
-      || stored?.['displayName']
-      || 'Administrator'
-    ).trim();
-    const role = String(stored?.['role'] || 'Administrator').trim();
+    const user = this.authService.currentUser;
+    const name = user?.fullName?.trim() || 'Administrator';
+    const role = user?.role?.trim() || 'Administrator';
 
     return {
       name,
@@ -43,7 +39,8 @@ export class AdminShellComponent {
     public readonly notificationService: NotificationService,
     public readonly bookingService: AdminBookingService,
     public readonly settingsService: AdminSettingsService,
-    public readonly brandingMedia: BrandingMediaService
+    public readonly brandingMedia: BrandingMediaService,
+    private readonly authService: AuthService
   ) {}
 
   get businessName(): string {
@@ -64,26 +61,6 @@ export class AdminShellComponent {
     if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
 
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-  }
-
-  private readStoredAdminUser(): Record<string, unknown> | null {
-    if (typeof window === 'undefined') return null;
-
-    for (const raw of [
-      window.localStorage.getItem('adminUser'),
-      window.sessionStorage.getItem('adminUser')
-    ]) {
-      if (!raw) continue;
-
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') return parsed as Record<string, unknown>;
-      } catch {
-        // Ignore malformed legacy user data.
-      }
-    }
-
-    return null;
   }
 
   private initials(name: string): string {
@@ -150,11 +127,8 @@ export class AdminShellComponent {
 
   logout(): void {
     this.profileMenuOpen = false;
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    sessionStorage.removeItem('adminToken');
-    sessionStorage.removeItem('adminUser');
-    void this.router.navigateByUrl('/');
+    this.authService.logout();
+    void this.router.navigateByUrl('/admin/login');
   }
 
   @HostListener('document:click')

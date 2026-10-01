@@ -435,3 +435,66 @@ button,input,select,textarea { font:inherit; }
     height:160px;
   }
 }
+
+
+.settings-state-note {
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  margin:-5px 0 14px;
+  padding:10px 12px;
+  border:1px solid rgba(89,211,143,.16);
+  border-radius:8px;
+  background:rgba(89,211,143,.035);
+  color:#819096;
+  font-size:8px;
+  line-height:1.45;
+
+  i { color:#67d49a; font-size:11px; }
+}
+
+.settings-grid.settings-busy {
+  opacity:.72;
+  pointer-events:none;
+}
+
+.save-settings-btn:disabled,
+.reset-settings-btn:disabled,
+.cancel-btn:disabled,
+.confirm-reset-btn:disabled {
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+.deferred-feature {
+  border-style:dashed;
+}
+
+.feature-badge {
+  flex:0 0 auto;
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+  min-height:24px;
+  margin:0 !important;
+  padding:0 8px;
+  border:1px solid #344148;
+  border-radius:999px;
+  background:#141d21;
+  color:#88969b !important;
+  font-size:7px !important;
+  font-weight:800;
+  white-space:nowrap;
+
+  &.paused {
+    border-color:rgba(242,191,90,.28);
+    background:rgba(242,191,90,.06);
+    color:$gold-soft !important;
+  }
+}
+
+.spin { animation:settingsSpin .8s linear infinite; }
+
+@keyframes settingsSpin {
+  to { transform:rotate(360deg); }
+}

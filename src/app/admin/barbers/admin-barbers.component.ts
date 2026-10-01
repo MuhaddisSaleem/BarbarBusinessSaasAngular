@@ -59,10 +59,6 @@ export class AdminBarbersComponent {
     'Vacation'
   ];
 
-  get specialtyOptions(): string[] {
-    return this.serviceService.active.map(service => service.name);
-  }
-
   constructor(
     public readonly barberService: AdminBarberService,
     public readonly serviceService: AdminServiceService,
@@ -125,11 +121,6 @@ export class AdminBarbersComponent {
       return;
     }
 
-    if (!this.newBarber.specialties.length) {
-      this.showFeedback(false, 'Select at least one specialty.');
-      return;
-    }
-
     if (!this.newBarber.image) {
       this.showFeedback(false, 'Upload a barber photo before adding the barber.');
       return;
@@ -144,24 +135,26 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const result = this.barberService.addBarber({
+    const payload = {
       name: this.newBarber.name,
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
       experience: this.newBarber.experience || 'New',
-      specialties: this.newBarber.specialties,
+      specialties: this.serviceService.all.map(service => service.name),
       workingHours: this.newBarber.workingHours.trim(),
       image: this.newBarber.image || 'assets/images/barber-placeholder.svg',
       rating: 5,
-      availability: 'Available Today',
-      accountStatus: 'Active',
+      availability: 'Available Today' as const,
+      accountStatus: 'Active' as const,
       note: ''
-    });
+    };
 
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.addModalOpen = false;
+    };
 
-    if (result.success) {
-      this.addModalOpen = false;
-    }
+    if (this.barberService.addBarberThroughApi(payload, handle)) return;
+    handle(this.barberService.addBarber(payload));
   }
 
   onPhoneInput(value: string): void {
@@ -299,7 +292,7 @@ export class AdminBarbersComponent {
       name: barber.name,
       phone: barber.phone.replace(/\D/g, '').replace(/^92/, '').slice(-10),
       experience: this.experienceNumber(barber.experience),
-      specialties: [...barber.specialties],
+      specialties: this.serviceService.all.map(service => service.name),
       workingHours: barber.workingHours,
       image: barber.image
     };
@@ -393,11 +386,6 @@ export class AdminBarbersComponent {
       return;
     }
 
-    if (!this.editBarber.specialties.length) {
-      this.showFeedback(false, 'Select at least one specialty.');
-      return;
-    }
-
     if (!this.editBarber.image) {
       this.showFeedback(false, 'A barber profile photo is required.');
       return;
@@ -425,24 +413,6 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const specialtySet = new Set(this.editBarber.specialties.map(item => item.trim().toLowerCase()));
-    const incompatibleBooking = upcomingBookings.find(booking =>
-      booking.service
-        .split(',')
-        .map(item => item.trim().toLowerCase())
-        .filter(Boolean)
-        .filter(service => !(booking.specialService?.trim() && service === 'custom home service'))
-        .some(service => !specialtySet.has(service))
-    );
-
-    if (incompatibleBooking) {
-      this.showFeedback(
-        false,
-        'This barber has an upcoming booking for "' + incompatibleBooking.service + '". Keep those specialties or reassign the booking first.'
-      );
-      return;
-    }
-
     const outsideNewShift = upcomingBookings.find(booking =>
       !this.barberService.workingHoursCover(
         this.editBarber.workingHours,
@@ -459,20 +429,22 @@ export class AdminBarbersComponent {
       return;
     }
 
-    const result = this.barberService.updateBarber(this.editCandidate.id, {
+    const changes = {
       name: this.editBarber.name,
       phone: '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3),
       experience: this.editBarber.experience,
-      specialties: this.editBarber.specialties,
+      specialties: this.serviceService.all.map(service => service.name),
       workingHours: this.editBarber.workingHours,
       image: this.editBarber.image
-    });
+    };
 
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeEditModal();
+    };
 
-    if (result.success) {
-      this.closeEditModal();
-    }
+    if (this.barberService.updateBarberThroughApi(this.editCandidate.id, changes, handle)) return;
+    handle(this.barberService.updateBarber(this.editCandidate.id, changes));
   }
 
   onAvailabilityChange(barber: AdminBarber, availability: BarberAvailability): void {
@@ -490,24 +462,32 @@ export class AdminBarbersComponent {
   }
 
   markUnavailableToday(barber: AdminBarber): void {
-    const todayBookings = this.activeUpcomingBookingsFor(barber.name)
-      .filter(booking => booking.date === this.todayKey);
+    if (!this.barberService.apiEnabled) {
+      const todayBookings = this.activeUpcomingBookingsFor(barber.name)
+        .filter(booking => booking.date === this.todayKey);
 
-    if (todayBookings.length) {
-      this.showFeedback(
-        false,
-        barber.name + ' has ' + todayBookings.length + ' active booking' + (todayBookings.length === 1 ? '' : 's') + ' today. Reassign or cancel them first.'
-      );
-      return;
+      if (todayBookings.length) {
+        this.showFeedback(
+          false,
+          barber.name + ' has ' + todayBookings.length + ' active booking' + (todayBookings.length === 1 ? '' : 's') + ' today. Reassign or cancel them first.'
+        );
+        return;
+      }
     }
 
-    const result = this.barberService.updateAvailability(barber.id, 'Not Available Today');
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.barberService.updateAvailabilityThroughApi(barber.id, 'Not Available Today', handle)) return;
+    handle(this.barberService.updateAvailability(barber.id, 'Not Available Today'));
   }
 
   markAvailableToday(barber: AdminBarber): void {
-    const result = this.barberService.updateAvailability(barber.id, 'Available Today');
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.barberService.updateAvailabilityThroughApi(barber.id, 'Available Today', handle)) return;
+    handle(this.barberService.updateAvailability(barber.id, 'Available Today'));
   }
 
   openLeaveModal(barber: AdminBarber, type: 'On Leave' | 'Vacation'): void {
@@ -529,37 +509,47 @@ export class AdminBarbersComponent {
   saveLeave(): void {
     if (!this.selectedBarber) return;
 
-    const overlappingBookings = this.activeUpcomingBookingsFor(this.selectedBarber.name)
-      .filter(booking =>
-        booking.date >= this.leaveForm.from
-        && booking.date <= this.leaveForm.to
-      );
+    if (!this.barberService.apiEnabled) {
+      const overlappingBookings = this.activeUpcomingBookingsFor(this.selectedBarber.name)
+        .filter(booking =>
+          booking.date >= this.leaveForm.from
+          && booking.date <= this.leaveForm.to
+        );
 
-    if (overlappingBookings.length) {
-      this.showFeedback(
-        false,
-        this.selectedBarber.name + ' has ' + overlappingBookings.length + ' active booking' + (overlappingBookings.length === 1 ? '' : 's') + ' during this period. Reassign or cancel them first.'
-      );
-      return;
+      if (overlappingBookings.length) {
+        this.showFeedback(
+          false,
+          this.selectedBarber.name + ' has ' + overlappingBookings.length + ' active booking' + (overlappingBookings.length === 1 ? '' : 's') + ' during this period. Reassign or cancel them first.'
+        );
+        return;
+      }
     }
 
-    const result = this.barberService.updateLeave(
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeLeaveModal();
+    };
+
+    if (this.barberService.updateLeaveThroughApi(
+      this.selectedBarber.id,
+      this.leaveForm.type,
+      this.leaveForm.from,
+      this.leaveForm.to,
+      this.leaveForm.note,
+      handle
+    )) return;
+
+    handle(this.barberService.updateLeave(
       this.selectedBarber.id,
       this.leaveForm.type,
       this.leaveForm.from,
       this.leaveForm.to,
       this.leaveForm.note
-    );
-
-    this.showFeedback(result.success, result.message);
-
-    if (result.success) {
-      this.closeLeaveModal();
-    }
+    ));
   }
 
   toggleAccountStatus(barber: AdminBarber): void {
-    if (barber.accountStatus === 'Active') {
+    if (!this.barberService.apiEnabled && barber.accountStatus === 'Active') {
       const upcoming = this.activeUpcomingBookingsFor(barber.name);
       if (upcoming.length) {
         this.showFeedback(
@@ -570,19 +560,24 @@ export class AdminBarbersComponent {
       }
     }
 
-    const result = this.barberService.toggleAccountStatus(barber.id);
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.barberService.toggleAccountStatusThroughApi(barber.id, handle)) return;
+    handle(this.barberService.toggleAccountStatus(barber.id));
   }
 
   requestDelete(barber: AdminBarber): void {
-    const upcomingCount = this.activeUpcomingBookingsFor(barber.name).length;
+    if (!this.barberService.apiEnabled) {
+      const upcomingCount = this.activeUpcomingBookingsFor(barber.name).length;
 
-    if (upcomingCount) {
-      this.showFeedback(
-        false,
-        barber.name + ' has ' + upcomingCount + ' upcoming booking' + (upcomingCount === 1 ? '' : 's') + '. Reassign or cancel them before deleting this barber.'
-      );
-      return;
+      if (upcomingCount) {
+        this.showFeedback(
+          false,
+          barber.name + ' has ' + upcomingCount + ' upcoming booking' + (upcomingCount === 1 ? '' : 's') + '. Reassign or cancel them before deleting this barber.'
+        );
+        return;
+      }
     }
 
     this.deleteCandidate = barber;
@@ -597,12 +592,13 @@ export class AdminBarbersComponent {
   confirmDelete(): void {
     if (!this.deleteCandidate) return;
 
-    const result = this.barberService.deleteBarber(this.deleteCandidate.id);
-    this.showFeedback(result.success, result.message);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) this.closeDeleteModal();
+    };
 
-    if (result.success) {
-      this.closeDeleteModal();
-    }
+    if (this.barberService.deleteBarberThroughApi(this.deleteCandidate.id, handle)) return;
+    handle(this.barberService.deleteBarber(this.deleteCandidate.id));
   }
 
   resetFilters(): void {

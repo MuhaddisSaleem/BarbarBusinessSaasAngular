@@ -7,31 +7,38 @@
         <p>Track booking activity, completed revenue, services and barber performance.</p>
       </div>
 
-      <button type="button" class="export-btn" (click)="exportCsv()" [disabled]="!filteredBookings.length">
-        <i class="bi bi-download"></i>
-        Export CSV
-      </button>
+      <div class="report-heading-actions d-flex flex-wrap gap-2">
+        <button type="button" class="refresh-report-btn" (click)="loadReport()" [disabled]="loading">
+          <i class="bi bi-arrow-clockwise" [class.spin]="loading"></i>
+          {{ loading ? 'Refreshing...' : 'Refresh' }}
+        </button>
+
+        <button type="button" class="export-btn" (click)="exportCsv()" [disabled]="loading || !filteredBookings.length">
+          <i class="bi bi-download"></i>
+          Export CSV
+        </button>
+      </div>
     </section>
 
     <section class="report-filters row g-2 g-lg-3 align-items-end">
       <div class="col-6 col-lg-auto">
         <label>
           <span>From</span>
-          <input type="date" [(ngModel)]="dateFrom" [max]="dateTo || undefined">
+          <input type="date" [(ngModel)]="dateFrom" (ngModelChange)="filtersChanged()" [max]="dateTo || undefined">
         </label>
       </div>
 
       <div class="col-6 col-lg-auto">
         <label>
           <span>To</span>
-          <input type="date" [(ngModel)]="dateTo" [min]="dateFrom || undefined">
+          <input type="date" [(ngModel)]="dateTo" (ngModelChange)="filtersChanged()" [min]="dateFrom || undefined">
         </label>
       </div>
 
       <div class="col-6 col-lg-auto">
         <label>
           <span>Barber</span>
-          <select [(ngModel)]="selectedBarber">
+          <select [(ngModel)]="selectedBarber" (ngModelChange)="filtersChanged()">
             <option value="All">All Barbers</option>
             <option *ngFor="let barber of filterBarbers" [value]="barber">{{ barber }}</option>
           </select>
@@ -41,7 +48,7 @@
       <div class="col-6 col-lg-auto">
         <label>
           <span>Status</span>
-          <select [(ngModel)]="selectedStatus">
+          <select [(ngModel)]="selectedStatus" (ngModelChange)="filtersChanged()">
             <option value="All">All Statuses</option>
             <option value="Pending">Pending</option>
             <option value="Confirmed">Confirmed</option>
@@ -59,6 +66,24 @@
       </div>
     </section>
 
+    <div class="report-alert" *ngIf="errorMessage">
+      <i class="bi bi-exclamation-triangle"></i>
+      <span>{{ errorMessage }}</span>
+      <button type="button" (click)="loadReport()">Retry</button>
+    </div>
+
+    <div class="report-sync-note" *ngIf="lastRefreshedAt && !errorMessage">
+      <i class="bi bi-database-check"></i>
+      Live SQL data · updated {{ lastRefreshedLabel }}
+    </div>
+
+    <div class="report-loading" *ngIf="loading && !report">
+      <i class="bi bi-arrow-clockwise spin"></i>
+      <strong>Loading report...</strong>
+      <span>Calculating booking and revenue performance from SQL.</span>
+    </div>
+
+    <ng-container *ngIf="report">
     <section class="row g-3 report-stats">
       <div class="col-6 col-xl-3">
         <article class="stat-card">
@@ -228,5 +253,6 @@
         </div>
       </ng-template>
     </section>
+    </ng-container>
   </div>
 </app-admin-shell>

@@ -370,20 +370,6 @@
           <input type="text" [(ngModel)]="newBarber.workingHours" placeholder="9 AM - 9 PM, or blank for salon hours">
         </label>
 
-        <label class="full">
-          <span>Specialties *</span>
-          <div class="specialty-picker">
-            <label class="specialty-option" *ngFor="let specialty of specialtyOptions">
-              <input
-                type="checkbox"
-                [checked]="newBarber.specialties.includes(specialty)"
-                (change)="$any($event.target).checked
-                  ? newBarber.specialties.push(specialty)
-                  : newBarber.specialties.splice(newBarber.specialties.indexOf(specialty), 1)">
-              <span>{{ specialty }}</span>
-            </label>
-          </div>
-        </label>
       </div>
 
       <button type="button"
@@ -417,7 +403,7 @@
           [alt]="editBarber.name || editCandidate.name">
         <div>
           <strong>{{ editBarber.name || editCandidate.name }}</strong>
-          <small>Update barber details, photo and assigned services below.</small>
+          <small>Update barber details and profile photo below. Services are assigned automatically.</small>
         </div>
       </div>
 
@@ -493,20 +479,6 @@
           <input type="text" [(ngModel)]="editBarber.workingHours" placeholder="9 AM - 9 PM, or blank for salon hours">
         </label>
 
-        <label class="full">
-          <span>Services / Specialties *</span>
-          <div class="specialty-picker">
-            <label class="specialty-option" *ngFor="let specialty of specialtyOptions">
-              <input
-                type="checkbox"
-                [checked]="editBarber.specialties.includes(specialty)"
-                (change)="$any($event.target).checked
-                  ? editBarber.specialties.push(specialty)
-                  : editBarber.specialties.splice(editBarber.specialties.indexOf(specialty), 1)">
-              <span>{{ specialty }}</span>
-            </label>
-          </div>
-        </label>
       </div>
 
       <button type="button"

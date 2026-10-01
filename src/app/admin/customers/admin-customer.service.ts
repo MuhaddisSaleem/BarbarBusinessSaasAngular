@@ -1,5 +1,11 @@
 import { Injectable } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { AdminBooking, AdminBookingService } from '../bookings/admin-booking.service';
+import {
+  CustomerApiService,
+  CustomerMutationResult,
+  CustomerProfileUpdate
+} from '../../core/customer-api.service';
 
 export type CustomerType = 'New' | 'Returning';
 
@@ -7,6 +13,7 @@ export interface AdminCustomer {
   id: string;
   name: string;
   phone: string;
+  email: string;
   bookingCount: number;
   completedVisits: number;
   cancelledCount: number;
@@ -17,138 +24,132 @@ export interface AdminCustomer {
   firstBookingDate: string;
   lastBookingDate: string;
   notes: string;
+  bookings: AdminBooking[];
 }
 
 @Injectable({ providedIn: 'root' })
 export class AdminCustomerService {
-  private readonly noteStorageKey = 'royal-barbers.customer-notes.v1';
+  private customers: AdminCustomer[] = [];
 
-  constructor(private readonly bookingService: AdminBookingService) {}
+  loading = false;
+  errorMessage = '';
+
+  constructor(
+    private readonly api: CustomerApiService,
+    private readonly bookingService: AdminBookingService
+  ) {
+    this.refresh();
+
+    // Booking changes can change customer counts, spend, next appointment and history.
+    this.bookingService.changes$.subscribe(() => this.refresh());
+  }
 
   get all(): AdminCustomer[] {
-    const groups = new Map<string, AdminBooking[]>();
-
-    for (const booking of this.bookingService.all) {
-      const key = this.customerKey(booking);
-      const current = groups.get(key) || [];
-      current.push(booking);
-      groups.set(key, current);
-    }
-
-    const notes = this.loadNotes();
-
-    return Array.from(groups.entries())
-      .map(([phoneKey, bookings]) => this.buildCustomer(phoneKey, bookings, notes[phoneKey] || ''))
-      .sort((a, b) => b.lastBookingDate.localeCompare(a.lastBookingDate));
+    return this.customers;
   }
 
   getById(id: string): AdminCustomer | undefined {
-    return this.all.find(item => item.id === id);
+    return this.customers.find(item => item.id === id);
   }
 
   bookingsForCustomer(customer: AdminCustomer): AdminBooking[] {
-    return this.bookingService.all
-      .filter(item => this.customerKey(item) === customer.id)
+    return [...customer.bookings]
       .sort((a, b) =>
         b.date.localeCompare(a.date) || this.timeToMinutes(b.time) - this.timeToMinutes(a.time)
       );
   }
 
-  saveNote(customerId: string, note: string): { success: boolean; message: string } {
-    const notes = this.loadNotes();
-    notes[customerId] = note.trim();
+  updateProfile(
+    customerId: string,
+    profile: CustomerProfileUpdate
+  ): Observable<CustomerMutationResult> {
+    return this.api.updateProfile(customerId, profile).pipe(
+      tap(result => {
+        if (!result.success || !result.customer) return;
 
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(this.noteStorageKey, JSON.stringify(notes));
-      } catch {
-        return { success: false, message: 'Could not save the customer note in this browser.' };
-      }
-    }
+        const normalized = this.normalizeCustomer(result.customer);
+        const index = this.customers.findIndex(item => item.id === customerId);
 
-    return { success: true, message: 'Customer note saved.' };
-  }
-
-  private buildCustomer(
-    phoneKey: string,
-    bookings: AdminBooking[],
-    note: string
-  ): AdminCustomer {
-    const sorted = [...bookings].sort((a, b) =>
-      a.date.localeCompare(b.date) || this.timeToMinutes(a.time) - this.timeToMinutes(b.time)
+        if (index >= 0) {
+          this.customers = [
+            ...this.customers.slice(0, index),
+            normalized,
+            ...this.customers.slice(index + 1)
+          ];
+        } else {
+          this.customers = [normalized, ...this.customers];
+        }
+      })
     );
+  }
 
-    const nonCancelled = sorted.filter(item => item.status !== 'Cancelled');
-    const completed = sorted.filter(item => item.status === 'Completed');
-    const now = new Date();
-    const nowKey = this.todayKey();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  saveNote(customerId: string, note: string): Observable<CustomerMutationResult> {
+    return this.api.saveNote(customerId, note.trim()).pipe(
+      tap(result => {
+        if (!result.success || !result.customer) return;
 
-    const upcoming = nonCancelled
-      .filter(item =>
-        (item.status === 'Pending' || item.status === 'Confirmed')
-        && (
-          item.date > nowKey
-          || (item.date === nowKey && this.timeToMinutes(item.time) >= nowMinutes)
-        )
-      )
-      .sort((a, b) =>
-        a.date.localeCompare(b.date) || this.timeToMinutes(a.time) - this.timeToMinutes(b.time)
-      )[0] || null;
+        const normalized = this.normalizeCustomer(result.customer);
+        const index = this.customers.findIndex(item => item.id === customerId);
 
-    const completedSorted = completed
-      .slice()
-      .sort((a, b) =>
-        b.date.localeCompare(a.date) || this.timeToMinutes(b.time) - this.timeToMinutes(a.time)
-      );
+        if (index >= 0) {
+          this.customers = [
+            ...this.customers.slice(0, index),
+            normalized,
+            ...this.customers.slice(index + 1)
+          ];
+        } else {
+          this.customers = [normalized, ...this.customers];
+        }
+      })
+    );
+  }
 
-    const latest = sorted[sorted.length - 1];
-    const first = sorted[0];
+  refresh(): void {
+    this.loading = true;
+    this.errorMessage = '';
 
+    this.api.getAll().subscribe({
+      next: customers => {
+        this.customers = Array.isArray(customers)
+          ? customers.map(item => this.normalizeCustomer(item))
+          : [];
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.errorMessage = 'Could not load customers from the database.';
+      }
+    });
+  }
+
+  private normalizeCustomer(customer: AdminCustomer): AdminCustomer {
     return {
-      id: phoneKey,
-      name: latest?.customerName || first?.customerName || 'Customer',
-      phone: latest?.phone || first?.phone || '',
-      bookingCount: nonCancelled.length,
-      completedVisits: completed.length,
-      cancelledCount: sorted.filter(item => item.status === 'Cancelled').length,
-      totalSpend: completed.reduce((sum, item) => sum + item.amount, 0),
-      lastVisit: completedSorted[0]?.date || null,
-      nextBooking: upcoming,
-      customerType: nonCancelled.length > 1 ? 'Returning' : 'New',
-      firstBookingDate: first?.date || '',
-      lastBookingDate: latest?.date || '',
-      notes: note
+      ...customer,
+      bookingCount: Number(customer.bookingCount) || 0,
+      completedVisits: Number(customer.completedVisits) || 0,
+      cancelledCount: Number(customer.cancelledCount) || 0,
+      totalSpend: Number(customer.totalSpend) || 0,
+      email: customer.email || '',
+      notes: customer.notes || '',
+      bookings: Array.isArray(customer.bookings)
+        ? customer.bookings.map(booking => this.normalizeBooking(booking))
+        : [],
+      nextBooking: customer.nextBooking
+        ? this.normalizeBooking(customer.nextBooking)
+        : null,
+      customerType: customer.customerType === 'Returning' ? 'Returning' : 'New'
     };
   }
 
-  private customerKey(booking: AdminBooking): string {
-    const phone = this.normalizePhone(booking.phone);
-    return phone || 'walkin-' + booking.id;
-  }
-
-  private normalizePhone(phone: string): string {
-    return phone.replace(/\D/g, '');
-  }
-
-  private loadNotes(): Record<string, string> {
-    if (typeof window === 'undefined') return {};
-
-    try {
-      const raw = window.localStorage.getItem(this.noteStorageKey);
-      return raw ? JSON.parse(raw) as Record<string, string> : {};
-    } catch {
-      return {};
-    }
-  }
-
-  private todayKey(): string {
-    const date = new Date();
-    return [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, '0'),
-      String(date.getDate()).padStart(2, '0')
-    ].join('-');
+  private normalizeBooking(booking: AdminBooking): AdminBooking {
+    return {
+      ...booking,
+      id: Number(booking.id),
+      duration: Number(booking.duration) || 0,
+      amount: Number(booking.amount) || 0,
+      groupSize: Number(booking.groupSize) || 1,
+      specialServiceAmount: Number(booking.specialServiceAmount) || 0
+    };
   }
 
   private timeToMinutes(time: string): number {

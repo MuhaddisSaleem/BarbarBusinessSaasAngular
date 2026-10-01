@@ -18,6 +18,8 @@ export class AdminSettingsComponent {
   feedbackType: 'success' | 'error' = 'success';
   resetConfirmOpen = false;
   brandingBusy = false;
+  savingSettings = false;
+  resettingSettings = false;
 
   readonly bookingIntervals = [10, 15, 20, 30, 45, 60];
 
@@ -25,21 +27,31 @@ export class AdminSettingsComponent {
     public readonly settingsService: AdminSettingsService,
     public readonly brandingMedia: BrandingMediaService
   ) {
-    this.settings = this.settingsService.current;
+    this.settings = this.withDeferredMessagingPaused(this.settingsService.current);
   }
 
   saveSettings(): void {
-    const result = this.settingsService.save(this.settings);
-    this.feedbackType = result.success ? 'success' : 'error';
-    this.feedbackMessage = result.message;
+    if (this.savingSettings || this.resettingSettings) return;
 
-    if (result.success) {
-      this.settings = this.settingsService.current;
-    }
+    this.savingSettings = true;
+    const next = this.withDeferredMessagingPaused(this.settings);
 
-    window.setTimeout(() => {
-      if (this.feedbackMessage === result.message) this.feedbackMessage = '';
-    }, 3500);
+    const handle = (result: { success: boolean; message: string }) => {
+      this.savingSettings = false;
+      this.feedbackType = result.success ? 'success' : 'error';
+      this.feedbackMessage = result.message;
+
+      if (result.success) {
+        this.settings = this.withDeferredMessagingPaused(this.settingsService.current);
+      }
+
+      window.setTimeout(() => {
+        if (this.feedbackMessage === result.message) this.feedbackMessage = '';
+      }, 3500);
+    };
+
+    if (this.settingsService.saveThroughApi(next, handle)) return;
+    handle(this.settingsService.save(next));
   }
 
   requestReset(): void {
@@ -51,27 +63,36 @@ export class AdminSettingsComponent {
   }
 
   async confirmReset(): Promise<void> {
-    const result = this.settingsService.reset();
+    if (this.savingSettings || this.resettingSettings) return;
 
-    if (!result.success) {
+    this.resettingSettings = true;
+
+    const handle = async (result: { success: boolean; message: string }) => {
+      if (!result.success) {
+        this.resettingSettings = false;
+        this.resetConfirmOpen = false;
+        this.feedbackType = 'error';
+        this.feedbackMessage = result.message;
+        return;
+      }
+
+      this.settings = this.withDeferredMessagingPaused(this.settingsService.current);
+
+      try {
+        await this.brandingMedia.clearAll();
+        this.feedbackType = 'success';
+        this.feedbackMessage = 'Settings and landing page branding reset to defaults.';
+      } catch {
+        this.feedbackType = 'error';
+        this.feedbackMessage = 'Settings were reset, but the saved logo or hero media could not be cleared.';
+      }
+
+      this.resettingSettings = false;
       this.resetConfirmOpen = false;
-      this.feedbackType = 'error';
-      this.feedbackMessage = result.message;
-      return;
-    }
+    };
 
-    this.settings = this.settingsService.current;
-
-    try {
-      await this.brandingMedia.clearAll();
-      this.feedbackType = 'success';
-      this.feedbackMessage = 'Settings and landing page branding reset to defaults.';
-    } catch {
-      this.feedbackType = 'error';
-      this.feedbackMessage = 'Settings were reset, but the saved logo or hero media could not be cleared.';
-    }
-
-    this.resetConfirmOpen = false;
+    if (this.settingsService.resetThroughApi(result => { void handle(result); })) return;
+    await handle(this.settingsService.reset());
   }
 
   onPhoneInput(event: Event, field: 'businessPhone' | 'whatsappNumber'): void {
@@ -145,6 +166,15 @@ export class AdminSettingsComponent {
 
   copyBusinessPhoneToWhatsapp(): void {
     this.settings.whatsappNumber = this.settings.businessPhone;
+  }
+
+  private withDeferredMessagingPaused(settings: AdminSettings): AdminSettings {
+    return {
+      ...settings,
+      sendWhatsappConfirmation: false,
+      sendSmsFallback: false,
+      sendAppointmentReminder: false
+    };
   }
 
   private showBrandingFeedback(success: boolean, message: string): void {

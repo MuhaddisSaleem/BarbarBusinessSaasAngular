@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { NotificationService } from '../notifications/notification.service';
 import { AdminBarberService } from '../barbers/admin-barber.service';
+import { CatalogApiService } from '../../core/catalog-api.service';
 
 export type ServiceStatus = 'Active' | 'Inactive';
 
@@ -26,15 +27,49 @@ export interface ServiceMutationResult {
 export class AdminServiceService {
   constructor(
     private readonly notificationService: NotificationService,
-    private readonly barberService: AdminBarberService
-  ) {}
+    private readonly barberService: AdminBarberService,
+    private readonly api?: CatalogApiService
+  ) {
+    this.services = this.api
+      ? this.normalizeServices(this.api.serviceSnapshot)
+      : this.loadServices();
+
+    if (this.api && typeof window !== 'undefined') {
+      window.localStorage.removeItem(this.storageKey);
+      window.localStorage.removeItem(this.demoCleanupKey);
+    }
+
+
+    this.api?.changes$.subscribe(changed => {
+      if (changed === 'services' && this.api) {
+        this.services = this.normalizeServices(this.api.serviceSnapshot);
+      }
+    });  }
 
   private readonly storageKey = 'royal-barbers.admin-services.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-services.demo-cleaned.v1';
-  private services: AdminService[] = this.loadServices();
+  private services: AdminService[] = [];
 
   refreshFromStorage(): void {
+    if (this.api) {
+      this.refreshFromApi();
+      return;
+    }
     this.services = this.loadServices();
+  }
+
+  refreshFromApi(): void {
+    if (!this.api) return;
+    this.api.getServices().subscribe({
+      next: services => {
+        this.services = this.normalizeServices(services);
+        this.api!.serviceSnapshot = this.services.map(item => ({ ...item }));
+      }
+    });
+  }
+
+  get apiEnabled(): boolean {
+    return !!this.api;
   }
 
   get all(): AdminService[] {
@@ -90,6 +125,121 @@ export class AdminServiceService {
     return Math.round(((service.originalPrice - Number(service.discountPrice)) / service.originalPrice) * 100);
   }
 
+  addServiceThroughApi(
+    input: Omit<AdminService, 'id'>,
+    done: (result: ServiceMutationResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.addService(input).subscribe({
+      next: response => {
+        if (response.item) {
+          const item = this.normalizeService(response.item);
+          this.services = [...this.services.filter(existing => existing.id !== item.id), item]
+            .sort((a, b) => a.id - b.id);
+          this.api!.serviceSnapshot = this.services.map(service => ({ ...service }));
+          this.barberService.refreshFromStorage();
+          this.notificationService.add({
+            type: 'system',
+            title: 'Service added',
+            message: item.name + ' was added at Rs. ' + this.effectivePrice(item).toLocaleString('en-US') + '.',
+            icon: 'bi-scissors',
+            url: '/admin/services'
+          });
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save this service.') })
+    });
+
+    return true;
+  }
+
+  updateServiceThroughApi(
+    id: number,
+    changes: Omit<AdminService, 'id'>,
+    done: (result: ServiceMutationResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.updateService(id, changes).subscribe({
+      next: response => {
+        if (response.item) {
+          const item = this.normalizeService(response.item);
+          const index = this.services.findIndex(service => service.id === id);
+          if (index >= 0) this.services[index] = item;
+          this.api!.serviceSnapshot = this.services.map(service => ({ ...service }));
+          this.barberService.refreshFromStorage();
+          this.notificationService.add({
+            type: 'system',
+            title: 'Service updated',
+            message: item.name + ' details or pricing were updated.',
+            icon: 'bi-pencil-square',
+            url: '/admin/services'
+          });
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save the service changes.') })
+    });
+
+    return true;
+  }
+
+  toggleStatusThroughApi(id: number, done: (result: ServiceMutationResult) => void): boolean {
+    if (!this.api) return false;
+
+    this.api.toggleServiceStatus(id).subscribe({
+      next: response => {
+        if (response.item) {
+          const item = this.normalizeService(response.item);
+          const index = this.services.findIndex(service => service.id === id);
+          if (index >= 0) this.services[index] = item;
+          this.api!.serviceSnapshot = this.services.map(service => ({ ...service }));
+          this.notificationService.add({
+            type: 'system',
+            title: 'Service ' + (item.status === 'Active' ? 'activated' : 'hidden'),
+            message: item.name + ' is now ' + item.status.toLowerCase() + '.',
+            icon: item.status === 'Active' ? 'bi-eye' : 'bi-eye-slash',
+            url: '/admin/services'
+          });
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save the service status.') })
+    });
+
+    return true;
+  }
+
+  deleteServiceThroughApi(id: number, done: (result: ServiceMutationResult) => void): boolean {
+    if (!this.api) return false;
+
+    const service = this.getById(id);
+    this.api.deleteService(id).subscribe({
+      next: response => {
+        if (response.success) {
+          this.services = this.services.filter(item => item.id !== id);
+          this.api!.serviceSnapshot = this.services.map(item => ({ ...item }));
+          this.barberService.refreshFromStorage();
+          if (service) {
+            this.notificationService.add({
+              type: 'system',
+              title: 'Service deleted',
+              message: service.name + ' was removed from the service list.',
+              icon: 'bi-trash3',
+              url: '/admin/services'
+            });
+          }
+        }
+        done(response);
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not delete this service.') })
+    });
+
+    return true;
+  }
+
   addService(input: Omit<AdminService, 'id'>): ServiceMutationResult {
     const validation = this.validateService(input);
     if (!validation.success) return validation;
@@ -116,6 +266,13 @@ export class AdminServiceService {
     if (!this.persist()) {
       this.services = this.services.filter(item => item.id !== nextId);
       return { success: false, message: 'Could not save this service locally. Try a smaller image.' };
+    }
+
+    const specialtyResult = this.barberService.addSpecialty(next.name);
+    if (!specialtyResult.success) {
+      this.services = this.services.filter(item => item.id !== nextId);
+      this.persist();
+      return specialtyResult;
     }
 
     this.notificationService.add({
@@ -334,6 +491,7 @@ export class AdminServiceService {
   }
 
   private persist(): boolean {
+    if (this.api) return true;
     if (typeof window === 'undefined') return true;
 
     try {
@@ -342,5 +500,28 @@ export class AdminServiceService {
     } catch {
       return false;
     }
+  }
+
+  private normalizeServices(services: AdminService[]): AdminService[] {
+    return (Array.isArray(services) ? services : []).map(service => this.normalizeService(service));
+  }
+
+  private normalizeService(service: AdminService): AdminService {
+    return {
+      ...service,
+      id: Number(service.id),
+      duration: Number(service.duration),
+      originalPrice: Number(service.originalPrice),
+      discountPrice: service.discountPrice === null ? null : Number(service.discountPrice),
+      homeServiceEnabled: service.homeServiceEnabled !== false,
+      homeOriginalPrice: service.homeOriginalPrice === null ? null : Number(service.homeOriginalPrice),
+      homeDiscountPrice: service.homeDiscountPrice === null ? null : Number(service.homeDiscountPrice),
+      image: service.image || 'assets/images/service-placeholder.svg',
+      status: service.status === 'Inactive' ? 'Inactive' : 'Active'
+    };
+  }
+
+  private apiError(error: unknown, fallback: string): string {
+    return (error as any)?.error?.message || fallback;
   }
 }

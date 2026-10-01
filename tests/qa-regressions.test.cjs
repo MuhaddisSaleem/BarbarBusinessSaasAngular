@@ -1,7 +1,86 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const crypto = require('node:crypto');
 const { fixture, DAY, NEXT } = require('./harness.cjs');
 const equal = (a,b) => assert.equal(JSON.stringify(a),JSON.stringify(b));
+const syncObservable = (value, error = null) => ({
+  pipe(...operators) { return operators.reduce((source, operator) => operator(source), this); },
+  subscribe(observer) {
+    if (error) observer?.error?.(error);
+    else if (typeof observer === 'function') observer(value);
+    else observer?.next?.(value);
+    return { unsubscribe() {} };
+  }
+});
+const apiCustomer = (id, name, phone, bookings, nextBooking = null, notes = '') => ({
+  id,
+  name,
+  phone,
+  email: '',
+  bookingCount: bookings.filter(item => item.status !== 'Cancelled').length,
+  completedVisits: bookings.filter(item => item.status === 'Completed').length,
+  cancelledCount: bookings.filter(item => item.status === 'Cancelled').length,
+  totalSpend: bookings.filter(item => item.status === 'Completed').reduce((sum, item) => sum + item.amount, 0),
+  lastVisit: null,
+  nextBooking,
+  customerType: bookings.filter(item => item.status !== 'Cancelled').length > 1 ? 'Returning' : 'New',
+  firstBookingDate: bookings[0]?.date || '',
+  lastBookingDate: bookings.at(-1)?.date || '',
+  notes,
+  bookings
+});
+
+test('dashboard and reports stay read-only and cannot mutate booking state', () => {
+  for (const file of [
+    'backend/BarberFlow.Api/Services/DashboardApplicationService.cs',
+    'backend/BarberFlow.Api/Services/ReportsApplicationService.cs'
+  ]) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /AsNoTracking\(\)/, file + ' should query read-only data');
+    assert.doesNotMatch(source, /SaveChanges(?:Async)?\s*\(/, file + ' must not write through DbContext');
+    assert.doesNotMatch(source, /db\.(?:Add|AddRange|Remove|RemoveRange|Update|UpdateRange)\s*\(/, file + ' must remain projection-only');
+  }
+
+  for (const file of [
+    'backend/BarberFlow.Api/Controllers/DashboardController.cs',
+    'backend/BarberFlow.Api/Controllers/ReportsController.cs'
+  ]) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /\[HttpGet/, file + ' should expose GET only');
+    assert.doesNotMatch(source, /\[Http(?:Post|Put|Patch|Delete)/, file + ' must not expose booking mutations');
+  }
+});
+
+test('settings business-hour saves protect active bookings and deferred messaging stays off by default', () => {
+  const source = fs.readFileSync('backend/BarberFlow.Api/Services/CatalogApplicationService.cs', 'utf8');
+  assert.match(source, /ValidateBusinessHoursAgainstActiveBookingsAsync/);
+  assert.match(source, /BookingStatus\.Pending/);
+  assert.match(source, /BookingStatus\.Confirmed/);
+  assert.match(source, /Reschedule or cancel that booking first/);
+
+  const entity = fs.readFileSync('backend/BarberFlow.Api/Domain/Entities/Salon.cs', 'utf8');
+  assert.doesNotMatch(entity, /SendWhatsappConfirmation\s*\{[^}]*\}\s*=\s*true/);
+  assert.doesNotMatch(entity, /SendAppointmentReminder\s*\{[^}]*\}\s*=\s*true/);
+});
+
+test('settings reject unsafe limits and duplicate weekdays before persistence', () => {
+  const f = fixture();
+  const base = {
+    ...f.settings.current,
+    businessName: 'QA Salon',
+    businessPhone: '+92 300 1234567',
+    whatsappNumber: '+92 300 1234567'
+  };
+
+  assert.equal(f.settings.save({...base,maxAdvanceDays:366}).success,false);
+  assert.equal(f.settings.save({...base,cancellationHours:169}).success,false);
+  assert.equal(f.settings.save({...base,lateArrivalMinutes:241}).success,false);
+
+  const duplicateHours = base.businessHours.map(day=>({...day}));
+  duplicateHours[1].key = duplicateHours[0].key;
+  assert.equal(f.settings.save({...base,businessHours:duplicateHours}).success,false);
+});
 
 for (const hours of ['9:00 AM - 9:00 PM','9 AM - 9 PM','09:00 - 21:00','9am to 9pm','9:00AM – 9:00PM','9:00 a.m. — 9:00 p.m.','']) {
   test('legacy working hours allow matching customer/admin slots: ' + (hours || '(salon hours)'), () => {
@@ -180,8 +259,14 @@ test('walk-ins still obey closed days, barber leave and overlap protection', () 
 });
 
 test('phone-less walk-ins stay separate in customer history', () => {
-  const f=fixture();f.booking({id:1,source:'Walk-in',phone:'',customerName:'Guest One'});f.booking({id:2,source:'Walk-in',phone:'',customerName:'Guest Two',time:'6:00 PM'});
-  const customers=f.make('admin/customers/admin-customer.service.ts','AdminCustomerService',f.bookings);
+  const f=fixture();
+  const one=f.booking({id:1,source:'Walk-in',phone:'',customerName:'Guest One'});
+  const two=f.booking({id:2,source:'Walk-in',phone:'',customerName:'Guest Two',time:'6:00 PM'});
+  const api={getAll:()=>syncObservable([
+    apiCustomer('walkin-1','Guest One','',[one],one),
+    apiCustomer('walkin-2','Guest Two','',[two],two)
+  ])};
+  const customers=f.make('admin/customers/admin-customer.service.ts','AdminCustomerService',api,f.bookings);
   assert.equal(customers.all.length,2);assert.notEqual(customers.all[0].id,customers.all[1].id);
   assert.equal(customers.bookingsForCustomer(customers.all[0]).length,1);
 });
@@ -207,9 +292,10 @@ for(const status of ['Completed','Cancelled'])test('closed bookings block resche
 test('walk-in barber options stay empty until a service is selected',()=>{const f=fixture();f.barber();const s=f.service();f.admin.openCreateModal();assert.equal(f.admin.createBarbers.length,0);f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();assert.ok(f.admin.createBarbers.length>0);});
 test('changing walk-in service clears the selected barber and refreshes the current start time',()=>{const f=fixture(),b=f.barber({specialties:['Haircut','Beard']});f.service({name:'Haircut'});f.service({name:'Beard'});f.admin.openCreateModal();f.admin.newBooking.service='Haircut';f.admin.newBooking.barber=b.name;f.admin.newBooking.time='5:00 PM';f.admin.newBooking.service='Beard';f.admin.onCreateServiceOrDateChange();assert.equal(f.admin.newBooking.time,'4:30 PM');assert.equal(f.admin.newBooking.barber,'');});
 test('legacy labeled weekday arrays retain their identities',()=>{const f=fixture({'royal-barbers.admin-settings.v1':{businessHours:[{label:'Tuesday',enabled:false},{label:'Monday',enabled:true,open:'10:15',close:'18:00'}]}});equal(f.settings.hoursForDate(new f.Clock(DAY+'T12:00:00')),{start:615,end:1080});assert.equal(f.settings.hoursForDate(new f.Clock(NEXT+'T12:00:00')),null);});
-test('barber edits preserve upcoming shifts, specialties and identity while allowing compatible updates',()=>{
+test('barber edits preserve upcoming shifts and identity while services stay automatic',()=>{
   const f=fixture(),b=f.barber(),s=f.service();f.booking();const c=f.make('admin/barbers/admin-barbers.component.ts','AdminBarbersComponent',f.barbers,f.services,f.bookings);
-  for(const patch of [{workingHours:'9 AM - 5 PM'},{specialties:['Beard']},{name:'Renamed'}]) {c.openEditModal(b);Object.assign(c.editBarber,patch);c.saveBarberChanges();assert.equal(c.feedbackType,'error');assert.equal(b.name,'Barber 1');assert.equal(b.workingHours,'9:00 AM - 9:00 PM');}
+  for(const patch of [{workingHours:'9 AM - 5 PM'},{name:'Renamed'}]) {c.openEditModal(b);Object.assign(c.editBarber,patch);c.saveBarberChanges();assert.equal(c.feedbackType,'error');assert.equal(b.name,'Barber 1');assert.equal(b.workingHours,'9:00 AM - 9:00 PM');}
+  c.openEditModal(b);c.editBarber.specialties=['Beard'];c.saveBarberChanges();assert.equal(c.feedbackType,'success');assert.equal(JSON.stringify(b.specialties),JSON.stringify([s.name]));
   c.openEditModal(b);c.editBarber.workingHours='09:00 - 21:00';c.saveBarberChanges();assert.equal(c.feedbackType,'success');assert.equal(b.workingHours,'09:00 - 21:00');
 });
 test('barber availability, leave, deletion and deactivation protect active appointments',()=>{
@@ -220,8 +306,40 @@ test('barber availability, leave, deletion and deactivation protect active appoi
 test('custom-only home bookings do not require a fictional barber specialty',()=>{const f=fixture(),b=f.barber();f.booking({service:'Custom Home Service',serviceLocation:'Home',specialService:'Request'});const c=f.make('admin/barbers/admin-barbers.component.ts','AdminBarbersComponent',f.barbers,f.services,f.bookings);c.openEditModal(b);c.saveBarberChanges();assert.equal(c.feedbackType,'success');});
 test('service rename/delete guards preserve upcoming bookings',()=>{const f=fixture(),b=f.barber(),s=f.service();f.booking();const c=f.make('admin/services/admin-services.component.ts','AdminServicesComponent',f.services,f.bookings);c.requestDelete(s);assert.equal(c.deleteModalOpen,false);c.openEditModal(s);c.editService.name='Changed';c.saveService();assert.equal(c.feedbackType,'error');assert.equal(s.name,'Haircut');});
 test('duplicate barber identities remain blocked',()=>{const f=fixture(),b=f.barber(),other=f.barber();assert.equal(f.barbers.updateBarber(other.id,{...other,name:' barber 1 '}).success,false);assert.equal(other.name,'Barber 2');});
-test('customer next appointment excludes elapsed, completed and cancelled records',()=>{const f=fixture();f.booking({time:'3:00 PM'});f.booking({time:'4:00 PM',status:'Completed'});f.booking({time:'4:30 PM',status:'Cancelled'});const next=f.booking({time:'5:00 PM'});const c=f.make('admin/customers/admin-customer.service.ts','AdminCustomerService',f.bookings);assert.equal(c.all[0].nextBooking.id,next.id);});
-test('failed customer note persistence reports failure and retains saved note',()=>{const f=fixture();f.booking();const c=f.make('admin/customers/admin-customer.service.ts','AdminCustomerService',f.bookings);const id=c.all[0].id;assert.equal(c.saveNote(id,'Before').success,true);f.fail('royal-barbers.customer-notes.v1');assert.equal(c.saveNote(id,'After').success,false);assert.equal(c.all[0].notes,'Before');});
+test('customer next appointment excludes elapsed, completed and cancelled records',()=>{
+  const f=fixture();
+  const past=f.booking({time:'3:00 PM'});
+  const completed=f.booking({time:'4:00 PM',status:'Completed'});
+  const cancelled=f.booking({time:'4:30 PM',status:'Cancelled'});
+  const next=f.booking({time:'5:00 PM'});
+  const history=[past,completed,cancelled,next];
+  const api={getAll:()=>syncObservable([apiCustomer('customer-1','Test Customer','+92 300 1234567',history,next)])};
+  const c=f.make('admin/customers/admin-customer.service.ts','AdminCustomerService',api,f.bookings);
+  assert.equal(c.all[0].nextBooking.id,next.id);
+});
+test('failed customer note persistence reports failure and retains saved note',()=>{
+  const f=fixture();
+  const booking=f.booking();
+  let saved=apiCustomer('customer-1','Test Customer','+92 300 1234567',[booking],booking,'');
+  let failSave=false;
+  const api={
+    getAll:()=>syncObservable([saved]),
+    saveNote:(id,notes)=>{
+      if(failSave) return syncObservable(null,new Error('Save failed'));
+      saved={...saved,notes};
+      return syncObservable({success:true,message:'Saved.',customer:saved});
+    }
+  };
+  const c=f.make('admin/customers/admin-customer.service.ts','AdminCustomerService',api,f.bookings);
+  let firstSaved=false;
+  c.saveNote(saved.id,'Before').subscribe({next:result=>{firstSaved=result.success;}});
+  assert.equal(firstSaved,true);
+  failSave=true;
+  let failed=false;
+  c.saveNote(saved.id,'After').subscribe({error:()=>{failed=true;}});
+  assert.equal(failed,true);
+  assert.equal(c.all[0].notes,'Before');
+});
 test('historical multi-service bookings remain discoverable by individual service',()=>{const f=fixture();f.booking({service:'Retired Cut, Beard',barber:'Former Barber'});f.admin.selectedService='Beard';assert.equal(f.admin.bookings.length,1);assert.ok(f.admin.filterServices.includes('Retired Cut'));assert.ok(f.admin.filterBarbers.includes('Former Barber'));});
 test('calendar does not advertise slots on a disallowed booking date',()=>{const f=fixture();f.barber();f.settings.settings.allowSameDayBooking=false;const c=f.make('admin/calendar/admin-calendar.component.ts','AdminCalendarComponent',f.bookings,f.settings,f.barbers,{});assert.equal(c.barberSummaries[0].nextAvailable,'Booking unavailable');});
 
@@ -288,4 +406,27 @@ test('cancelling either photo picker preserves its approved photo and validation
   assert.equal(c.newBarber.image, 'data:image/png;base64,existing'); assert.equal(c.imageValidationState, 'valid');
   c.openEditModal(b); await c.onEditImageSelected({target:{files:[]}});
   assert.equal(c.editBarber.image, b.image); assert.equal(c.editImageValidationState, 'valid');
+});
+
+
+test('final admin lock keeps UI, booking, services and barbers unchanged', () => {
+  const manifest = JSON.parse(fs.readFileSync('tests/admin-lock.manifest.json', 'utf8'));
+
+  const gitBlobSha = filePath => {
+    const content = fs.readFileSync(filePath);
+    const header = Buffer.from('blob ' + content.length + '\0');
+    return crypto.createHash('sha1').update(header).update(content).digest('hex');
+  };
+
+  const entries = Object.entries(manifest.protected_files);
+  assert.ok(entries.length >= 40, 'Admin lock should protect the complete admin surface and booking/service/barber core.');
+
+  for (const [filePath, expectedSha] of entries) {
+    assert.ok(fs.existsSync(filePath), filePath + ' must still exist.');
+    assert.equal(
+      gitBlobSha(filePath),
+      expectedSha,
+      filePath + ' changed after the admin lock baseline. Review the change explicitly before updating tests/admin-lock.manifest.json.'
+    );
+  }
 });

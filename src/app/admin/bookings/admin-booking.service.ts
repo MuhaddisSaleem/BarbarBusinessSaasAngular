@@ -1,8 +1,11 @@
 import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
 import { AdminBarberService } from '../barbers/admin-barber.service';
 import { AdminServiceService } from '../services/admin-service.service';
 import { AdminSettingsService } from '../settings/admin-settings.service';
 import { NotificationService } from '../notifications/notification.service';
+import { BookingApiService, BookingBusySlot } from '../../core/booking-api.service';
+import { AuthService } from '../../core/auth.service';
 
 export type BookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
 
@@ -41,12 +44,32 @@ export interface WalkInBarberOption {
 
 @Injectable({ providedIn: 'root' })
 export class AdminBookingService {
+  private readonly bookingsChangedSubject = new Subject<void>();
+  readonly changes$ = this.bookingsChangedSubject.asObservable();
+
   constructor(
     private readonly barberService: AdminBarberService,
     private readonly serviceService: AdminServiceService,
     private readonly settingsService: AdminSettingsService,
-    private readonly notificationService: NotificationService
-  ) {}
+    private readonly notificationService: NotificationService,
+    private readonly api?: BookingApiService,
+    private readonly auth?: AuthService
+  ) {
+    if (this.api) {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(this.storageKey);
+        window.localStorage.removeItem(this.demoCleanupKey);
+      }
+
+      if (this.auth) {
+        this.auth.currentUser$.subscribe(() => this.refreshFromApi());
+      } else {
+        this.refreshFromApi();
+      }
+    } else {
+      this.bookings = this.loadBookings();
+    }
+  }
 
   get barbers(): string[] {
     return this.barberService.active.map(barber => barber.name);
@@ -159,10 +182,104 @@ export class AdminBookingService {
 
   private readonly storageKey = 'royal-barbers.admin-bookings.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-bookings.demo-cleaned.v1';
-  private bookings: AdminBooking[] = this.loadBookings();
+  private bookings: AdminBooking[] = [];
 
   refreshFromStorage(): void {
+    if (this.api) {
+      this.refreshFromApi();
+      return;
+    }
     this.bookings = this.loadBookings();
+    this.bookingsChangedSubject.next();
+  }
+
+  refreshFromApi(): void {
+    if (!this.api) return;
+
+    if (this.auth?.isAuthenticated()) {
+      this.api.getAll().subscribe({
+        next: bookings => {
+          this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+          this.bookingsChangedSubject.next();
+        },
+        error: error => this.notifyApiError('Could not load bookings from the API.', error)
+      });
+      return;
+    }
+
+    this.api.getBusySlots().subscribe({
+      next: slots => {
+        this.bookings = Array.isArray(slots) ? slots.map(item => this.busySlotBooking(item)) : [];
+        this.bookingsChangedSubject.next();
+      },
+      error: error => this.notifyApiError('Could not load booking availability from the API.', error)
+    });
+  }
+
+  get apiEnabled(): boolean {
+    return !!this.api;
+  }
+
+  createOnlineBookingsThroughApi(
+    bookings: Array<Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>>,
+    onSuccess: (result: BookingMutationResult) => void,
+    onError: (message: string) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.createOnline(bookings).subscribe({
+      next: response => this.reloadAfterMutation(response, onSuccess, onError),
+      error: error => onError(this.apiErrorMessage(error, 'Could not save the booking. Please try again.'))
+    });
+
+    return true;
+  }
+
+  createWalkInThroughApi(
+    booking: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>,
+    onSuccess: (result: BookingMutationResult) => void,
+    onError: (message: string) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.createWalkIn(booking).subscribe({
+      next: response => this.reloadAfterMutation(response, onSuccess, onError),
+      error: error => onError(this.apiErrorMessage(error, 'Could not save the walk-in booking. Please try again.'))
+    });
+
+    return true;
+  }
+
+  private reloadAfterMutation(
+    response: BookingMutationResult,
+    onSuccess: (result: BookingMutationResult) => void,
+    onError: (message: string) => void
+  ): void {
+    if (!this.api) {
+      onSuccess(response);
+      return;
+    }
+
+    if (this.auth?.isAuthenticated()) {
+      this.api.getAll().subscribe({
+        next: bookings => {
+          this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
+          onSuccess(response);
+          this.bookingsChangedSubject.next();
+        },
+        error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but the booking list could not be refreshed.'))
+      });
+      return;
+    }
+
+    this.api.getBusySlots().subscribe({
+      next: slots => {
+        this.bookings = Array.isArray(slots) ? slots.map(item => this.busySlotBooking(item)) : [];
+        onSuccess(response);
+        this.bookingsChangedSubject.next();
+      },
+      error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but availability could not be refreshed.'))
+    });
   }
 
   get all(): AdminBooking[] {
@@ -221,6 +338,16 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the booking status. Please try again.' };
     }
 
+    this.api?.updateStatus(id, status).subscribe({
+      next: response => {
+        if (response.booking) Object.assign(booking, this.normalizeBooking(response.booking));
+      },
+      error: error => {
+        booking.status = previousStatus;
+        this.notifyApiError('Could not update the booking status.', error);
+      }
+    });
+
     if (previousStatus !== status) {
       this.notificationService.add({
         type: status === 'Cancelled' ? 'cancelled' : 'booking',
@@ -265,6 +392,16 @@ export class AdminBookingService {
       booking.barber = previousBarber;
       return { success: false, message: 'Could not save the barber assignment. Please try again.' };
     }
+
+    this.api?.assignBarber(id, barber).subscribe({
+      next: response => {
+        if (response.booking) Object.assign(booking, this.normalizeBooking(response.booking));
+      },
+      error: error => {
+        booking.barber = previousBarber;
+        this.notifyApiError('Could not save the barber assignment.', error);
+      }
+    });
 
     if (previousBarber !== barber) {
       this.notificationService.add({
@@ -317,6 +454,17 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the new appointment schedule. Please try again.' };
     }
 
+    this.api?.reschedule(id, date, time).subscribe({
+      next: response => {
+        if (response.booking) Object.assign(booking, this.normalizeBooking(response.booking));
+      },
+      error: error => {
+        booking.date = previousDate;
+        booking.time = previousTime;
+        this.notifyApiError('Could not save the new appointment schedule.', error);
+      }
+    });
+
     if (previousDate !== date || previousTime !== time) {
       this.notificationService.add({
         type: 'rescheduled',
@@ -358,6 +506,17 @@ export class AdminBookingService {
       booking.amount = previousTotal;
       return { success: false, message: 'Could not save the custom service price.' };
     }
+
+    this.api?.updateSpecialServicePrice(id, booking.specialServiceAmount).subscribe({
+      next: response => {
+        if (response.booking) Object.assign(booking, this.normalizeBooking(response.booking));
+      },
+      error: error => {
+        booking.specialServiceAmount = previousSpecialAmount;
+        booking.amount = previousTotal;
+        this.notifyApiError('Could not save the custom service price.', error);
+      }
+    });
 
     this.notificationService.add({
       type: 'booking',
@@ -591,6 +750,14 @@ export class AdminBookingService {
       return { success: false, message: 'Could not save the booking. Please try again.' };
     }
 
+    this.api?.createAdmin(input).subscribe({
+      next: () => this.refreshFromApi(),
+      error: error => {
+        this.bookings = previousBookings;
+        this.notifyApiError('Could not save the admin booking to SQL Server.', error);
+      }
+    });
+
     const created = this.bookings[0];
     this.notificationService.add({
       type: 'booking',
@@ -755,14 +922,71 @@ export class AdminBookingService {
   }
 
   private persist(): boolean {
+    if (this.api) return true;
     if (typeof window === 'undefined') return true;
 
     try {
       window.localStorage.setItem(this.storageKey, JSON.stringify(this.bookings));
+      this.bookingsChangedSubject.next();
       return true;
     } catch {
       return false;
     }
+  }
+
+  private busySlotBooking(item: BookingBusySlot): AdminBooking {
+    return {
+      id: Number(item.id),
+      code: '',
+      customerName: '',
+      phone: '',
+      service: '',
+      duration: Number(item.duration) || 0,
+      barber: item.barber,
+      date: item.date,
+      time: item.time,
+      amount: 0,
+      status: item.status,
+      source: 'Online',
+      notes: '',
+      groupSize: 1,
+      serviceLocation: 'Salon',
+      serviceAddress: '',
+      specialService: '',
+      specialServiceAmount: 0
+    };
+  }
+
+  private normalizeBooking(item: AdminBooking): AdminBooking {
+    return {
+      ...item,
+      id: Number(item.id),
+      duration: Number(item.duration) || 0,
+      amount: Number(item.amount) || 0,
+      groupSize: Number(item.groupSize) || 1,
+      status: this.isBookingStatus(item.status) ? item.status : 'Pending',
+      source: item.source === 'Walk-in' ? 'Walk-in' : (item.source === 'Admin' ? 'Admin' : 'Online'),
+      notes: item.notes || '',
+      serviceLocation: item.serviceLocation === 'Home' ? 'Home' : 'Salon',
+      serviceAddress: item.serviceAddress || '',
+      specialService: item.specialService || '',
+      specialServiceAmount: Number(item.specialServiceAmount) || 0
+    };
+  }
+
+  private apiErrorMessage(error: unknown, fallback: string): string {
+    return (error as any)?.error?.message || fallback;
+  }
+
+  private notifyApiError(message: string, error: unknown): void {
+    const apiMessage = (error as any)?.error?.message;
+    this.notificationService.add({
+      type: 'system',
+      title: 'Database sync failed',
+      message: apiMessage ? message + ' ' + apiMessage : message,
+      icon: 'bi-cloud-slash',
+      url: '/admin/bookings'
+    });
   }
 
   private isBookingStatus(value: string): value is BookingStatus {
