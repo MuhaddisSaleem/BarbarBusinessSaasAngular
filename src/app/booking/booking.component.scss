@@ -1291,7 +1291,7 @@ button { -webkit-tap-highlight-color: transparent; }
   display:grid;
   grid-template-columns:minmax(250px,.95fr) minmax(0,1.45fr);
   align-items:stretch;
-  gap:18px;
+  gap:12px;
   margin:4px 0 18px;
 }
 
@@ -1360,7 +1360,7 @@ button { -webkit-tap-highlight-color: transparent; }
   align-items:center;
   gap:6px;
   color:$gold-soft;
-  font-size:9px;
+  font-size:12px;
   font-weight:800;
   letter-spacing:.2em;
 }
