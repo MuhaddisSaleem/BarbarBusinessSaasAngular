@@ -518,6 +518,7 @@ let browser, activePage;
     const actionStageBox=await page.locator('.salon-choice-action-stage').boundingBox();
     assert.ok(actionStageBox&&actionStageBox.height<=100,'Home mode must not keep the hidden stacked salon-choice height');
 
+    await page.waitForTimeout(550);
     const selectorGeometry=await page.evaluate(()=>{
       const salon=document.querySelector('.salon-service-choice')?.getBoundingClientRect();
       const salonButton=document.querySelector('.select-salon-service-btn')?.getBoundingClientRect();
