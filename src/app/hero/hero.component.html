@@ -1,36 +1,26 @@
 <section class="royal-hero" id="home">
   <div class="hero-photo" *ngIf="!brandingMedia.heroMediaUrl()" aria-hidden="true"></div>
-  <img
-    *ngIf="brandingMedia.heroMediaType() === 'image'"
-    class="hero-media hero-media-image"
-    [src]="brandingMedia.heroMediaUrl()"
-    alt=""
-    aria-hidden="true">
-  <video
-    *ngIf="brandingMedia.heroMediaType() === 'video'"
-    class="hero-media hero-media-video"
-    [src]="brandingMedia.heroMediaUrl()"
-    autoplay
-    muted
-    loop
-    playsinline
-    preload="metadata"
-    aria-hidden="true"></video>
+  <img *ngIf="brandingMedia.heroMediaType() === 'image'" class="hero-media hero-media-image"
+    [src]="brandingMedia.heroMediaUrl()" alt="" aria-hidden="true">
+  <video *ngIf="brandingMedia.heroMediaType() === 'video'" class="hero-media hero-media-video"
+    [src]="brandingMedia.heroMediaUrl()" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>
   <div class="hero-overlay" aria-hidden="true"></div>
 
   <div class="hero-shell">
     <header class="site-header navbar navbar-expand-xl navbar-dark p-0">
       <div class="container-fluid p-0">
-        <a class="brand navbar-brand d-inline-flex align-items-center m-0" href="#home" [attr.aria-label]="businessName + ' home'">
+        <a class="brand navbar-brand d-inline-flex align-items-center m-0" href="#home"
+          [attr.aria-label]="businessName + ' home'">
           <span class="brand-mark" aria-hidden="true">
             <img *ngIf="brandingMedia.logoUrl(); else defaultBrandMark" [src]="brandingMedia.logoUrl()" alt="">
             <ng-template #defaultBrandMark>
               <svg viewBox="0 0 64 72" role="img">
-                <path d="M15 17 22 8l10 9L42 8l7 9-4 9H19l-4-9Z" fill="currentColor"/>
-                <circle cx="22" cy="8" r="2.8" fill="currentColor"/><circle cx="42" cy="8" r="2.8" fill="currentColor"/>
-                <path d="M17 31 47 63M47 31 17 63" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-                <circle cx="13" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
-                <circle cx="51" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
+                <path d="M15 17 22 8l10 9L42 8l7 9-4 9H19l-4-9Z" fill="currentColor" />
+                <circle cx="22" cy="8" r="2.8" fill="currentColor" />
+                <circle cx="42" cy="8" r="2.8" fill="currentColor" />
+                <path d="M17 31 47 63M47 31 17 63" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+                <circle cx="13" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3" />
+                <circle cx="51" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3" />
               </svg>
             </ng-template>
           </span>
@@ -50,9 +40,12 @@
           <nav class="main-nav navbar-nav mx-xl-auto align-items-xl-center" aria-label="Main navigation">
             <a class="nav-link" href="#home" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Home</a>
             <a class="nav-link" href="#about" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">About</a>
-            <a class="nav-link" href="#services" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Services</a>
-            <a class="nav-link" href="#services" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Gallery</a>
-            <a class="nav-link" href="#contact" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Contact</a>
+            <a class="nav-link" href="#services" data-bs-toggle="collapse"
+              data-bs-target=".navbar-collapse.show">Services</a>
+            <a class="nav-link" href="#services" data-bs-toggle="collapse"
+              data-bs-target=".navbar-collapse.show">Gallery</a>
+            <a class="nav-link" href="#contact" data-bs-toggle="collapse"
+              data-bs-target=".navbar-collapse.show">Contact</a>
           </nav>
 
           <a class="book-button d-flex align-items-center justify-content-center mt-3 mt-xl-0" href="#booking"
@@ -65,32 +58,36 @@
       <div class="hero-copy">
         <span class="eyebrow" *ngIf="heroEyebrow">{{ heroEyebrow }}</span>
         <h1>{{ heroHeadline }}</h1>
-
+        <p class="tagline" *ngIf="heroTagline">{{ heroTagline }}</p>
         <div class="location-row d-flex align-items-center">
           <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
           <span>{{ locationLabel }}</span>
         </div>
 
-        <p class="tagline" *ngIf="heroTagline">{{ heroTagline }}</p>
+
 
         <div id="about" class="hero-features row g-0 d-flex align-items-stretch flex-wrap">
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
-            <span class="feature-icon star-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-star-fill"></i></span>
+            <span class="feature-icon star-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i
+                class="bi bi-star-fill"></i></span>
             <div><strong>{{ averageRatingLabel }}</strong><small>barber rating</small></div>
           </div>
 
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
-            <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-clock"></i></span>
+            <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i
+                class="bi bi-clock"></i></span>
             <div><strong>{{ businessHoursStatus.label }}</strong><small>{{ businessHoursStatus.value }}</small></div>
           </div>
 
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
-            <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
+            <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i
+                class="bi bi-people-fill"></i></span>
             <div><strong>Professional</strong><small>{{ activeBarberCount }} barbers</small></div>
           </div>
 
           <div class="hero-feature col-6 col-md-3 d-flex align-items-center">
-            <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+            <span class="feature-icon d-flex align-items-center justify-content-center" aria-hidden="true"><i
+                class="bi bi-shield-check"></i></span>
             <div><strong>Clean &amp; Safe</strong><small>Environment</small></div>
           </div>
         </div>
