@@ -444,3 +444,14 @@ body {
     padding: 5px 8px;
   }
 }
+
+
+/* Booking selector active-stage heights */
+@media (max-width:720px) {
+  app-booking .salon-choice-action-stage.salon-active { min-height:154px; }
+  app-booking .salon-choice-action-stage.home-active { min-height:64px; }
+}
+
+@media (max-width:575.98px) {
+  app-booking .salon-choice-action-stage.home-active { min-height:60px; }
+}

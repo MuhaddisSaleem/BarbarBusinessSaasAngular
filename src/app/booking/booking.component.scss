@@ -1833,8 +1833,6 @@ button { -webkit-tap-highlight-color: transparent; }
 .salon-choice-action-panel {
   position:absolute;
   inset:0;
-  width:100%;
-  min-width:0;
   opacity:0;
   visibility:hidden;
   pointer-events:none;
@@ -1972,21 +1970,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 
-@media (max-width:720px) {
-  .salon-choice-action-stage.salon-active {
-    min-height:154px;
-  }
-
-  .salon-choice-action-stage.home-active {
-    min-height:64px;
-  }
-}
-
 @media (max-width:575.98px) {
-  .salon-choice-action-stage.home-active {
-    min-height:60px;
-  }
-
   .catalog-motion {
     transition-duration:.36s;
   }
