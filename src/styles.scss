@@ -366,3 +366,81 @@ body {
     font-size: 10.5px !important;
   }
 }
+
+
+/* Booking Salon/Home responsive shell */
+@media (max-width: 767.98px) {
+  app-booking .service-section .salon-service-choice {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  app-booking .service-section .salon-choice-action-stage,
+  app-booking .service-section .salon-choice-action-panel,
+  app-booking .service-section .select-salon-service-btn,
+  app-booking .service-section .home-service-selector,
+  app-booking .service-section .home-selector-copy,
+  app-booking .service-section .home-selector-actions,
+  app-booking .service-section .home-address-prompt,
+  app-booking .service-section .home-selector-action {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  app-booking .service-section .select-salon-service-btn {
+    min-height: 64px;
+    padding: 12px 15px;
+  }
+
+  app-booking .service-section .select-salon-service-btn > span {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  app-booking .service-section .select-salon-service-btn small,
+  app-booking .service-section .home-address-copy small {
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  app-booking .service-section .home-service-selector {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 17px;
+  }
+
+  app-booking .service-section .home-selector-actions {
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 420px) {
+  app-booking .service-section .select-salon-service-btn {
+    min-height: 58px;
+    padding: 10px 13px;
+  }
+
+  app-booking .service-section .home-service-selector {
+    min-height: 0;
+    padding: 15px;
+    border-radius: 11px;
+  }
+
+  app-booking .service-section .home-service-photo {
+    left: auto;
+    right: 0;
+    width: 78%;
+    opacity: .24;
+  }
+
+  app-booking .service-section .home-service-features {
+    gap: 6px;
+    margin-top: 13px;
+  }
+
+  app-booking .service-section .home-service-features span {
+    min-height: 28px;
+    padding: 5px 8px;
+  }
+}
