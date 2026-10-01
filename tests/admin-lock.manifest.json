@@ -1,6 +1,6 @@
 {
-  "baseline_commit": "90b8c9edfe9fb914a7b8e7d9e1233172c85088c3",
-  "purpose": "Final admin/booking lock. Salon service selector UI intentionally updated to the approved dark/gold reference; booking, service and barber behavior remains locked.",
+  "baseline_commit": "3715ab482095e1287298a331a2351f2d70e353ca",
+  "purpose": "Final admin/booking lock. Salon selector and Home Service selector UI intentionally updated to approved references; booking, service and barber behavior remains locked.",
   "protected_files": {
     "backend/BarberFlow.Api/Services/BookingApplicationService.cs": "1d10ac0390692f1fbb0f89f7a81ea21a58c7120e",
     "backend/BarberFlow.Api/Services/CatalogApplicationService.cs": "aedd79ad0cc23e0b3e6f22e0bcfddf4e04b47bc5",
@@ -41,8 +41,8 @@
     "src/app/admin/shared/admin-shell.component.html": "cd23199e6b374d3a9631025f1c8b713437f2f329",
     "src/app/admin/shared/admin-shell.component.scss": "5605534eeb2bc9e6c757de03e901dd7168c45177",
     "src/app/admin/shared/admin-shell.component.ts": "c41ddcbba3ee5b03349a4b19d221b131f7adc0c5",
-    "src/app/booking/booking.component.html": "615df27565626253e228a1467cf5cd45808eaa65",
-    "src/app/booking/booking.component.scss": "03dc0c9f774d840a6b159f38e97d2e2f39cae23e",
+    "src/app/booking/booking.component.html": "5f0731e4fc42512966b96f97a2f7dd9ea6b97709",
+    "src/app/booking/booking.component.scss": "f31c55dda3d6f12f16a87f05d6baf8acec511c7b",
     "src/app/booking/booking.component.ts": "6bf5748d0cb21f6be8b30449c4626e47f125ef92",
     "src/app/core/booking-api.service.ts": "8a6c5bc2364857dd41d60450a61c503266b63510",
     "src/styles.scss": "e79f75a7f53bc531d78cfbdade08058f5976d39c",

@@ -132,24 +132,56 @@
             </div>
 
             <div class="home-services-section" [class.active]="serviceLocation === 'home'">
-              <button type="button"
-                class="home-service-selector w-100 d-flex align-items-center justify-content-between"
+              <div
+                class="home-service-selector w-100"
+                role="button"
+                tabindex="0"
                 [class.active]="serviceLocation === 'home'"
-                (click)="setServiceLocation('home')">
-                <div class="home-selector-copy">
-                  <span class="service-type-label"><i class="bi bi-house-heart"></i> HOME SERVICES</span>
-                  <h3>Professional service at your address</h3>
-                  <p>
-                    We assign the best available barber for your selected services. The barber arrives in professional
-                    uniform with sanitized essentials.
-                  </p>
+                (click)="setServiceLocation('home')"
+                (keydown.enter)="setServiceLocation('home')"
+                (keydown.space)="setServiceLocation('home'); $event.preventDefault()">
+                <div class="home-service-photo" aria-hidden="true">
+                  <img src="assets/images/services/haircut.webp" alt="">
                 </div>
 
-                <span class="home-selector-action d-flex align-items-center gap-2">
-                  <strong>{{ serviceLocation === 'home' ? 'Selected' : 'Select Home Service' }}</strong>
-                  <i class="bi" [ngClass]="serviceLocation === 'home' ? 'bi-check-circle-fill' : 'bi-chevron-down'"></i>
-                </span>
-              </button>
+                <div class="home-selector-copy">
+                  <div class="home-service-kicker d-flex align-items-center">
+                    <i class="bi bi-house-door-fill"></i>
+                    <span>HOME SERVICES</span>
+                  </div>
+
+                  <h3>Professional service at your address</h3>
+                  <p>
+                    We bring the best barber experience to your doorstep. Our barber arrives
+                    in professional uniform with sanitized essentials.
+                  </p>
+
+                  <div class="home-service-features d-flex flex-wrap">
+                    <span><i class="bi bi-truck"></i> At your doorstep</span>
+                    <span><i class="bi bi-shield-check"></i> Sanitized tools</span>
+                    <span><i class="bi bi-clock"></i> Flexible timing</span>
+                    <span><i class="bi bi-house"></i> Comfort at home</span>
+                  </div>
+                </div>
+
+                <div class="home-selector-actions">
+                  <div class="home-address-prompt d-flex align-items-center">
+                    <span class="home-address-icon d-flex align-items-center justify-content-center">
+                      <i class="bi bi-geo-alt-fill"></i>
+                    </span>
+                    <span class="home-address-copy">
+                      <strong>Your Address</strong>
+                      <small>Add your location to check availability</small>
+                    </span>
+                    <i class="bi bi-chevron-right home-address-chevron"></i>
+                  </div>
+
+                  <span class="home-selector-action d-flex align-items-center justify-content-center">
+                    <strong>{{ serviceLocation === 'home' ? 'Home Service Selected' : 'Select Home Service' }}</strong>
+                    <i class="bi" [ngClass]="serviceLocation === 'home' ? 'bi-check-lg' : 'bi-arrow-right'"></i>
+                  </span>
+                </div>
+              </div>
 
               <ng-container *ngIf="serviceLocation === 'home'">
                 <div class="services-grid row g-3 home-services-grid">
