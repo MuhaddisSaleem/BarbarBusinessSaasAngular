@@ -518,10 +518,16 @@ let browser, activePage;
     const actionStageBox=await page.locator('.salon-choice-action-stage').boundingBox();
     assert.ok(actionStageBox&&actionStageBox.height<=100,'Home mode must not keep the hidden stacked salon-choice height');
 
-    const salonBox=await page.locator('.salon-service-choice').boundingBox();
-    const homeBox=await page.locator('#home-service-section').boundingBox();
-    assert.ok(salonButtonBox&&homeBox&&(homeBox.y-(salonButtonBox.y+salonButtonBox.height))<90,'Home Service should follow the visible Salon switch without a large empty gap');
-    assert.ok(salonBox&&homeBox&&salonBox.y<homeBox.y,'Salon Service must always remain above Home Service');
+    const selectorGeometry=await page.evaluate(()=>{
+      const salon=document.querySelector('.salon-service-choice')?.getBoundingClientRect();
+      const salonButton=document.querySelector('.select-salon-service-btn')?.getBoundingClientRect();
+      const home=document.querySelector('#home-service-section')?.getBoundingClientRect();
+      return salon&&salonButton&&home
+        ? {gap:home.top-salonButton.bottom,salonTop:salon.top,homeTop:home.top}
+        : null;
+    });
+    assert.ok(selectorGeometry&&selectorGeometry.gap<90,'Home Service should follow the visible Salon switch without a large empty gap');
+    assert.ok(selectorGeometry&&selectorGeometry.salonTop<selectorGeometry.homeTop,'Salon Service must always remain above Home Service');
 
     await page.locator('.select-salon-service-btn').click();
     await page.locator('.salon-catalog-motion.expanded').waitFor();
