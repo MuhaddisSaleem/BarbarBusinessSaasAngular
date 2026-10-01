@@ -39,13 +39,13 @@
 
 .hero-photo,
 .hero-media {
-  animation: heroBackgroundEnter 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: heroBackgroundEnter 4s cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 @keyframes heroBackgroundEnter {
   from {
     opacity: 0;
-    transform: scale(1.12);
+    transform: scale(1.08);
   }
   to {
     opacity: 1;
