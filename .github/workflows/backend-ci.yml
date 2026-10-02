@@ -11,6 +11,7 @@ on:
     branches:
       - main
       - codex/backend-database-setup
+      - The_trim_town
     paths:
       - "backend/**"
       - ".config/dotnet-tools.json"
