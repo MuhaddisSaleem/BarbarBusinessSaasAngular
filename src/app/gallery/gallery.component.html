@@ -22,7 +22,7 @@
       </button>
     </div>
 
-    <div class="gallery-carousel" *ngIf="filteredItems.length">
+    <div class="gallery-carousel" *ngIf="filteredItems.length" (mouseenter)="pauseAutoScroll()" (mouseleave)="resumeAutoScroll()">
       <div class="gallery-stage">
         <button
           *ngFor="let item of filteredItems; let i = index; trackBy: trackByItem"
@@ -46,10 +46,10 @@
           </span>
         </button>
 
-        <button type="button" class="gallery-arrow gallery-arrow-prev d-flex align-items-center justify-content-center" aria-label="Previous gallery image" (click)="previous()">
+        <button type="button" class="gallery-arrow gallery-arrow-prev d-flex align-items-center justify-content-center" aria-label="Previous gallery image" (click)="previousManual()">
           <i class="bi bi-chevron-left"></i>
         </button>
-        <button type="button" class="gallery-arrow gallery-arrow-next d-flex align-items-center justify-content-center" aria-label="Next gallery image" (click)="next()">
+        <button type="button" class="gallery-arrow gallery-arrow-next d-flex align-items-center justify-content-center" aria-label="Next gallery image" (click)="nextManual()">
           <i class="bi bi-chevron-right"></i>
         </button>
       </div>
