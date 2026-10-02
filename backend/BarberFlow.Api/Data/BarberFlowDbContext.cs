@@ -16,6 +16,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
     public DbSet<BarberWorkingHour> BarberWorkingHours => Set<BarberWorkingHour>();
     public DbSet<BarberScheduleOverride> BarberScheduleOverrides => Set<BarberScheduleOverride>();
     public DbSet<BarberLeave> BarberLeaves => Set<BarberLeave>();
+    public DbSet<ServiceCategory> ServiceCategories => Set<ServiceCategory>();
     public DbSet<Service> Services => Set<Service>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Booking> Bookings => Set<Booking>();
@@ -29,6 +30,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
 
         ConfigureSalon(modelBuilder);
         ConfigureSalonUser(modelBuilder);
+        ConfigureServiceCategory(modelBuilder);
         ConfigureService(modelBuilder);
         ConfigureBarber(modelBuilder);
         ConfigureCustomer(modelBuilder);
@@ -97,6 +99,23 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
         });
     }
 
+
+    private static void ConfigureServiceCategory(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ServiceCategory>(entity =>
+        {
+            entity.ToTable("ServiceCategories");
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.HasIndex(x => new { x.SalonId, x.PublicId }).IsUnique();
+            entity.HasIndex(x => new { x.SalonId, x.Name }).IsUnique();
+            entity.HasIndex(x => new { x.SalonId, x.IsActive, x.SortOrder });
+            entity.HasOne(x => x.Salon)
+                .WithMany(x => x.ServiceCategories)
+                .HasForeignKey(x => x.SalonId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
     private static void ConfigureService(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Service>(entity =>
@@ -111,6 +130,11 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
             entity.Property(x => x.ImageUrl).HasColumnType("nvarchar(max)");
             entity.HasIndex(x => new { x.SalonId, x.PublicId }).IsUnique();
             entity.HasIndex(x => new { x.SalonId, x.Name }).IsUnique();
+            entity.HasIndex(x => x.ServiceCategoryId);
+            entity.HasOne(x => x.ServiceCategory)
+                .WithMany(x => x.Services)
+                .HasForeignKey(x => x.ServiceCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Salon)
                 .WithMany(x => x.Services)
                 .HasForeignKey(x => x.SalonId)
