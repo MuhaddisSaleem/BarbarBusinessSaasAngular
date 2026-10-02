@@ -93,6 +93,11 @@ export class BookingComponent implements OnInit {
   }
 
   isServiceCategorySelected(category: 'all' | number): boolean {
+    if (category === 'all') {
+      return this.selectedServiceCategory === 'all'
+        || !this.serviceCategories.some(item => item.id === this.selectedServiceCategory);
+    }
+
     return this.selectedServiceCategory === category;
   }
 
@@ -166,7 +171,8 @@ export class BookingComponent implements OnInit {
 
     if (event && event.storageArea !== window.localStorage) return;
     const keys = ['royal-barbers.admin-barbers.v1', 'royal-barbers.admin-services.v1',
-      'royal-barbers.admin-settings.v1', 'royal-barbers.admin-bookings.v1'];
+      'royal-barbers.admin-service-categories.v1', 'royal-barbers.admin-settings.v1',
+      'royal-barbers.admin-bookings.v1'];
     if (event?.key && !keys.includes(event.key)) return;
 
     this.barberService.refreshFromStorage();
@@ -1101,8 +1107,8 @@ export class BookingComponent implements OnInit {
   private filterServicesByCategory(source: Service[]): Service[] {
     if (this.selectedServiceCategory === 'all') return source;
 
-    const categoryExists = this.serviceCategories.some(
-      category => category.id === this.selectedServiceCategory
+    const categoryExists = source.some(
+      service => service.categoryId === this.selectedServiceCategory
     );
 
     if (!categoryExists) return source;
