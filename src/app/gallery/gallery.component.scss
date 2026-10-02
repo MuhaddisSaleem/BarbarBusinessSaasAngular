@@ -66,6 +66,44 @@ button {
   padding: 0 40px;
 }
 
+.gallery-intro {
+  max-width: 1100px;
+  margin: 0 auto 74px;
+  padding: 6px 20px 0;
+}
+
+.gallery-intro-kicker {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: #e9b654;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 4.4px;
+}
+
+.gallery-intro h2 {
+  margin: 0;
+  color: #f4f1ea;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(46px, 5.8vw, 86px);
+  line-height: .98;
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+
+.gallery-intro h2 span {
+  color: #e9b654;
+}
+
+.gallery-intro p {
+  margin: 18px 0 0;
+  color: #9ca3a5;
+  font-size: clamp(15px, 1.25vw, 20px);
+  line-height: 1.5;
+  letter-spacing: .01em;
+}
+
 .gallery-heading {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(280px, .75fr);
@@ -497,6 +535,27 @@ button {
 
   .gallery-shell {
     padding: 0 14px;
+  }
+
+  .gallery-intro {
+    margin-bottom: 52px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .gallery-intro-kicker {
+    margin-bottom: 12px;
+    font-size: 9px;
+    letter-spacing: 3.2px;
+  }
+
+  .gallery-intro h2 {
+    font-size: clamp(38px, 11vw, 58px);
+  }
+
+  .gallery-intro p {
+    margin-top: 14px;
+    font-size: 13px;
   }
 
   .gallery-heading {
