@@ -39,6 +39,10 @@ export class FooterComponent {
     return location || 'The Trim Town Studio, Bahawalpur';
   }
 
+  get contactEmail(): string {
+    return this.settingsService.current.email?.trim() || 'thetrimtown@gmail.com';
+  }
+
   get currentYear(): number {
     return new Date().getFullYear();
   }
