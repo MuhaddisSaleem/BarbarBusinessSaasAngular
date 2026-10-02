@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy } from '@angular/core';
 
 interface GalleryImage {
   src: string;
@@ -15,7 +15,8 @@ interface GalleryImage {
   templateUrl: './gallery.component.html',
   styleUrl: './gallery.component.scss'
 })
-export class GalleryComponent {
+export class GalleryComponent implements AfterViewInit, OnDestroy {
+  private revealObserver?: IntersectionObserver;
   selectedIndex: number | null = null;
 
   readonly images: GalleryImage[] = [
@@ -30,6 +31,44 @@ export class GalleryComponent {
     { src: 'assets/images/gallery/gallery9.jpg', alt: 'The Trim Town interior view', className: 'tile-9', label: 'Art & Character' },
     { src: 'assets/images/gallery/gallery10.jpg', alt: 'The Trim Town salon space', className: 'tile-10', label: 'Tools of Craft' }
   ];
+
+  constructor(private readonly host: ElementRef<HTMLElement>) {}
+
+  ngAfterViewInit(): void {
+    const root = this.host.nativeElement;
+    const section = root.querySelector<HTMLElement>('.studio-gallery');
+    const revealElements = Array.from(root.querySelectorAll<HTMLElement>('.scroll-reveal'));
+
+    section?.classList.add('motion-ready');
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+      revealElements.forEach(element => element.classList.add('is-visible'));
+      return;
+    }
+
+    this.revealObserver = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const element = entry.target as HTMLElement;
+          element.classList.add('is-visible');
+          this.revealObserver?.unobserve(element);
+        });
+      },
+      {
+        root: null,
+        threshold: 0.14,
+        rootMargin: '0px 0px -8% 0px'
+      }
+    );
+
+    revealElements.forEach(element => this.revealObserver?.observe(element));
+  }
+
+  ngOnDestroy(): void {
+    this.revealObserver?.disconnect();
+    document.body.style.overflow = '';
+  }
 
   get selectedImage(): GalleryImage | null {
     return this.selectedIndex === null ? null : this.images[this.selectedIndex];
