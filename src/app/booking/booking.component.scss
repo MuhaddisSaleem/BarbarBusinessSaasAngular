@@ -352,6 +352,12 @@ button { -webkit-tap-highlight-color: transparent; }
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 13px;
+  margin: 0;
+}
+
+.service-col {
+  min-width: 0;
+  width: 100%;
 }
 
 .service-card {
@@ -1588,12 +1594,32 @@ button { -webkit-tap-highlight-color: transparent; }
 
 @media (max-width:1199.98px) {
   .salon-service-choice {
-    grid-template-columns:1fr;
-    gap:12px;
+    grid-template-columns:minmax(0,1fr) minmax(260px,.8fr);
+    gap:14px;
   }
 
   .service-subheading.salon-service-intro {
     padding:5px 2px;
+  }
+}
+
+@media (max-width:767.98px) {
+  .salon-service-choice {
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+
+  .salon-choice-action-stage {
+    min-height:58px;
+  }
+
+  .service-search-box {
+    min-height:48px;
+
+    input {
+      height:46px;
+      font-size:10px;
+    }
   }
 }
 
@@ -2029,6 +2055,98 @@ button { -webkit-tap-highlight-color: transparent; }
 .service-section > .home-services-section { order:6; }
 .service-section > .home-catalog-motion { order:7; }
 
+.salon-search-panel {
+  display:flex;
+  align-items:center;
+}
+
+.service-search-box {
+  width:100%;
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 14px;
+  border:1px solid #334047;
+  border-radius:10px;
+  background:
+    linear-gradient(145deg,rgba(16,24,27,.98),rgba(11,17,20,.98));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+  transition:border-color .2s ease,box-shadow .2s ease;
+
+  &:focus-within {
+    border-color:rgba(242,191,90,.7);
+    box-shadow:0 0 0 3px rgba(242,191,90,.055);
+  }
+
+  > i {
+    flex:0 0 auto;
+    color:#aeb7ba;
+    font-size:17px;
+  }
+
+  input {
+    min-width:0;
+    flex:1;
+    height:50px;
+    padding:0;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:#eef1f2;
+    font-size:11px;
+
+    &::placeholder {
+      color:#7f898d;
+    }
+
+    &::-webkit-search-cancel-button {
+      display:none;
+    }
+  }
+}
+
+.service-search-clear {
+  width:29px;
+  height:29px;
+  flex:0 0 29px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.045);
+  color:#aeb7ba;
+  cursor:pointer;
+
+  &:hover {
+    background:rgba(242,191,90,.09);
+    color:$gold-soft;
+  }
+
+  i {
+    font-size:11px;
+  }
+}
+
+.service-search-empty {
+  min-height:76px;
+  margin-top:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:1px dashed #344148;
+  border-radius:9px;
+  color:#89959a;
+  font-size:10px;
+  text-align:center;
+
+  i {
+    color:$gold;
+  }
+}
+
 .salon-choice-action-stage {
   position:relative;
   min-width:0;
@@ -2202,5 +2320,183 @@ button { -webkit-tap-highlight-color: transparent; }
     padding:0 15px;
     border-radius:8px;
     font-size:9px;
+  }
+}
+
+
+/* Compact responsive booking progress + two-up mobile service catalog */
+@media (max-width:767.98px) {
+  .booking-stepper {
+    overflow:hidden;
+  }
+
+  .booking-stepper .page-shell {
+    overflow:visible;
+    padding-left:8px;
+    padding-right:8px;
+  }
+
+  .steps,
+  .steps.home-service-steps {
+    width:100%;
+    min-width:0;
+    padding:15px 0 13px;
+  }
+
+  .steps {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+  .steps.home-service-steps {
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+
+  .step-circle {
+    width:40px;
+    height:40px;
+    flex-basis:40px;
+    font-size:17px;
+    border-width:1px;
+  }
+
+  .step:not(:last-child)::after {
+    top:20px;
+    left:calc(50% + 24px);
+    right:calc(-50% + 24px);
+  }
+
+  .step-badge {
+    top:-5px;
+    right:-4px;
+    width:17px;
+    height:17px;
+    font-size:7px;
+  }
+
+  .step-copy {
+    width:100%;
+    margin-top:7px;
+    padding:0 2px;
+  }
+
+  .step-copy .step-label {
+    font-size:9px;
+    line-height:1.15;
+    white-space:normal;
+  }
+
+  .step-copy small {
+    display:none;
+  }
+
+  .services-grid,
+  .salon-services-grid,
+  .home-services-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+  }
+
+  .service-col {
+    min-width:0;
+    width:100%;
+  }
+
+  .service-card {
+    border-radius:8px;
+  }
+
+  .service-image {
+    padding:6px 6px 0;
+  }
+
+  .service-image img {
+    aspect-ratio:1 / 1;
+    object-fit:cover;
+  }
+
+  .service-card-body {
+    padding:8px 8px 9px;
+  }
+
+  .service-title-row {
+    align-items:flex-start !important;
+    gap:5px;
+  }
+
+  .service-title-row h3 {
+    font-size:10px;
+    line-height:1.25;
+  }
+
+  .radio-dot {
+    width:13px;
+    height:13px;
+    flex-basis:13px;
+  }
+
+  .selected .radio-dot {
+    border-width:4px;
+  }
+
+  .duration-row {
+    margin-top:6px;
+    font-size:8px;
+  }
+
+  .service-price-wrap {
+    gap:4px;
+    margin-top:6px;
+  }
+
+  .service-price {
+    font-size:11px;
+  }
+
+  .service-original-price {
+    font-size:8px;
+  }
+
+  .service-discount-badge {
+    padding:2px 4px;
+    font-size:6.5px;
+  }
+}
+
+@media (max-width:430px) {
+  .steps,
+  .steps.home-service-steps {
+    padding-top:13px;
+    padding-bottom:11px;
+  }
+
+  .step-circle {
+    width:34px;
+    height:34px;
+    flex-basis:34px;
+    font-size:15px;
+  }
+
+  .step:not(:last-child)::after {
+    top:17px;
+    left:calc(50% + 21px);
+    right:calc(-50% + 21px);
+  }
+
+  .step-badge {
+    width:15px;
+    height:15px;
+    top:-4px;
+    right:-3px;
+    font-size:6.5px;
+  }
+
+  .step-copy .step-label {
+    font-size:8px;
+  }
+
+  .services-grid,
+  .salon-services-grid,
+  .home-services-grid {
+    gap:8px;
   }
 }
