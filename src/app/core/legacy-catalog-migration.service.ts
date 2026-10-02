@@ -67,6 +67,7 @@ export class LegacyCatalogMigrationService {
   private clearLegacyKeys(): void {
     [
       this.serviceKey,
+      'royal-barbers.admin-service-categories.v1',
       this.barberKey,
       this.settingsKey,
       'royal-barbers.admin-services.demo-cleaned.v1',
