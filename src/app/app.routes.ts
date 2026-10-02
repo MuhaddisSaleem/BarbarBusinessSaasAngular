@@ -9,6 +9,12 @@ export const routes: Routes = [
     title: 'Book Appointment'
   },
   {
+    path: 'gallery',
+    loadComponent: () =>
+      import('./gallery-page/gallery-page.component').then(m => m.GalleryPageComponent),
+    title: 'Gallery | The Trim Town'
+  },
+  {
     path: 'admin/login',
     loadComponent: () =>
       import('./admin-login/admin-login.component').then(m => m.AdminLoginComponent),
