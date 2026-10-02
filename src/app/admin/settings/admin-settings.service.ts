@@ -97,11 +97,6 @@ export class AdminSettingsService {
       ? this.normalizeSettings(this.api.settingsSnapshot)
       : this.loadSettings();
 
-    if (this.api && typeof window !== 'undefined') {
-      window.localStorage.removeItem(this.storageKey);
-    }
-
-
     this.api?.changes$.subscribe(changed => {
       if (changed === 'settings' && this.api?.settingsSnapshot) {
         this.settings = this.normalizeSettings(this.api.settingsSnapshot);
