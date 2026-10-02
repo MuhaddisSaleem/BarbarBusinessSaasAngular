@@ -81,7 +81,15 @@ export class BookingComponent implements OnInit {
   }
 
   get visibleSalonServices(): Service[] {
-    return this.filterServicesByCategory(this.salonServices);
+    const services = this.filterServicesByCategory(this.salonServices);
+    const term = this.serviceSearchTerm.trim().toLowerCase();
+
+    if (!term) return services;
+
+    return services.filter(service =>
+      service.name.toLowerCase().includes(term)
+      || service.categoryName.toLowerCase().includes(term)
+    );
   }
 
   get visibleHomeServices(): Service[] {
@@ -113,6 +121,7 @@ export class BookingComponent implements OnInit {
 
   serviceLocation: 'salon' | 'home' = 'salon';
   selectedServiceCategory: 'all' | number = 'all';
+  serviceSearchTerm = '';
   bookingMode: 'single' | 'group' = 'single';
   groupStrategy: 'parallel' | 'sequential' = 'parallel';
   homeAddress = '';
