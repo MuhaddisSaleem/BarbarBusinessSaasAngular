@@ -1887,6 +1887,7 @@ button { -webkit-tap-highlight-color: transparent; }
   // Keep collapsed catalog contents inside the animated grid row so hidden
   // service cards cannot extend the document past the footer.
   overflow:hidden;
+  padding: 1px 0 0 0;
 }
 
 .salon-catalog-motion.expanded {
