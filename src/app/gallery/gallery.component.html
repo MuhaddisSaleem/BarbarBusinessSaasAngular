@@ -1,0 +1,109 @@
+<section id="gallery" class="gallery-section" aria-labelledby="gallery-title">
+  <div class="gallery-glow gallery-glow-left" aria-hidden="true"></div>
+  <div class="gallery-glow gallery-glow-right" aria-hidden="true"></div>
+
+  <div class="gallery-shell container-fluid">
+    <div class="gallery-heading text-center">
+      <span class="gallery-eyebrow">OUR GALLERY</span>
+      <h2 id="gallery-title">Moments at <span>The Trim Town</span></h2>
+      <p>Real style. Premium details. A space built around the modern grooming experience.</p>
+    </div>
+
+    <div class="gallery-filters d-flex align-items-center justify-content-center" role="tablist" aria-label="Gallery categories">
+      <button
+        *ngFor="let category of categories"
+        type="button"
+        class="gallery-filter"
+        [class.active]="activeCategory === category"
+        [attr.aria-selected]="activeCategory === category"
+        role="tab"
+        (click)="selectCategory(category)">
+        {{ category }}
+      </button>
+    </div>
+
+    <div class="gallery-carousel" *ngIf="filteredItems.length">
+      <div class="gallery-stage">
+        <button
+          *ngFor="let item of filteredItems; let i = index; trackBy: trackBySrc"
+          type="button"
+          class="gallery-card"
+          [ngClass]="cardClass(i)"
+          [attr.aria-label]="i === activeIndex ? 'Open ' + item.title : 'Show ' + item.title"
+          (click)="selectSlide(i)">
+          <img
+            [src]="item.src"
+            [alt]="item.alt"
+            [style.object-position]="item.position || 'center'"
+            [attr.loading]="i === activeIndex ? 'eager' : 'lazy'"
+            decoding="async">
+          <span class="gallery-card-shade" aria-hidden="true"></span>
+          <span class="gallery-card-copy">
+            <small>{{ item.category }}</small>
+            <strong>{{ item.title }}</strong>
+          </span>
+          <span class="gallery-expand d-flex align-items-center justify-content-center" *ngIf="i === activeIndex" aria-hidden="true">
+            <i class="bi bi-arrows-fullscreen"></i>
+          </span>
+        </button>
+
+        <button type="button" class="gallery-arrow gallery-arrow-prev d-flex align-items-center justify-content-center" aria-label="Previous gallery image" (click)="previous()">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <button type="button" class="gallery-arrow gallery-arrow-next d-flex align-items-center justify-content-center" aria-label="Next gallery image" (click)="next()">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="gallery-pagination d-flex align-items-center justify-content-center">
+        <button
+          *ngFor="let item of filteredItems; let i = index; trackBy: trackBySrc"
+          type="button"
+          class="gallery-dot"
+          [class.active]="i === activeIndex"
+          [attr.aria-label]="'Go to image ' + (i + 1)"
+          (click)="activeIndex = i">
+        </button>
+      </div>
+
+      <div class="gallery-counter text-center">
+        <span>{{ formatCount(activeIndex + 1) }}</span>
+        <i></i>
+        <span>{{ formatCount(filteredItems.length) }}</span>
+      </div>
+    </div>
+
+    <div class="gallery-cta d-flex flex-column flex-md-row align-items-center justify-content-between">
+      <div>
+        <small>READY FOR YOUR TURN?</small>
+        <h3>Experience The Trim Town in person.</h3>
+      </div>
+      <a href="#services" class="gallery-book-btn d-inline-flex align-items-center justify-content-center">
+        Book Your Experience
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="gallery-lightbox d-flex align-items-center justify-content-center" *ngIf="lightboxOpen && activeItem" (click)="closeLightbox()">
+  <button type="button" class="lightbox-close d-flex align-items-center justify-content-center" aria-label="Close gallery image" (click)="closeLightbox(); $event.stopPropagation()">
+    <i class="bi bi-x-lg"></i>
+  </button>
+
+  <button type="button" class="lightbox-nav lightbox-prev d-flex align-items-center justify-content-center" aria-label="Previous image" (click)="previous(); $event.stopPropagation()">
+    <i class="bi bi-chevron-left"></i>
+  </button>
+
+  <figure (click)="$event.stopPropagation()">
+    <img [src]="activeItem.src" [alt]="activeItem.alt">
+    <figcaption>
+      <small>{{ activeItem.category }}</small>
+      <strong>{{ activeItem.title }}</strong>
+    </figcaption>
+  </figure>
+
+  <button type="button" class="lightbox-nav lightbox-next d-flex align-items-center justify-content-center" aria-label="Next image" (click)="next(); $event.stopPropagation()">
+    <i class="bi bi-chevron-right"></i>
+  </button>
+</div>
