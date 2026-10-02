@@ -24,8 +24,17 @@ export class AdminShellComponent {
 
   get currentUser(): { name: string; role: string; initials: string } {
     const user = this.authService.currentUser;
-    const name = user?.fullName?.trim() || 'Administrator';
     const role = user?.role?.trim() || 'Administrator';
+    const savedName = user?.fullName?.trim() || '';
+
+    const isLegacyOwnerName = /^royal\s+barbers\s+owner$/i.test(savedName)
+      || /^salon\s+owner$/i.test(savedName);
+
+    const name = isLegacyOwnerName
+      ? `${this.businessName} Owner`
+      : (savedName || (role.toLowerCase() === 'owner'
+          ? `${this.businessName} Owner`
+          : 'Administrator'));
 
     return {
       name,
