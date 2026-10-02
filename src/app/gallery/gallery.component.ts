@@ -5,11 +5,11 @@ import { RouterLink } from '@angular/router';
 type GalleryCategory = 'All' | 'Interior' | 'Chairs' | 'Products' | 'Tools' | 'Atmosphere';
 
 interface GalleryItem {
-  src: string;
+  strip: string;
+  frame: number;
   alt: string;
   title: string;
   category: Exclude<GalleryCategory, 'All'>;
-  position?: string;
 }
 
 @Component({
@@ -26,26 +26,26 @@ export class GalleryComponent {
   lightboxOpen = false;
 
   readonly items: GalleryItem[] = [
-    { src: 'assets/images/gallery/gallery-13.webp', alt: 'Wide view of The Trim Town barber shop floor', title: 'The Main Floor', category: 'Interior', position: 'center 55%' },
-    { src: 'assets/images/gallery/gallery-02.webp', alt: 'Premium black and gold barber chair inside The Trim Town', title: 'The Signature Chair', category: 'Chairs' },
-    { src: 'assets/images/gallery/gallery-11.webp', alt: 'Professional barber scissors displayed at The Trim Town', title: 'Tools of the Craft', category: 'Tools' },
-    { src: 'assets/images/gallery/gallery-01.webp', alt: 'Dark sculptural wall art inside The Trim Town', title: 'Art & Character', category: 'Atmosphere' },
-    { src: 'assets/images/gallery/gallery-08.webp', alt: 'Professional grooming products displayed on a shelf', title: 'Professional Care', category: 'Products' },
-    { src: 'assets/images/gallery/gallery-03.webp', alt: 'Close view of a tufted barber chair', title: 'Crafted Comfort', category: 'Chairs' },
-    { src: 'assets/images/gallery/gallery-07.webp', alt: 'Barber stations and mirrors inside The Trim Town', title: 'Barber Stations', category: 'Interior' },
-    { src: 'assets/images/gallery/gallery-12.webp', alt: 'Blindfolded classical portrait wall art', title: 'The Trim Town Aesthetic', category: 'Atmosphere' },
-    { src: 'assets/images/gallery/gallery-06.webp', alt: 'Hair color and salon supplies arranged on shelving', title: 'Color Collection', category: 'Products' },
-    { src: 'assets/images/gallery/gallery-09.webp', alt: 'Hair treatment products under warm salon lighting', title: 'Premium Treatments', category: 'Products' },
-    { src: 'assets/images/gallery/gallery-10.webp', alt: 'Hair care products arranged against the brick interior', title: 'Hair Care Range', category: 'Products' },
-    { src: 'assets/images/gallery/gallery-05.webp', alt: 'Professional hair styling products held in display hands', title: 'Styling Essentials', category: 'Products' },
-    { src: 'assets/images/gallery/gallery-04.webp', alt: 'Professional facial and grooming equipment', title: 'Grooming Technology', category: 'Tools' },
-    { src: 'assets/images/gallery/gallery-14.webp', alt: 'Decorative shelving and plants inside The Trim Town', title: 'Thoughtful Details', category: 'Interior' },
-    { src: 'assets/images/gallery/gallery-15.webp', alt: 'Warm private grooming area inside The Trim Town', title: 'Private Grooming', category: 'Atmosphere' },
-    { src: 'assets/images/gallery/gallery-16.webp', alt: 'Waiting and grooming chairs inside the shop', title: 'Classic Lounge', category: 'Interior' },
-    { src: 'assets/images/gallery/gallery-17.webp', alt: 'Reception decor and shelving at The Trim Town', title: 'Welcome In', category: 'Interior' },
-    { src: 'assets/images/gallery/gallery-18.webp', alt: 'Warm brick interior and seating area', title: 'Warm Atmosphere', category: 'Interior' },
-    { src: 'assets/images/gallery/gallery-19.webp', alt: 'Private treatment beds beneath warm pendant lights', title: 'Treatment Space', category: 'Atmosphere' },
-    { src: 'assets/images/gallery/gallery-20.webp', alt: 'Premium seating and brick wall interior', title: 'Relax & Refresh', category: 'Interior' }
+    this.photo(13, 'Wide view of The Trim Town barber shop floor', 'The Main Floor', 'Interior'),
+    this.photo(2, 'Premium black and gold barber chair inside The Trim Town', 'The Signature Chair', 'Chairs'),
+    this.photo(11, 'Professional barber scissors displayed at The Trim Town', 'Tools of the Craft', 'Tools'),
+    this.photo(1, 'Dark sculptural wall art inside The Trim Town', 'Art & Character', 'Atmosphere'),
+    this.photo(8, 'Professional grooming products displayed on a shelf', 'Professional Care', 'Products'),
+    this.photo(3, 'Close view of a tufted barber chair', 'Crafted Comfort', 'Chairs'),
+    this.photo(7, 'Barber stations and mirrors inside The Trim Town', 'Barber Stations', 'Interior'),
+    this.photo(12, 'Blindfolded classical portrait wall art', 'The Trim Town Aesthetic', 'Atmosphere'),
+    this.photo(6, 'Hair color and salon supplies arranged on shelving', 'Color Collection', 'Products'),
+    this.photo(9, 'Hair treatment products under warm salon lighting', 'Premium Treatments', 'Products'),
+    this.photo(10, 'Hair care products arranged against the brick interior', 'Hair Care Range', 'Products'),
+    this.photo(5, 'Professional hair styling products held in display hands', 'Styling Essentials', 'Products'),
+    this.photo(4, 'Professional facial and grooming equipment', 'Grooming Technology', 'Tools'),
+    this.photo(14, 'Decorative shelving and plants inside The Trim Town', 'Thoughtful Details', 'Interior'),
+    this.photo(15, 'Warm private grooming area inside The Trim Town', 'Private Grooming', 'Atmosphere'),
+    this.photo(16, 'Waiting and grooming chairs inside the shop', 'Classic Lounge', 'Interior'),
+    this.photo(17, 'Reception decor and shelving at The Trim Town', 'Welcome In', 'Interior'),
+    this.photo(18, 'Warm brick interior and seating area', 'Warm Atmosphere', 'Interior'),
+    this.photo(19, 'Private treatment beds beneath warm pendant lights', 'Treatment Space', 'Atmosphere'),
+    this.photo(20, 'Premium seating and brick wall interior', 'Relax & Refresh', 'Interior')
   ];
 
   get filteredItems(): GalleryItem[] {
@@ -69,6 +69,7 @@ export class GalleryComponent {
       this.openLightbox();
       return;
     }
+
     this.activeIndex = index;
   }
 
@@ -113,12 +114,21 @@ export class GalleryComponent {
     }
   }
 
+  photoStyle(item: GalleryItem): Record<string, string> {
+    return {
+      'background-image': `url("${item.strip}")`,
+      'background-size': '500% auto',
+      'background-position': `${item.frame * 25}% center`,
+      'background-repeat': 'no-repeat'
+    };
+  }
+
   formatCount(value: number): string {
     return String(value).padStart(2, '0');
   }
 
-  trackBySrc(_index: number, item: GalleryItem): string {
-    return item.src;
+  trackByItem(_index: number, item: GalleryItem): string {
+    return `${item.strip}-${item.frame}`;
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -130,5 +140,23 @@ export class GalleryComponent {
 
     if (event.key === 'ArrowRight') this.next();
     if (event.key === 'ArrowLeft') this.previous();
+  }
+
+  private photo(
+    sourceNumber: number,
+    alt: string,
+    title: string,
+    category: Exclude<GalleryCategory, 'All'>
+  ): GalleryItem {
+    const stripNumber = Math.floor((sourceNumber - 1) / 5) + 1;
+    const frame = (sourceNumber - 1) % 5;
+
+    return {
+      strip: `assets/images/gallery/gallery-strip-${stripNumber}.webp`,
+      frame,
+      alt,
+      title,
+      category
+    };
   }
 }
