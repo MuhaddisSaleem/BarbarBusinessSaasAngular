@@ -30,15 +30,19 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         CancellationToken cancellationToken)
     {
         var salonId = await GetSalonIdAsync(cancellationToken);
-        var categories = await db.ServiceCategories
+
+        return await db.ServiceCategories
             .AsNoTracking()
             .Where(x => x.SalonId == salonId)
-            .Include(x => x.Services)
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.PublicId)
+            .Select(x => new ServiceCategoryDto(
+                x.PublicId,
+                x.Name,
+                x.SortOrder,
+                x.IsActive ? "Active" : "Inactive",
+                x.Services.Count))
             .ToListAsync(cancellationToken);
-
-        return categories.Select(MapServiceCategory).ToList();
     }
 
     public async Task<MutationResponse<ServiceCategoryDto>> AddServiceCategoryAsync(
@@ -263,11 +267,11 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
     {
         var salon = await GetSalonAsync(cancellationToken);
 
-        // Backfill older data created before services became universal for all barbers.
-        await EnsureAllBarbersHaveAllServicesAsync(salon.Id, cancellationToken);
-
+        // Reads stay read-only. Universal barber/service links are maintained when
+        // services or barbers are created/updated, not on every customer page load.
         var barbers = await db.Barbers
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(x => x.SalonId == salon.Id)
             .Include(x => x.Services).ThenInclude(x => x.Service)
             .Include(x => x.WorkingHours)
