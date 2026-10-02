@@ -1,11 +1,11 @@
 import { Routes } from '@angular/router';
-import { CustomerBookingComponent } from './customer-booking/customer-booking.component';
 import { adminAuthGuard } from './core/admin-auth.guard';
 
 export const routes: Routes = [
   {
     path: '',
-    component: CustomerBookingComponent,
+    loadComponent: () =>
+      import('./customer-booking/customer-booking.component').then(m => m.CustomerBookingComponent),
     title: 'Book Appointment'
   },
   {
