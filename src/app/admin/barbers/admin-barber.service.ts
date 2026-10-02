@@ -36,12 +36,6 @@ export class AdminBarberService {
       ? this.normalizeBarbers(this.api.barberSnapshot)
       : this.loadBarbers();
 
-    if (this.api && typeof window !== 'undefined') {
-      window.localStorage.removeItem(this.storageKey);
-      window.localStorage.removeItem(this.demoCleanupKey);
-    }
-
-
     this.api?.changes$.subscribe(changed => {
       if (changed === 'barbers' && this.api) {
         this.barbers = this.normalizeBarbers(this.api.barberSnapshot);
