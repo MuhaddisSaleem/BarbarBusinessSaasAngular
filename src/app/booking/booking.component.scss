@@ -269,12 +269,12 @@ button { -webkit-tap-highlight-color: transparent; }
   }
 
   img {
-    width: 74px;
-    height: 70px;
+    width: 94px;
+    height: 90px;
     display: block;
     border-radius: 7px;
     object-fit: cover;
-    object-position: center 22%;
+    object-position: center 0%;
     filter: saturate(.75) contrast(1.05) brightness(.9);
   }
 
