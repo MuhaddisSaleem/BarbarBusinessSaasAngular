@@ -78,7 +78,9 @@ export class AdminServiceService {
       this.refreshFromApi();
       return;
     }
+    this.categories = this.loadCategories();
     this.services = this.loadServices();
+    this.persistCategories();
   }
 
   refreshFromApi(): void {
@@ -468,6 +470,8 @@ export class AdminServiceService {
       return { success: false, message: 'Could not save this service locally. Try a smaller image.' };
     }
 
+    this.persistCategories();
+
     const specialtyResult = this.barberService.addSpecialty(next.name);
     if (!specialtyResult.success) {
       this.services = this.services.filter(item => item.id !== nextId);
@@ -518,6 +522,8 @@ export class AdminServiceService {
       Object.assign(service, previous);
       return { success: false, message: 'Could not save the service changes.' };
     }
+
+    this.persistCategories();
 
     if (previous.name.trim().toLowerCase() !== service.name.trim().toLowerCase()) {
       const specialtyResult = this.barberService.renameSpecialty(previous.name, service.name);
@@ -576,6 +582,8 @@ export class AdminServiceService {
       this.services = previous;
       return { success: false, message: 'Could not delete this service.' };
     }
+
+    this.persistCategories();
 
     const specialtyResult = this.barberService.removeSpecialty(service.name);
     if (!specialtyResult.success) {
