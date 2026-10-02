@@ -59,6 +59,9 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Property<Guid>("SalonId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("ServiceCategoryId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -704,6 +707,48 @@ namespace BarberFlow.Api.Data.Migrations
                     b.ToTable("SalonUsers", (string)null);
                 });
 
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.ServiceCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("PublicId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SalonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalonId", "IsActive", "SortOrder");
+
+                    b.HasIndex("SalonId", "Name")
+                        .IsUnique();
+
+                    b.HasIndex("SalonId", "PublicId")
+                        .IsUnique();
+
+                    b.ToTable("ServiceCategories", (string)null);
+                });
+
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.Service", b =>
                 {
                     b.Property<Guid>("Id")
@@ -760,6 +805,8 @@ namespace BarberFlow.Api.Data.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ServiceCategoryId");
 
                     b.HasIndex("SalonId", "Name")
                         .IsUnique();
@@ -951,13 +998,32 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Navigation("Salon");
                 });
 
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.ServiceCategory", b =>
+                {
+                    b.HasOne("BarberFlow.Api.Domain.Entities.Salon", "Salon")
+                        .WithMany("ServiceCategories")
+                        .HasForeignKey("SalonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Salon");
+                });
+
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.Service", b =>
                 {
+                    b.HasOne("BarberFlow.Api.Domain.Entities.ServiceCategory", "ServiceCategory")
+                        .WithMany("Services")
+                        .HasForeignKey("ServiceCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BarberFlow.Api.Domain.Entities.Salon", "Salon")
                         .WithMany("Services")
                         .HasForeignKey("SalonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("ServiceCategory");
 
                     b.Navigation("Salon");
                 });
@@ -999,6 +1065,8 @@ namespace BarberFlow.Api.Data.Migrations
 
                     b.Navigation("Notifications");
 
+                    b.Navigation("ServiceCategories");
+
                     b.Navigation("Services");
 
                     b.Navigation("WhatsAppMessages");
@@ -1006,6 +1074,11 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Navigation("Settings");
 
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.ServiceCategory", b =>
+                {
+                    b.Navigation("Services");
                 });
 
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.Service", b =>
