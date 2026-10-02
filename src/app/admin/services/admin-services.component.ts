@@ -63,9 +63,7 @@ export class AdminServicesComponent {
 
   openAddModal(): void {
     this.newService = this.emptyServiceForm();
-    this.newService.categoryId = this.serviceService.activeCategories[0]?.id
-      ?? this.serviceService.allCategories[0]?.id
-      ?? 0;
+    this.newService.categoryId = this.serviceService.activeCategories[0]?.id ?? 0;
     this.addModalOpen = true;
     this.feedbackMessage = '';
   }
