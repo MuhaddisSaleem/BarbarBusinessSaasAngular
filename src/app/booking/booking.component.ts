@@ -162,8 +162,14 @@ export class BookingComponent implements OnInit {
       queueMicrotask(() => this.reconcileAvailability());
     });
 
-    this.catalogApi?.changes$.subscribe(() => {
-      queueMicrotask(() => this.reconcileAvailability());
+    this.catalogApi?.changes$.subscribe(scope => {
+      queueMicrotask(() => {
+        if (scope === 'settings') {
+          this.buildCalendar();
+        }
+
+        this.reconcileAvailability();
+      });
     });
   }
 
