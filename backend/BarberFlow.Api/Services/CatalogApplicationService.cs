@@ -272,7 +272,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         var barbers = await db.Barbers
             .AsNoTracking()
             .AsSplitQuery()
-            .Where(x => x.SalonId == salon.Id)
+            .Where(x => x.SalonId == salon.Id && !x.IsDeleted)
             .Include(x => x.Services).ThenInclude(x => x.Service)
             .Include(x => x.WorkingHours)
             .Include(x => x.ScheduleOverrides)
@@ -305,7 +305,8 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             ExperienceYears = ExperienceYears(request.Experience),
             ImageUrl = request.Image,
             Rating = NormalizeRating(request.Rating),
-            IsActive = !request.AccountStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
+            IsActive = !request.AccountStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase),
+            IsDeleted = false
         };
 
         db.Barbers.Add(barber);
@@ -332,7 +333,9 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             .Include(x => x.WorkingHours)
             .Include(x => x.ScheduleOverrides)
             .Include(x => x.Leaves)
-            .FirstOrDefaultAsync(x => x.SalonId == salon.Id && x.PublicId == publicId, cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salon.Id && x.PublicId == publicId && !x.IsDeleted,
+                cancellationToken);
 
         if (barber is null) return new(false, "Barber not found.");
 
@@ -360,11 +363,9 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
     {
         var salon = await GetSalonAsync(cancellationToken);
         var barber = await db.Barbers
-            .Include(x => x.Services)
-            .Include(x => x.WorkingHours)
-            .Include(x => x.ScheduleOverrides)
-            .Include(x => x.Leaves)
-            .FirstOrDefaultAsync(x => x.SalonId == salon.Id && x.PublicId == publicId, cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salon.Id && x.PublicId == publicId && !x.IsDeleted,
+                cancellationToken);
 
         if (barber is null) return new(false, "Barber not found.");
 
@@ -378,11 +379,11 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         if (upcoming)
             return new(false, "Reassign or cancel upcoming bookings before deleting this barber.");
 
-        db.BarberServices.RemoveRange(barber.Services);
-        db.BarberWorkingHours.RemoveRange(barber.WorkingHours);
-        db.BarberScheduleOverrides.RemoveRange(barber.ScheduleOverrides);
-        db.BarberLeaves.RemoveRange(barber.Leaves);
-        db.Barbers.Remove(barber);
+        // Do not physically delete the row: historical bookings reference this barber
+        // with a restrictive foreign key. Soft-delete keeps reports/history accurate
+        // while removing the barber from all current customer/admin catalog results.
+        barber.IsActive = false;
+        barber.IsDeleted = true;
         await db.SaveChangesAsync(cancellationToken);
 
         return new(true, barber.FullName + " removed from the barber list.");
@@ -686,6 +687,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
                             barber.ImageUrl = dto.Image;
                             barber.Rating = NormalizeRating(dto.Rating);
                             barber.IsActive = !dto.AccountStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase);
+                            barber.IsDeleted = false;
 
                             db.BarberServices.RemoveRange(barber.Services);
                             barber.Services.Clear();
@@ -900,6 +902,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
         var duplicateName = await db.Barbers.AnyAsync(
             x => x.SalonId == salonId
+                 && !x.IsDeleted
                  && (!publicId.HasValue || x.PublicId != publicId.Value)
                  && x.FullName.ToLower() == request.Name.Trim().ToLower(),
             cancellationToken);
@@ -908,6 +911,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         var normalizedPhone = NormalizePhone(request.Phone);
         var duplicatePhone = await db.Barbers.AnyAsync(
             x => x.SalonId == salonId
+                 && !x.IsDeleted
                  && (!publicId.HasValue || x.PublicId != publicId.Value)
                  && x.Phone == normalizedPhone,
             cancellationToken);
@@ -983,7 +987,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         if (serviceIds.Count == 0) return;
 
         var barbers = await db.Barbers
-            .Where(x => x.SalonId == salonId)
+            .Where(x => x.SalonId == salonId && !x.IsDeleted)
             .Include(x => x.Services)
             .ToListAsync(cancellationToken);
 
@@ -1159,7 +1163,9 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             .Include(x => x.WorkingHours)
             .Include(x => x.ScheduleOverrides)
             .Include(x => x.Leaves)
-            .FirstOrDefaultAsync(x => x.SalonId == salonId && x.PublicId == publicId, cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salonId && x.PublicId == publicId && !x.IsDeleted,
+                cancellationToken);
 
     private async Task ReloadBarberGraphAsync(Barber barber, CancellationToken cancellationToken)
     {
