@@ -61,15 +61,18 @@ button {
 }
 
 .studio-picture-gallery {
-  column-count: 3;
-  column-gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 8px;
+  overflow: hidden;
 }
 
 .gallery-tile {
   position: relative;
   display: block;
   width: 100%;
-  margin: 0 0 8px;
+  height: 210px;
+  margin: 0;
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -77,16 +80,14 @@ button {
   background: #0d1315;
   cursor: zoom-in;
   isolation: isolate;
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
-  page-break-inside: avoid;
+  min-width: 0;
 }
 
 .gallery-tile img {
   display: block;
   width: 100%;
-  height: auto;
-  object-fit: contain;
+  height: 100%;
+  object-fit: cover;
   object-position: center;
   transform: scale(1.001);
   transition:
@@ -138,7 +139,7 @@ button {
   border-color: rgba(233, 182, 84, .7);
 }
 
-/* CSS columns intentionally flow items top-to-bottom, then into the next column. */
+/* Keep all 10 gallery pictures in one single row. */
 .tile-1,
 .tile-2,
 .tile-3,
@@ -150,6 +151,7 @@ button {
 .tile-9,
 .tile-10 {
   width: 100%;
+  grid-row: 1;
 }
 
 .gallery-lightbox {
@@ -229,6 +231,19 @@ button {
   .gallery-shell {
     padding: 0 28px;
   }
+
+  .studio-picture-gallery {
+    grid-template-columns: repeat(10, 150px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(233, 182, 84, .55) rgba(255, 255, 255, .06);
+  }
+
+  .gallery-tile {
+    height: 200px;
+  }
 }
 
 @media (max-width: 991.98px) {
@@ -237,7 +252,7 @@ button {
   }
 
   .studio-picture-gallery {
-    column-count: 2;
+    grid-template-columns: repeat(10, 150px);
   }
 }
 
@@ -264,12 +279,17 @@ button {
   }
 
   .studio-picture-gallery {
-    column-count: 1;
-    column-gap: 0;
+    display: grid;
+    grid-template-columns: repeat(10, 145px);
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
   }
 
   .gallery-tile {
-    margin-bottom: 8px;
+    height: 190px;
+    margin: 0;
     border-radius: 6px;
   }
 
