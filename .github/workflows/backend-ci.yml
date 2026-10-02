@@ -107,6 +107,27 @@ jobs:
           curl --fail --silent -H "Authorization: Bearer $TOKEN" \
             http://127.0.0.1:5080/api/auth/me | grep '"email":"ci-owner@barberflow.test"'
 
+          SERVICE_COUNT_BEFORE=$(curl --fail --silent http://127.0.0.1:5080/api/services | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          BARBER_COUNT_BEFORE=$(curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          test "$SERVICE_COUNT_BEFORE" -gt 0
+          test "$BARBER_COUNT_BEFORE" -gt 0
+
+          curl --fail --silent http://127.0.0.1:5080/api/service-categories | grep '"name":"Haircut"'
+
+          CATEGORY_RESPONSE=$(curl --fail --silent \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Beard","sortOrder":2,"status":"Active"}' \
+            http://127.0.0.1:5080/api/service-categories)
+          echo "$CATEGORY_RESPONSE" | grep '"success":true'
+          echo "$CATEGORY_RESPONSE" | grep '"name":"Beard"'
+          curl --fail --silent http://127.0.0.1:5080/api/service-categories | grep '"name":"Beard"'
+
+          SERVICE_COUNT_AFTER_CATEGORY=$(curl --fail --silent http://127.0.0.1:5080/api/services | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          BARBER_COUNT_AFTER_CATEGORY=$(curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          test "$SERVICE_COUNT_AFTER_CATEGORY" = "$SERVICE_COUNT_BEFORE"
+          test "$BARBER_COUNT_AFTER_CATEGORY" = "$BARBER_COUNT_BEFORE"
+
           BOOKING_DATE=$(date -u -d '+1 day' +%F)
           curl --fail --silent \
             -H "Content-Type: application/json" \
