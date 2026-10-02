@@ -12,9 +12,9 @@ public partial class RepairServiceCategorySchema : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        // Follow-up safety migration for local databases where the first category
-        // upgrade may already be recorded but the schema/backfill is incomplete.
-        // No service or barber rows are deleted or replaced.
+        // Keep each schema step in a separate SQL command. SQL Server compiles a
+        // batch before executing IF blocks, so a column added conditionally cannot
+        // be referenced later in the same batch.
         migrationBuilder.Sql("""
             IF OBJECT_ID(N'[dbo].[ServiceCategories]', N'U') IS NULL
             BEGIN
@@ -31,13 +31,33 @@ public partial class RepairServiceCategorySchema : Migration
                     CONSTRAINT [PK_ServiceCategories] PRIMARY KEY ([Id])
                 );
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF COL_LENGTH(N'dbo.Services', N'ServiceCategoryId') IS NULL
             BEGIN
                 ALTER TABLE [dbo].[Services]
                     ADD [ServiceCategoryId] uniqueidentifier NULL;
             END;
+            """);
 
+        migrationBuilder.Sql("""
+            IF NOT EXISTS
+            (
+                SELECT 1
+                FROM sys.foreign_keys
+                WHERE [name] = N'FK_ServiceCategories_Salons_SalonId'
+                  AND [parent_object_id] = OBJECT_ID(N'[dbo].[ServiceCategories]')
+            )
+            BEGIN
+                ALTER TABLE [dbo].[ServiceCategories] WITH CHECK
+                    ADD CONSTRAINT [FK_ServiceCategories_Salons_SalonId]
+                    FOREIGN KEY ([SalonId]) REFERENCES [dbo].[Salons] ([Id])
+                    ON DELETE CASCADE;
+            END;
+            """);
+
+        migrationBuilder.Sql("""
             INSERT INTO [dbo].[ServiceCategories]
                 ([Id], [SalonId], [PublicId], [Name], [SortOrder], [IsActive], [CreatedAtUtc], [UpdatedAtUtc])
             SELECT
@@ -82,7 +102,9 @@ public partial class RepairServiceCategorySchema : Migration
             BEGIN
                 THROW 51001, 'Service category repair could not classify every existing service. No service or barber data was deleted.', 1;
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF EXISTS
             (
                 SELECT 1
@@ -95,10 +117,13 @@ public partial class RepairServiceCategorySchema : Migration
                 ALTER TABLE [dbo].[Services]
                     ALTER COLUMN [ServiceCategoryId] uniqueidentifier NOT NULL;
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF NOT EXISTS
             (
-                SELECT 1 FROM sys.indexes
+                SELECT 1
+                FROM sys.indexes
                 WHERE [name] = N'IX_ServiceCategories_SalonId_IsActive_SortOrder'
                   AND [object_id] = OBJECT_ID(N'[dbo].[ServiceCategories]')
             )
@@ -109,7 +134,8 @@ public partial class RepairServiceCategorySchema : Migration
 
             IF NOT EXISTS
             (
-                SELECT 1 FROM sys.indexes
+                SELECT 1
+                FROM sys.indexes
                 WHERE [name] = N'IX_ServiceCategories_SalonId_Name'
                   AND [object_id] = OBJECT_ID(N'[dbo].[ServiceCategories]')
             )
@@ -120,7 +146,8 @@ public partial class RepairServiceCategorySchema : Migration
 
             IF NOT EXISTS
             (
-                SELECT 1 FROM sys.indexes
+                SELECT 1
+                FROM sys.indexes
                 WHERE [name] = N'IX_ServiceCategories_SalonId_PublicId'
                   AND [object_id] = OBJECT_ID(N'[dbo].[ServiceCategories]')
             )
@@ -131,7 +158,8 @@ public partial class RepairServiceCategorySchema : Migration
 
             IF NOT EXISTS
             (
-                SELECT 1 FROM sys.indexes
+                SELECT 1
+                FROM sys.indexes
                 WHERE [name] = N'IX_Services_ServiceCategoryId'
                   AND [object_id] = OBJECT_ID(N'[dbo].[Services]')
             )
@@ -139,21 +167,9 @@ public partial class RepairServiceCategorySchema : Migration
                 CREATE INDEX [IX_Services_ServiceCategoryId]
                     ON [dbo].[Services] ([ServiceCategoryId]);
             END;
+            """);
 
-            IF NOT EXISTS
-            (
-                SELECT 1
-                FROM sys.foreign_keys
-                WHERE [name] = N'FK_ServiceCategories_Salons_SalonId'
-                  AND [parent_object_id] = OBJECT_ID(N'[dbo].[ServiceCategories]')
-            )
-            BEGIN
-                ALTER TABLE [dbo].[ServiceCategories] WITH CHECK
-                    ADD CONSTRAINT [FK_ServiceCategories_Salons_SalonId]
-                    FOREIGN KEY ([SalonId]) REFERENCES [dbo].[Salons] ([Id])
-                    ON DELETE CASCADE;
-            END;
-
+        migrationBuilder.Sql("""
             IF NOT EXISTS
             (
                 SELECT 1
