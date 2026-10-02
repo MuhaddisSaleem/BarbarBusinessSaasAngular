@@ -62,8 +62,9 @@ button {
 
 .studio-picture-gallery {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: repeat(3, 190px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 220px;
+  grid-auto-flow: dense;
   gap: 8px;
 }
 
@@ -87,8 +88,8 @@ button {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
-  transform: scale(1.01);
+  object-position: center center;
+  transform: scale(1.005);
   transition:
     transform .65s cubic-bezier(.2, .72, .25, 1),
     filter .4s ease;
@@ -124,7 +125,7 @@ button {
 }
 
 .gallery-tile:hover img {
-  transform: scale(1.055);
+  transform: scale(1.045);
   filter: brightness(1.04) saturate(1.04);
 }
 
@@ -138,55 +139,23 @@ button {
   border-color: rgba(233, 182, 84, .7);
 }
 
-.tile-1 {
-  grid-column: 1 / span 2;
-  grid-row: 1;
-}
+/*
+  Every card is landscape.
+  A few cards span two columns for the bento feel,
+  but no card spans multiple rows.
+*/
+.tile-1 { grid-column: span 2; }
+.tile-2 { grid-column: span 1; }
+.tile-3 { grid-column: span 1; }
 
-.tile-2 {
-  grid-column: 3;
-  grid-row: 1;
-}
+.tile-4 { grid-column: span 1; }
+.tile-5 { grid-column: span 1; }
+.tile-6 { grid-column: span 2; }
 
-.tile-3 {
-  grid-column: 4;
-  grid-row: 1 / span 2;
-}
-
-.tile-4 {
-  grid-column: 5 / span 2;
-  grid-row: 1;
-}
-
-.tile-5 {
-  grid-column: 1;
-  grid-row: 2 / span 2;
-}
-
-.tile-6 {
-  grid-column: 2 / span 2;
-  grid-row: 2;
-}
-
-.tile-7 {
-  grid-column: 5 / span 2;
-  grid-row: 2;
-}
-
-.tile-8 {
-  grid-column: 6;
-  grid-row: 3;
-}
-
-.tile-9 {
-  grid-column: 2 / span 2;
-  grid-row: 3;
-}
-
-.tile-10 {
-  grid-column: 4 / span 2;
-  grid-row: 3;
-}
+.tile-7 { grid-column: span 1; }
+.tile-8 { grid-column: span 1; }
+.tile-9 { grid-column: span 1; }
+.tile-10 { grid-column: span 1; }
 
 .gallery-lightbox {
   position: fixed;
@@ -267,7 +236,7 @@ button {
   }
 
   .studio-picture-gallery {
-    grid-template-rows: repeat(3, 160px);
+    grid-auto-rows: 190px;
   }
 }
 
@@ -277,20 +246,25 @@ button {
   }
 
   .studio-picture-gallery {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: repeat(4, 170px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 210px;
   }
 
-  .tile-1 { grid-column: 1 / span 2; grid-row: 1; }
-  .tile-2 { grid-column: 3; grid-row: 1; }
-  .tile-3 { grid-column: 4; grid-row: 1 / span 2; }
-  .tile-4 { grid-column: 1 / span 2; grid-row: 2; }
-  .tile-5 { grid-column: 3; grid-row: 2 / span 2; }
-  .tile-6 { grid-column: 1 / span 2; grid-row: 3; }
-  .tile-7 { grid-column: 4; grid-row: 3; }
-  .tile-8 { grid-column: 1; grid-row: 4; }
-  .tile-9 { grid-column: 2 / span 2; grid-row: 4; }
-  .tile-10 { grid-column: 4; grid-row: 4; }
+  .tile-1,
+  .tile-4,
+  .tile-6,
+  .tile-9 {
+    grid-column: span 2;
+  }
+
+  .tile-2,
+  .tile-3,
+  .tile-5,
+  .tile-7,
+  .tile-8,
+  .tile-10 {
+    grid-column: span 1;
+  }
 }
 
 @media (max-width: 575.98px) {
@@ -316,26 +290,27 @@ button {
   }
 
   .studio-picture-gallery {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: none;
-    grid-auto-rows: 150px;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 8px;
   }
 
-  .gallery-tile {
+  .gallery-tile,
+  .tile-1,
+  .tile-2,
+  .tile-3,
+  .tile-4,
+  .tile-5,
+  .tile-6,
+  .tile-7,
+  .tile-8,
+  .tile-9,
+  .tile-10 {
+    grid-column: 1;
+    aspect-ratio: 16 / 10;
     border-radius: 6px;
   }
-
-  .tile-1 { grid-column: 1 / span 2; grid-row: auto; }
-  .tile-2 { grid-column: 1; grid-row: auto; }
-  .tile-3 { grid-column: 2; grid-row: auto / span 2; }
-  .tile-4 { grid-column: 1; grid-row: auto; }
-  .tile-5 { grid-column: 1 / span 2; grid-row: auto; }
-  .tile-6 { grid-column: 1; grid-row: auto; }
-  .tile-7 { grid-column: 2; grid-row: auto; }
-  .tile-8 { grid-column: 1 / span 2; grid-row: auto; }
-  .tile-9 { grid-column: 1; grid-row: auto; }
-  .tile-10 { grid-column: 2; grid-row: auto; }
 
   .tile-open {
     opacity: 1;
@@ -359,6 +334,7 @@ button {
 
   .lightbox-prev { left: 8px; }
   .lightbox-next { right: 8px; }
+
   .lightbox-close {
     top: 14px;
     right: 14px;
