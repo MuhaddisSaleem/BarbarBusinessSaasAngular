@@ -49,13 +49,6 @@ export class AdminServiceService {
       ? this.normalizeServices(this.api.serviceSnapshot)
       : this.loadServices();
 
-    if (this.api && typeof window !== 'undefined') {
-      window.localStorage.removeItem(this.storageKey);
-      window.localStorage.removeItem(this.categoryStorageKey);
-      window.localStorage.removeItem(this.demoCleanupKey);
-    }
-
-
     this.api?.changes$.subscribe(changed => {
       if (changed === 'services' && this.api) {
         this.services = this.normalizeServices(this.api.serviceSnapshot);
