@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { firstValueFrom, forkJoin, Observable, Subject, tap } from 'rxjs';
+import { firstValueFrom, Observable, Subject, tap } from 'rxjs';
 import type {
   AdminService,
   AdminServiceCategory,
@@ -188,25 +188,30 @@ export class CatalogApiService {
   }
 
   async preload(): Promise<void> {
-    const state = await firstValueFrom(forkJoin({
-      services: this.getServices(),
-      categories: this.getServiceCategories(),
-      barbers: this.getBarbers(),
-      settings: this.getSettings()
-    }));
-
-    this.serviceSnapshot = state.services;
-    this.categorySnapshot = state.categories;
-    this.barberSnapshot = state.barbers;
-    this.settingsSnapshot = state.settings;
+    // Load catalog scopes in parallel, but publish each one as soon as it arrives.
+    // A slow barber/settings request must not delay rendering services (or vice versa).
+    await Promise.all([
+      firstValueFrom(this.getServices()).then(services => {
+        this.serviceSnapshot = services;
+        this.changeSubject.next('services');
+      }),
+      firstValueFrom(this.getServiceCategories()).then(categories => {
+        this.categorySnapshot = categories;
+        this.changeSubject.next('categories');
+      }),
+      firstValueFrom(this.getBarbers()).then(barbers => {
+        this.barberSnapshot = barbers;
+        this.changeSubject.next('barbers');
+      }),
+      firstValueFrom(this.getSettings()).then(settings => {
+        this.settingsSnapshot = settings;
+        this.changeSubject.next('settings');
+      })
+    ]);
   }
 
   async refreshAllAndNotify(): Promise<void> {
     await this.preload();
-    this.changeSubject.next('services');
-    this.changeSubject.next('categories');
-    this.changeSubject.next('barbers');
-    this.changeSubject.next('settings');
   }
 
   private async refreshScope(scope: 'services' | 'categories' | 'barbers' | 'settings'): Promise<void> {
