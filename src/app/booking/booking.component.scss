@@ -31,9 +31,26 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* Stepper */
 .booking-stepper {
-  border-top: 1px solid #2d363b;
-  border-bottom: 1px solid #20292e;
-  background: linear-gradient(180deg, #172025 0%, #11181c 100%);
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, .055);
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+  background:
+    radial-gradient(circle at 12% 50%, rgba(242, 191, 90, .055), transparent 28%),
+    linear-gradient(180deg, #10181c 0%, #0c1316 100%);
+}
+
+.booking-stepper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.018) 50%, transparent);
+}
+
+.booking-stepper .page-shell {
+  position: relative;
+  z-index: 1;
 }
 
 .steps {
@@ -41,71 +58,205 @@ button { -webkit-tap-highlight-color: transparent; }
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: start;
   width: 100%;
-  padding: 21px 20px 17px;
+  padding: 24px 14px 22px;
+}
+
+.steps.home-service-steps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .step {
-  flex: 1;
-  min-width: 0;
   position: relative;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #d4d6d7;
+  color: #aeb5b8;
+  text-align: center;
 
   &:not(:last-child)::after {
     content: '';
     position: absolute;
     z-index: 0;
-    top: 15px;
-    left: calc(50% + 24px);
-    right: calc(-50% + 24px);
-    width: auto;
+    top: 29px;
+    left: calc(50% + 38px);
+    right: calc(-50% + 38px);
     height: 1px;
-    background: #6d7478;
+    background: rgba(174, 184, 188, .42);
+    transition: background .35s ease, box-shadow .35s ease;
   }
 
-  > .step-label {
-    margin-top: 10px;
-    font-size: 14px;
-    line-height: 1;
-    white-space: nowrap;
-    text-align: center;
+  &.completed:not(:last-child)::after {
+    background: linear-gradient(90deg, $gold-soft, rgba(242, 191, 90, .48));
+    box-shadow: 0 0 10px rgba(242, 191, 90, .12);
   }
 }
 
 .step-circle {
   position: relative;
-  z-index: 1;
-  width: 31px;
-  height: 31px;
-  border: 1px solid #858d91;
+  z-index: 2;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  border: 1.5px solid #768087;
   border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: #31393e;
-  color: #e6e8e9;
-  font-size: 15px;
-  font-weight: 700;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,.04);
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.06), transparent 42%),
+    rgba(14, 22, 26, .96);
+  color: #9fa8ac;
+  font-size: 25px;
+  box-shadow:
+    inset 0 0 0 4px rgba(255,255,255,.018),
+    0 5px 18px rgba(0,0,0,.18);
+  transition:
+    border-color .3s ease,
+    color .3s ease,
+    background .3s ease,
+    box-shadow .3s ease,
+    transform .3s ease;
 
-  .step-number {
+  > i {
     display: block;
-    width: auto;
-    min-width: 0;
-    margin: 0 !important;
-    padding: 0;
-    font-size: inherit;
     line-height: 1;
-    text-align: center;
   }
 }
 
-.step.active .step-circle {
-  border-color: $gold-soft;
-  background: linear-gradient(145deg, #ffd879, #e9aa42);
-  color: #111;
-  box-shadow: 0 0 12px rgba(242, 191, 90, .18);
+.step-badge {
+  position: absolute;
+  top: -7px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border: 1px solid rgba(191, 201, 205, .55);
+  border-radius: 50%;
+  background: #111a1e;
+  color: #d8dddf;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0,0,0,.22);
+  transition:
+    border-color .3s ease,
+    background .3s ease,
+    color .3s ease;
+}
+
+.step-copy {
+  margin-top: 11px;
+
+  .step-label {
+    display: block;
+    color: #e5e8e8;
+    font-size: 14px;
+    line-height: 1.15;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: color .3s ease;
+  }
+
+  small {
+    display: block;
+    margin-top: 5px;
+    color: #939c9f;
+    font-size: 10px;
+    line-height: 1.25;
+    white-space: nowrap;
+    transition: color .3s ease;
+  }
+}
+
+.step.active {
+  .step-circle {
+    border-color: $gold-soft;
+    background:
+      radial-gradient(circle at 35% 28%, rgba(255,255,255,.16), transparent 40%),
+      linear-gradient(145deg, rgba(242,191,90,.18), rgba(17,24,27,.98));
+    color: $gold-soft;
+    box-shadow:
+      0 0 0 5px rgba(242, 191, 90, .075),
+      0 0 26px rgba(242, 191, 90, .16),
+      inset 0 0 0 1px rgba(255,209,111,.12);
+    transform: translateY(-2px);
+  }
+
+  .step-badge {
+    border-color: $gold-soft;
+    background: #3a2a13;
+    color: $gold-soft;
+  }
+
+  .step-label {
+    color: $gold-soft;
+  }
+
+  .step-copy small {
+    color: #d2d5d5;
+  }
+}
+
+.step.completed {
+  .step-circle {
+    border-color: rgba(242, 191, 90, .82);
+    background: linear-gradient(145deg, #dca344, #f0c86c);
+    color: #101416;
+    box-shadow: 0 7px 20px rgba(242, 191, 90, .13);
+  }
+
+  .step-badge {
+    border-color: rgba(242, 191, 90, .75);
+    background: #191a16;
+    color: $gold-soft;
+  }
+
+  .step-label {
+    color: #f1f2ef;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .booking-stepper .page-shell {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-left: 14px;
+    padding-right: 14px;
+    scrollbar-width: none;
+  }
+
+  .booking-stepper .page-shell::-webkit-scrollbar {
+    display: none;
+  }
+
+  .steps {
+    min-width: 760px;
+    padding: 22px 4px 20px;
+  }
+
+  .steps.home-service-steps {
+    min-width: 620px;
+  }
+
+  .step-circle {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+    font-size: 22px;
+  }
+
+  .step:not(:last-child)::after {
+    top: 26px;
+    left: calc(50% + 34px);
+    right: calc(-50% + 34px);
+  }
+
+  .step-copy .step-label {
+    font-size: 13px;
+  }
+
+  .step-copy small {
+    font-size: 9px;
+  }
 }
 
 /* Main layout */
@@ -1801,11 +1952,6 @@ button { -webkit-tap-highlight-color: transparent; }
   .home-selector-action strong {
     font-size:11px;
   }
-}
-
-
-.steps.home-service-steps {
-  grid-template-columns:repeat(4,minmax(0,1fr));
 }
 
 
