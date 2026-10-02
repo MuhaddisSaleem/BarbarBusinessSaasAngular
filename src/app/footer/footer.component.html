@@ -1,0 +1,106 @@
+<footer id="contact" class="site-footer">
+  <div class="footer-glow" aria-hidden="true"></div>
+
+  <div class="footer-shell">
+    <div class="footer-grid">
+      <section class="footer-column footer-brand" aria-label="About The Trim Town">
+        <a class="footer-logo" [routerLink]="['/']" fragment="home" [attr.aria-label]="businessName + ' home'">
+          <span class="footer-logo-mark" aria-hidden="true">
+            <img *ngIf="brandingMedia.logoUrl(); else defaultFooterLogo" [src]="brandingMedia.logoUrl()" alt="">
+            <ng-template #defaultFooterLogo>
+              <svg viewBox="0 0 64 72" role="img">
+                <path d="M15 17 22 8l10 9L42 8l7 9-4 9H19l-4-9Z" fill="currentColor" />
+                <circle cx="22" cy="8" r="2.8" fill="currentColor" />
+                <circle cx="42" cy="8" r="2.8" fill="currentColor" />
+                <path d="M17 31 47 63M47 31 17 63" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+                <circle cx="13" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3" />
+                <circle cx="51" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3" />
+              </svg>
+            </ng-template>
+          </span>
+
+          <span class="footer-logo-copy">
+            <strong>{{ businessNameUpper }}</strong>
+            <small>{{ brandSubtitle }}</small>
+          </span>
+        </a>
+
+        <p class="footer-description">
+          Premium grooming, modern styling and an easier way to book your next visit.
+          The Trim Town brings a refined studio experience to Bahawalpur.
+        </p>
+
+        <div class="footer-socials">
+          <span class="social-label">Follow us</span>
+
+          <a class="social-link"
+            [href]="facebookUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Follow The Trim Town on Facebook">
+            <i class="bi bi-facebook"></i>
+            <span>Facebook</span>
+          </a>
+
+          <a class="social-link"
+            [href]="instagramUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Follow The Trim Town on Instagram">
+            <i class="bi bi-instagram"></i>
+            <span>Instagram</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="footer-column footer-links" aria-label="Site links">
+        <span class="footer-eyebrow">NAVIGATION</span>
+        <h3>Site Links</h3>
+
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a [routerLink]="['/']" fragment="home"><i class="bi bi-arrow-up-right"></i>Home</a>
+          <a [routerLink]="['/']" fragment="about"><i class="bi bi-arrow-up-right"></i>About</a>
+          <a [routerLink]="['/']" fragment="services"><i class="bi bi-arrow-up-right"></i>Services</a>
+          <a [routerLink]="['/']" fragment="booking"><i class="bi bi-arrow-up-right"></i>Booking</a>
+          <a [routerLink]="['/gallery']"><i class="bi bi-arrow-up-right"></i>Gallery</a>
+          <a [routerLink]="['/']" fragment="booking"><i class="bi bi-arrow-up-right"></i>Appointments</a>
+        </nav>
+      </section>
+
+      <section class="footer-column footer-location" aria-label="Studio location">
+        <span class="footer-eyebrow">VISIT THE STUDIO</span>
+        <h3>Find The Trim Town</h3>
+
+        <a class="location-line" [href]="locationUrl" target="_blank" rel="noopener noreferrer">
+          <span class="location-icon"><i class="bi bi-geo-alt-fill"></i></span>
+          <span>
+            <strong>{{ locationLabel }}</strong>
+            <small>Open location in Google Maps</small>
+          </span>
+          <i class="bi bi-arrow-up-right location-arrow"></i>
+        </a>
+
+        <a class="map-frame"
+          [href]="locationUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open The Trim Town Studio location in Google Maps">
+          <iframe
+            title="The Trim Town Studio location"
+            src="https://www.google.com/maps?q=The%20Trim%20Town%20Studio%20Bahawalpur%20Pakistan&output=embed"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            tabindex="-1">
+          </iframe>
+          <span class="map-overlay" aria-hidden="true"></span>
+          <span class="map-cta"><i class="bi bi-map"></i> View Map</span>
+        </a>
+      </section>
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; {{ currentYear }} {{ businessName }}. All rights reserved.</span>
+      <span class="footer-signoff">Stay Sharp <i class="bi bi-gem"></i></span>
+    </div>
+  </div>
+</footer>
