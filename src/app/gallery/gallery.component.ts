@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 type GalleryCategory = 'All' | 'Interior' | 'Chairs' | 'Products' | 'Tools' | 'Atmosphere';
@@ -19,11 +19,15 @@ interface GalleryItem {
   templateUrl: './gallery.component.html',
   styleUrl: './gallery.component.scss'
 })
-export class GalleryComponent {
+export class GalleryComponent implements OnInit, OnDestroy {
   readonly categories: GalleryCategory[] = ['All', 'Interior', 'Chairs', 'Products', 'Tools', 'Atmosphere'];
   activeCategory: GalleryCategory = 'All';
   activeIndex = 0;
   lightboxOpen = false;
+  isPaused = false;
+
+  private autoScrollTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly autoScrollDelay = 3200;
 
   readonly items: GalleryItem[] = [
     this.photo(13, 'Wide view of The Trim Town barber shop floor', 'The Main Floor', 'Interior'),
@@ -42,11 +46,19 @@ export class GalleryComponent {
     this.photo(14, 'Decorative shelving and plants inside The Trim Town', 'Thoughtful Details', 'Interior'),
     this.photo(15, 'Warm private grooming area inside The Trim Town', 'Private Grooming', 'Atmosphere'),
     this.photo(16, 'Waiting and grooming chairs inside the shop', 'Classic Lounge', 'Interior'),
-    this.photo(17, 'Reception decor and shelving at The Trim Town', 'Welcome In', 'Interior'),
     this.photo(18, 'Warm brick interior and seating area', 'Warm Atmosphere', 'Interior'),
     this.photo(19, 'Private treatment beds beneath warm pendant lights', 'Treatment Space', 'Atmosphere'),
     this.photo(20, 'Premium seating and brick wall interior', 'Relax & Refresh', 'Interior')
   ];
+
+  ngOnInit(): void {
+    this.startAutoScroll();
+  }
+
+  ngOnDestroy(): void {
+    this.stopAutoScroll();
+    document.body.style.overflow = '';
+  }
 
   get filteredItems(): GalleryItem[] {
     if (this.activeCategory === 'All') return this.items;
@@ -62,6 +74,7 @@ export class GalleryComponent {
     this.activeCategory = category;
     this.activeIndex = 0;
     this.lightboxOpen = false;
+    this.restartAutoScroll();
   }
 
   selectSlide(index: number): void {
@@ -71,6 +84,7 @@ export class GalleryComponent {
     }
 
     this.activeIndex = index;
+    this.restartAutoScroll();
   }
 
   next(): void {
@@ -85,15 +99,37 @@ export class GalleryComponent {
     this.activeIndex = (this.activeIndex - 1 + total) % total;
   }
 
+  nextManual(): void {
+    this.next();
+    this.restartAutoScroll();
+  }
+
+  previousManual(): void {
+    this.previous();
+    this.restartAutoScroll();
+  }
+
+  pauseAutoScroll(): void {
+    this.isPaused = true;
+    this.stopAutoScroll();
+  }
+
+  resumeAutoScroll(): void {
+    this.isPaused = false;
+    if (!this.lightboxOpen) this.startAutoScroll();
+  }
+
   openLightbox(): void {
     if (!this.activeItem) return;
     this.lightboxOpen = true;
+    this.stopAutoScroll();
     document.body.style.overflow = 'hidden';
   }
 
   closeLightbox(): void {
     this.lightboxOpen = false;
     document.body.style.overflow = '';
+    if (!this.isPaused) this.startAutoScroll();
   }
 
   cardClass(index: number): string {
@@ -110,6 +146,8 @@ export class GalleryComponent {
       case 1: return 'is-next';
       case -2: return 'is-prev-far';
       case 2: return 'is-next-far';
+      case -3: return 'is-prev-outer';
+      case 3: return 'is-next-outer';
       default: return 'is-hidden';
     }
   }
@@ -138,8 +176,36 @@ export class GalleryComponent {
       return;
     }
 
-    if (event.key === 'ArrowRight') this.next();
-    if (event.key === 'ArrowLeft') this.previous();
+    if (event.key === 'ArrowRight') this.nextManual();
+    if (event.key === 'ArrowLeft') this.previousManual();
+  }
+
+  @HostListener('document:visibilitychange')
+  handleVisibilityChange(): void {
+    if (document.hidden) {
+      this.stopAutoScroll();
+    } else if (!this.isPaused && !this.lightboxOpen) {
+      this.startAutoScroll();
+    }
+  }
+
+  private startAutoScroll(): void {
+    if (this.autoScrollTimer || this.filteredItems.length <= 1) return;
+
+    this.autoScrollTimer = setInterval(() => {
+      if (!this.isPaused && !this.lightboxOpen) this.next();
+    }, this.autoScrollDelay);
+  }
+
+  private stopAutoScroll(): void {
+    if (!this.autoScrollTimer) return;
+    clearInterval(this.autoScrollTimer);
+    this.autoScrollTimer = null;
+  }
+
+  private restartAutoScroll(): void {
+    this.stopAutoScroll();
+    if (!this.isPaused && !this.lightboxOpen) this.startAutoScroll();
   }
 
   private photo(
