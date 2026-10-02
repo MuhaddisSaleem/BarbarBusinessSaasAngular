@@ -140,6 +140,21 @@
               </div>
               <div class="salon-choice-action-stage" [class.salon-active]="serviceLocation === 'salon'"
                 [class.home-active]="serviceLocation === 'home'">
+                <div class="salon-choice-action-panel salon-search-panel"
+                  [class.visible]="serviceLocation === 'salon'"
+                  [attr.aria-hidden]="serviceLocation !== 'salon'"
+                  [attr.inert]="serviceLocation !== 'salon' ? '' : null">
+                  <label class="service-search-box">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input type="search" [(ngModel)]="serviceSearchTerm" placeholder="Search services..."
+                      autocomplete="off" aria-label="Search salon services">
+                    <button type="button" class="service-search-clear" *ngIf="serviceSearchTerm"
+                      (click)="serviceSearchTerm = ''" aria-label="Clear service search">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </label>
+                </div>
+
                 <div class="salon-choice-action-panel" [class.visible]="serviceLocation === 'home'"
                   [attr.aria-hidden]="serviceLocation !== 'home'" [attr.inert]="serviceLocation !== 'home' ? '' : null">
                   <button type="button" class="select-salon-service-btn" (click)="setServiceLocation('salon')">
@@ -217,8 +232,8 @@
                   </button>
                 </div>
 
-                <div class="services-grid salon-services-grid row g-3">
-                  <div class="service-col col-12 col-sm-6 col-md-4" *ngFor="let service of visibleSalonServices">
+                <div class="services-grid salon-services-grid">
+                  <div class="service-col" *ngFor="let service of visibleSalonServices">
                     <button type="button" class="service-card h-100"
                       [class.selected]="isServiceSelectedForLocation(service.id, 'salon')"
                       [class.disabled]="isServiceDisabled(service)" [disabled]="isServiceDisabled(service)"
@@ -243,6 +258,11 @@
                       </div>
                     </button>
                   </div>
+                </div>
+
+                <div class="service-search-empty" *ngIf="serviceSearchTerm.trim() && !visibleSalonServices.length">
+                  <i class="bi bi-search"></i>
+                  <span>No services found for “{{ serviceSearchTerm }}”.</span>
                 </div>
               </div>
             </div>
@@ -314,8 +334,8 @@
                     </button>
                   </div>
 
-                  <div class="services-grid row g-3 home-services-grid">
-                    <div class="service-col col-12 col-sm-6 col-md-4" *ngFor="let service of visibleHomeServices">
+                  <div class="services-grid home-services-grid">
+                    <div class="service-col" *ngFor="let service of visibleHomeServices">
                       <button type="button" class="service-card home-service-card h-100"
                         [class.selected]="isServiceSelectedForLocation(service.id, 'home')"
                         [class.disabled]="isServiceDisabled(service)" [disabled]="isServiceDisabled(service)"
