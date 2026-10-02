@@ -1,10 +1,19 @@
 <section id="gallery" class="studio-gallery" aria-labelledby="gallery-title">
+  <div class="gallery-ambient gallery-ambient-one" aria-hidden="true"></div>
+  <div class="gallery-ambient gallery-ambient-two" aria-hidden="true"></div>
+
   <div class="gallery-shell">
-    <div class="gallery-heading">
-      <span class="gallery-kicker">THE STUDIO</span>
-      <h1 id="gallery-title">Inside The Trim Town</h1>
-      <p>A closer look at the space, details and atmosphere behind the experience.</p>
-    </div>
+    <header class="gallery-heading">
+      <div>
+        <span class="gallery-kicker">THE TRIM TOWN / VISUAL JOURNAL</span>
+        <h1 id="gallery-title">Inside <em>The Trim Town</em></h1>
+      </div>
+
+      <div class="gallery-heading-copy">
+        <p>A cinematic look into the space, atmosphere and details that shape The Trim Town experience.</p>
+        <span class="gallery-count">10 FRAMES <i></i> ONE EXPERIENCE</span>
+      </div>
+    </header>
 
     <div class="studio-picture-gallery">
       <button
@@ -12,16 +21,27 @@
         type="button"
         class="gallery-tile"
         [ngClass]="image.className"
-        [attr.aria-label]="'Open gallery image ' + (i + 1)"
+        [attr.aria-label]="'Open ' + image.label"
         (click)="openImage(i)">
         <img
           [src]="image.src"
           [alt]="image.alt"
           loading="lazy"
           decoding="async">
+
         <span class="tile-shade" aria-hidden="true"></span>
+
+        <span class="tile-index" aria-hidden="true">
+          {{ formatIndex(i) }}
+        </span>
+
+        <span class="tile-meta" aria-hidden="true">
+          <small>THE TRIM TOWN</small>
+          <strong>{{ image.label }}</strong>
+        </span>
+
         <span class="tile-open" aria-hidden="true">
-          <i class="bi bi-arrows-fullscreen"></i>
+          <i class="bi bi-arrow-up-right"></i>
         </span>
       </button>
     </div>
@@ -51,10 +71,12 @@
     <i class="bi bi-chevron-left"></i>
   </button>
 
-  <img
-    [src]="image.src"
-    [alt]="image.alt"
-    (click)="$event.stopPropagation()">
+  <figure (click)="$event.stopPropagation()">
+    <img [src]="image.src" [alt]="image.alt">
+    <figcaption>
+      <span>{{ image.label }}</span>
+    </figcaption>
+  </figure>
 
   <button
     type="button"
