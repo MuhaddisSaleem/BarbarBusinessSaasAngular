@@ -10,6 +10,10 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
@@ -100,6 +104,7 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+app.UseResponseCompression();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
