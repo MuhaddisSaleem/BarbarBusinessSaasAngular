@@ -12,9 +12,9 @@ public partial class AddServiceCategories : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        // This migration is intentionally idempotent because some local development
-        // databases may have been interrupted while the first category upgrade ran.
-        // It never deletes or recreates Services/Barbers.
+        // Keep each schema step in a separate SQL command. SQL Server compiles a
+        // batch before executing IF blocks, so a column added conditionally cannot
+        // be referenced later in the same batch.
         migrationBuilder.Sql("""
             IF OBJECT_ID(N'[dbo].[ServiceCategories]', N'U') IS NULL
             BEGIN
@@ -31,13 +31,17 @@ public partial class AddServiceCategories : Migration
                     CONSTRAINT [PK_ServiceCategories] PRIMARY KEY ([Id])
                 );
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF COL_LENGTH(N'dbo.Services', N'ServiceCategoryId') IS NULL
             BEGIN
                 ALTER TABLE [dbo].[Services]
                     ADD [ServiceCategoryId] uniqueidentifier NULL;
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF NOT EXISTS
             (
                 SELECT 1
@@ -51,7 +55,9 @@ public partial class AddServiceCategories : Migration
                     FOREIGN KEY ([SalonId]) REFERENCES [dbo].[Salons] ([Id])
                     ON DELETE CASCADE;
             END;
+            """);
 
+        migrationBuilder.Sql("""
             INSERT INTO [dbo].[ServiceCategories]
                 ([Id], [SalonId], [PublicId], [Name], [SortOrder], [IsActive], [CreatedAtUtc], [UpdatedAtUtc])
             SELECT
@@ -96,7 +102,9 @@ public partial class AddServiceCategories : Migration
             BEGIN
                 THROW 51000, 'Unable to backfill a service category for every existing service. Existing service data was left untouched.', 1;
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF EXISTS
             (
                 SELECT 1
@@ -109,7 +117,9 @@ public partial class AddServiceCategories : Migration
                 ALTER TABLE [dbo].[Services]
                     ALTER COLUMN [ServiceCategoryId] uniqueidentifier NOT NULL;
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF NOT EXISTS
             (
                 SELECT 1
@@ -157,7 +167,9 @@ public partial class AddServiceCategories : Migration
                 CREATE INDEX [IX_Services_ServiceCategoryId]
                     ON [dbo].[Services] ([ServiceCategoryId]);
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF NOT EXISTS
             (
                 SELECT 1
@@ -200,12 +212,16 @@ public partial class AddServiceCategories : Migration
             BEGIN
                 DROP INDEX [IX_Services_ServiceCategoryId] ON [dbo].[Services];
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF COL_LENGTH(N'dbo.Services', N'ServiceCategoryId') IS NOT NULL
             BEGIN
                 ALTER TABLE [dbo].[Services] DROP COLUMN [ServiceCategoryId];
             END;
+            """);
 
+        migrationBuilder.Sql("""
             IF OBJECT_ID(N'[dbo].[ServiceCategories]', N'U') IS NOT NULL
             BEGIN
                 DROP TABLE [dbo].[ServiceCategories];
