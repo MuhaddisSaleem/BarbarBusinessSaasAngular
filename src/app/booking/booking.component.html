@@ -186,8 +186,27 @@
               [attr.aria-hidden]="serviceLocation !== 'salon'"
               [attr.inert]="serviceLocation !== 'salon' ? '' : null">
               <div class="catalog-motion-inner">
+                <div class="service-category-tabs" *ngIf="serviceCategories.length">
+                  <button
+                    type="button"
+                    class="service-category-tab"
+                    [class.active]="isServiceCategorySelected('all')"
+                    (click)="selectServiceCategory('all')">
+                    All Services
+                  </button>
+
+                  <button
+                    type="button"
+                    class="service-category-tab"
+                    *ngFor="let category of serviceCategories"
+                    [class.active]="isServiceCategorySelected(category.id)"
+                    (click)="selectServiceCategory(category.id)">
+                    {{ category.name }}
+                  </button>
+                </div>
+
                 <div class="services-grid salon-services-grid row g-3">
-              <div class="service-col col-12 col-sm-6 col-md-4" *ngFor="let service of salonServices">
+              <div class="service-col col-12 col-sm-6 col-md-4" *ngFor="let service of visibleSalonServices">
                 <button type="button" class="service-card h-100"
                   [class.selected]="isServiceSelectedForLocation(service.id, 'salon')"
                   [class.disabled]="isServiceDisabled(service)"
@@ -274,8 +293,27 @@
               [attr.inert]="serviceLocation !== 'home' ? '' : null">
               <div class="catalog-motion-inner">
                 <div class="home-service-content">
+                <div class="service-category-tabs" *ngIf="serviceCategories.length">
+                  <button
+                    type="button"
+                    class="service-category-tab"
+                    [class.active]="isServiceCategorySelected('all')"
+                    (click)="selectServiceCategory('all')">
+                    All Services
+                  </button>
+
+                  <button
+                    type="button"
+                    class="service-category-tab"
+                    *ngFor="let category of serviceCategories"
+                    [class.active]="isServiceCategorySelected(category.id)"
+                    (click)="selectServiceCategory(category.id)">
+                    {{ category.name }}
+                  </button>
+                </div>
+
                   <div class="services-grid row g-3 home-services-grid">
-                  <div class="service-col col-12 col-sm-6 col-md-4" *ngFor="let service of homeServices">
+                  <div class="service-col col-12 col-sm-6 col-md-4" *ngFor="let service of visibleHomeServices">
                     <button type="button" class="service-card home-service-card h-100"
                       [class.selected]="isServiceSelectedForLocation(service.id, 'home')"
                       [class.disabled]="isServiceDisabled(service)"
@@ -303,6 +341,10 @@
 
                 <div class="no-home-services" *ngIf="!homeServices.length">
                   No home-service prices are configured yet. Add them from Admin → Services.
+                </div>
+
+                <div class="no-home-services" *ngIf="homeServices.length && !visibleHomeServices.length">
+                  No home services are available in this category.
                 </div>
 
                 <div class="special-home-service">
