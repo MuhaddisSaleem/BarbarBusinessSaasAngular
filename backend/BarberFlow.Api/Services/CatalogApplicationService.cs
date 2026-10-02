@@ -17,10 +17,134 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         var services = await db.Services
             .AsNoTracking()
             .Where(x => x.SalonId == salonId)
-            .OrderBy(x => x.PublicId)
+            .Include(x => x.ServiceCategory)
+            .OrderBy(x => x.ServiceCategory.SortOrder)
+            .ThenBy(x => x.PublicId)
             .ToListAsync(cancellationToken);
 
         return services.Select(MapService).ToList();
+    }
+
+
+    public async Task<IReadOnlyList<ServiceCategoryDto>> GetServiceCategoriesAsync(
+        CancellationToken cancellationToken)
+    {
+        var salonId = await GetSalonIdAsync(cancellationToken);
+        var categories = await db.ServiceCategories
+            .AsNoTracking()
+            .Where(x => x.SalonId == salonId)
+            .Include(x => x.Services)
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.PublicId)
+            .ToListAsync(cancellationToken);
+
+        return categories.Select(MapServiceCategory).ToList();
+    }
+
+    public async Task<MutationResponse<ServiceCategoryDto>> AddServiceCategoryAsync(
+        ServiceCategoryUpsertRequest request,
+        CancellationToken cancellationToken)
+    {
+        var salonId = await GetSalonIdAsync(cancellationToken);
+        var validation = ValidateServiceCategory(request);
+        if (validation is not null) return new(false, validation);
+
+        var normalizedName = request.Name.Trim();
+        var duplicate = await db.ServiceCategories.AnyAsync(
+            x => x.SalonId == salonId && x.Name.ToLower() == normalizedName.ToLower(),
+            cancellationToken);
+        if (duplicate) return new(false, "A service category with this name already exists.");
+
+        var nextId = (await db.ServiceCategories
+            .Where(x => x.SalonId == salonId)
+            .MaxAsync(x => (int?)x.PublicId, cancellationToken) ?? 0) + 1;
+
+        var category = new ServiceCategory
+        {
+            SalonId = salonId,
+            PublicId = nextId,
+            Name = normalizedName,
+            SortOrder = request.SortOrder > 0 ? request.SortOrder : nextId,
+            IsActive = !request.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
+        };
+
+        db.ServiceCategories.Add(category);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new(true, category.Name + " category added successfully.", MapServiceCategory(category));
+    }
+
+    public async Task<MutationResponse<ServiceCategoryDto>> UpdateServiceCategoryAsync(
+        int publicId,
+        ServiceCategoryUpsertRequest request,
+        CancellationToken cancellationToken)
+    {
+        var salonId = await GetSalonIdAsync(cancellationToken);
+        var category = await db.ServiceCategories
+            .Include(x => x.Services)
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salonId && x.PublicId == publicId,
+                cancellationToken);
+        if (category is null) return new(false, "Service category not found.");
+
+        var validation = ValidateServiceCategory(request);
+        if (validation is not null) return new(false, validation);
+
+        var normalizedName = request.Name.Trim();
+        var duplicate = await db.ServiceCategories.AnyAsync(
+            x => x.SalonId == salonId
+                 && x.PublicId != publicId
+                 && x.Name.ToLower() == normalizedName.ToLower(),
+            cancellationToken);
+        if (duplicate) return new(false, "Another service category already uses this name.");
+
+        category.Name = normalizedName;
+        category.SortOrder = request.SortOrder > 0 ? request.SortOrder : category.SortOrder;
+        category.IsActive = !request.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new(true, category.Name + " category updated successfully.", MapServiceCategory(category));
+    }
+
+    public async Task<MutationResponse<ServiceCategoryDto>> ToggleServiceCategoryStatusAsync(
+        int publicId,
+        CancellationToken cancellationToken)
+    {
+        var salonId = await GetSalonIdAsync(cancellationToken);
+        var category = await db.ServiceCategories
+            .Include(x => x.Services)
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salonId && x.PublicId == publicId,
+                cancellationToken);
+        if (category is null) return new(false, "Service category not found.");
+
+        category.IsActive = !category.IsActive;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new(
+            true,
+            category.Name + " category is now " + (category.IsActive ? "active." : "inactive."),
+            MapServiceCategory(category));
+    }
+
+    public async Task<MutationResponse> DeleteServiceCategoryAsync(
+        int publicId,
+        CancellationToken cancellationToken)
+    {
+        var salonId = await GetSalonIdAsync(cancellationToken);
+        var category = await db.ServiceCategories
+            .Include(x => x.Services)
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salonId && x.PublicId == publicId,
+                cancellationToken);
+        if (category is null) return new(false, "Service category not found.");
+
+        if (category.Services.Count > 0)
+            return new(false, "Move or delete the services in this category before deleting it.");
+
+        db.ServiceCategories.Remove(category);
+        await db.SaveChangesAsync(cancellationToken);
+        return new(true, category.Name + " category deleted successfully.");
     }
 
     public async Task<MutationResponse<ServiceDto>> AddServiceAsync(
@@ -31,6 +155,9 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         var validation = ValidateService(request);
         if (validation is not null) return new(false, validation);
 
+        var category = await ResolveServiceCategoryAsync(salonId, request.CategoryId, cancellationToken);
+        if (category is null) return new(false, "Select a valid service category.");
+
         var duplicate = await db.Services.AnyAsync(
             x => x.SalonId == salonId && x.Name.ToLower() == request.Name.Trim().ToLower(),
             cancellationToken);
@@ -40,7 +167,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             .Where(x => x.SalonId == salonId)
             .MaxAsync(x => (int?)x.PublicId, cancellationToken) ?? 0) + 1;
 
-        var service = BuildService(salonId, nextId, request);
+        var service = BuildService(salonId, nextId, request, category);
         db.Services.Add(service);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -57,13 +184,18 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         CancellationToken cancellationToken)
     {
         var salonId = await GetSalonIdAsync(cancellationToken);
-        var service = await db.Services.FirstOrDefaultAsync(
-            x => x.SalonId == salonId && x.PublicId == publicId,
-            cancellationToken);
+        var service = await db.Services
+            .Include(x => x.ServiceCategory)
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salonId && x.PublicId == publicId,
+                cancellationToken);
         if (service is null) return new(false, "Service not found.");
 
         var validation = ValidateService(request);
         if (validation is not null) return new(false, validation);
+
+        var category = await ResolveServiceCategoryAsync(salonId, request.CategoryId, cancellationToken);
+        if (category is null) return new(false, "Select a valid service category.");
 
         var duplicate = await db.Services.AnyAsync(
             x => x.SalonId == salonId
@@ -72,7 +204,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             cancellationToken);
         if (duplicate) return new(false, "Another service already uses this name.");
 
-        ApplyService(service, request);
+        ApplyService(service, request, category);
         await db.SaveChangesAsync(cancellationToken);
 
         return new(true, service.Name + " updated successfully.", MapService(service));
@@ -448,6 +580,7 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
                 if (request.Services is { Count: > 0 })
                 {
+                    var defaultCategory = await GetOrCreateDefaultServiceCategoryAsync(salon.Id, cancellationToken);
                     var existingServices = await db.Services
                         .Where(x => x.SalonId == salon.Id)
                         .ToListAsync(cancellationToken);
@@ -465,7 +598,8 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
                             dto.HomeOriginalPrice,
                             dto.HomeDiscountPrice,
                             dto.Image,
-                            dto.Status);
+                            dto.Status,
+                            dto.CategoryId);
 
                         var validation = ValidateService(upsert);
                         if (validation is not null)
@@ -477,14 +611,14 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
 
                         if (service is null)
                         {
-                            service = BuildService(salon.Id, dto.Id, upsert);
+                            service = BuildService(salon.Id, dto.Id, upsert, defaultCategory);
                             db.Services.Add(service);
                             existingServices.Add(service);
                         }
                         else
                         {
                             service.PublicId = dto.Id;
-                            ApplyService(service, upsert);
+                            ApplyService(service, upsert, defaultCategory);
                         }
 
                         importedServiceIds.Add(service.Id);
@@ -633,17 +767,42 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         service.HomeOriginalPrice,
         service.HomeDiscountPrice,
         service.ImageUrl ?? "assets/images/service-placeholder.svg",
-        service.IsActive ? "Active" : "Inactive");
+        service.IsActive ? "Active" : "Inactive",
+        service.ServiceCategory?.PublicId,
+        service.ServiceCategory?.Name);
 
-    private static Service BuildService(Guid salonId, int publicId, ServiceUpsertRequest request)
+    private static ServiceCategoryDto MapServiceCategory(ServiceCategory category) => new(
+        category.PublicId,
+        category.Name,
+        category.SortOrder,
+        category.IsActive ? "Active" : "Inactive",
+        category.Services.Count);
+
+    private static Service BuildService(
+        Guid salonId,
+        int publicId,
+        ServiceUpsertRequest request,
+        ServiceCategory category)
     {
-        var service = new Service { SalonId = salonId, PublicId = publicId, Name = request.Name.Trim() };
-        ApplyService(service, request);
+        var service = new Service
+        {
+            SalonId = salonId,
+            PublicId = publicId,
+            Name = request.Name.Trim(),
+            ServiceCategoryId = category.Id,
+            ServiceCategory = category
+        };
+        ApplyService(service, request, category);
         return service;
     }
 
-    private static void ApplyService(Service service, ServiceUpsertRequest request)
+    private static void ApplyService(
+        Service service,
+        ServiceUpsertRequest request,
+        ServiceCategory category)
     {
+        service.ServiceCategoryId = category.Id;
+        service.ServiceCategory = category;
         service.Name = request.Name.Trim();
         service.DurationMinutes = request.Duration;
         service.OriginalPrice = request.OriginalPrice;
@@ -671,6 +830,54 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
             return "Home discount amount must be greater than 0 and lower than the home service amount.";
         if (string.IsNullOrWhiteSpace(request.Image)) return "Service image is required.";
         return null;
+    }
+
+    private static string? ValidateServiceCategory(ServiceCategoryUpsertRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name)) return "Category name is required.";
+        if (request.Name.Trim().Length > 120) return "Category name cannot exceed 120 characters.";
+        if (request.SortOrder < 0) return "Category display order cannot be negative.";
+        return null;
+    }
+
+    private async Task<ServiceCategory?> ResolveServiceCategoryAsync(
+        Guid salonId,
+        int? publicId,
+        CancellationToken cancellationToken)
+    {
+        if (!publicId.HasValue || publicId.Value <= 0)
+            return await GetOrCreateDefaultServiceCategoryAsync(salonId, cancellationToken);
+
+        return await db.ServiceCategories.FirstOrDefaultAsync(
+            x => x.SalonId == salonId && x.PublicId == publicId.Value,
+            cancellationToken);
+    }
+
+    private async Task<ServiceCategory> GetOrCreateDefaultServiceCategoryAsync(
+        Guid salonId,
+        CancellationToken cancellationToken)
+    {
+        var category = await db.ServiceCategories.FirstOrDefaultAsync(
+            x => x.SalonId == salonId && x.Name.ToLower() == "haircut",
+            cancellationToken);
+
+        if (category is not null) return category;
+
+        var nextId = (await db.ServiceCategories
+            .Where(x => x.SalonId == salonId)
+            .MaxAsync(x => (int?)x.PublicId, cancellationToken) ?? 0) + 1;
+
+        category = new ServiceCategory
+        {
+            SalonId = salonId,
+            PublicId = nextId,
+            Name = "Haircut",
+            SortOrder = 1,
+            IsActive = true
+        };
+        db.ServiceCategories.Add(category);
+        await db.SaveChangesAsync(cancellationToken);
+        return category;
     }
 
     private async Task<string?> ValidateBarberRequestAsync(
