@@ -5,6 +5,7 @@ interface GalleryImage {
   src: string;
   alt: string;
   className: string;
+  label: string;
 }
 
 @Component({
@@ -18,16 +19,16 @@ export class GalleryComponent {
   selectedIndex: number | null = null;
 
   readonly images: GalleryImage[] = [
-    { src: 'assets/images/gallery/gallery1.jpg', alt: 'The Trim Town studio interior', className: 'tile-1' },
-    { src: 'assets/images/gallery/gallery2.jpg', alt: 'The Trim Town interior detail', className: 'tile-2' },
-    { src: 'assets/images/gallery/gallery3.jpg', alt: 'The Trim Town grooming area', className: 'tile-3' },
-    { src: 'assets/images/gallery/gallery4.jpg', alt: 'The Trim Town studio atmosphere', className: 'tile-4' },
-    { src: 'assets/images/gallery/gallery5.jpg', alt: 'The Trim Town premium interior', className: 'tile-5' },
-    { src: 'assets/images/gallery/gallery6.jpg', alt: 'The Trim Town barber station', className: 'tile-6' },
-    { src: 'assets/images/gallery/gallery7.jpg', alt: 'The Trim Town studio details', className: 'tile-7' },
-    { src: 'assets/images/gallery/gallery8.jpg', alt: 'The Trim Town grooming experience', className: 'tile-8' },
-    { src: 'assets/images/gallery/gallery9.jpg', alt: 'The Trim Town interior view', className: 'tile-9' },
-    { src: 'assets/images/gallery/gallery10.jpg', alt: 'The Trim Town salon space', className: 'tile-10' }
+    { src: 'assets/images/gallery/gallery1.jpg', alt: 'The Trim Town studio interior', className: 'tile-1', label: 'The Studio' },
+    { src: 'assets/images/gallery/gallery2.jpg', alt: 'The Trim Town interior detail', className: 'tile-2', label: 'Crafted Space' },
+    { src: 'assets/images/gallery/gallery3.jpg', alt: 'The Trim Town grooming area', className: 'tile-3', label: 'Main Floor' },
+    { src: 'assets/images/gallery/gallery4.jpg', alt: 'The Trim Town studio atmosphere', className: 'tile-4', label: 'Details' },
+    { src: 'assets/images/gallery/gallery5.jpg', alt: 'The Trim Town premium interior', className: 'tile-5', label: 'Signature Mood' },
+    { src: 'assets/images/gallery/gallery6.jpg', alt: 'The Trim Town barber station', className: 'tile-6', label: 'Private Grooming' },
+    { src: 'assets/images/gallery/gallery7.jpg', alt: 'The Trim Town studio details', className: 'tile-7', label: 'The Lounge' },
+    { src: 'assets/images/gallery/gallery8.jpg', alt: 'The Trim Town grooming experience', className: 'tile-8', label: 'Experience' },
+    { src: 'assets/images/gallery/gallery9.jpg', alt: 'The Trim Town interior view', className: 'tile-9', label: 'Art & Character' },
+    { src: 'assets/images/gallery/gallery10.jpg', alt: 'The Trim Town salon space', className: 'tile-10', label: 'Tools of Craft' }
   ];
 
   get selectedImage(): GalleryImage | null {
@@ -56,6 +57,10 @@ export class GalleryComponent {
 
   trackBySrc(_index: number, item: GalleryImage): string {
     return item.src;
+  }
+
+  formatIndex(index: number): string {
+    return String(index + 1).padStart(2, '0');
   }
 
   @HostListener('document:keydown', ['$event'])
