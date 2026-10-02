@@ -181,8 +181,25 @@ jobs:
           curl --fail --silent -X PATCH -H "Authorization: Bearer $TOKEN" http://127.0.0.1:5080/api/barbers/$BARBER_ID/status | grep '"accountStatus":"Inactive"'
           curl --fail --silent -X PATCH -H "Authorization: Bearer $TOKEN" http://127.0.0.1:5080/api/barbers/$BARBER_ID/status | grep '"accountStatus":"Active"'
 
+          # Regression: a barber with closed booking history must still be removable
+          # from current lists without deleting or corrupting the historical booking.
+          HISTORY_BOOKING_RESPONSE=$(curl --fail --silent \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"customerName\":\"History Customer\",\"phone\":\"+923001234568\",\"service\":\"Haircut\",\"duration\":40,\"barber\":\"CI Barber Updated\",\"date\":\"$BOOKING_DATE\",\"time\":\"6:00 PM\",\"amount\":600,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Salon\",\"serviceAddress\":\"\",\"specialService\":\"\",\"specialServiceAmount\":0}" \
+            http://127.0.0.1:5080/api/bookings/admin)
+          echo "$HISTORY_BOOKING_RESPONSE" | grep '"success":true'
+          HISTORY_BOOKING_ID=$(echo "$HISTORY_BOOKING_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["booking"]["id"])')
+
+          curl --fail --silent -X PATCH \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"Completed"}' \
+            http://127.0.0.1:5080/api/bookings/$HISTORY_BOOKING_ID/status | grep '"status":"Completed"'
+
           curl --fail --silent -X DELETE -H "Authorization: Bearer $TOKEN" http://127.0.0.1:5080/api/barbers/$BARBER_ID | grep '"success":true'
           curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; items=json.load(sys.stdin); assert all(x["name"] != "CI Barber Updated" for x in items)'
+          curl --fail --silent -H "Authorization: Bearer $TOKEN" http://127.0.0.1:5080/api/bookings | python3 -c 'import json,sys; items=json.load(sys.stdin); item=next(x for x in items if x["id"] == int("'"$HISTORY_BOOKING_ID"'")); assert item["barber"] == "CI Barber Updated" and item["status"] == "Completed"'
 
           curl --fail --silent http://127.0.0.1:5080/api/settings | grep '"businessName":"Royal Barbers"'
           curl --fail --silent \
