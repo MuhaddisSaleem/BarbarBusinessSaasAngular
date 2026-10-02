@@ -90,7 +90,7 @@
 
 .footer-logo-copy strong {
   color: #fff;
-  font-size: clamp(15px, 1.3vw, 20px);
+  font-size: clamp(17px, 1.45vw, 23px);
   font-weight: 850;
   letter-spacing: .08em;
   line-height: 1.05;
@@ -99,9 +99,9 @@
 .footer-logo-copy small {
   margin-top: 6px;
   color: #e9b654;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: .2em;
+  letter-spacing: .18em;
   text-transform: uppercase;
 }
 
@@ -109,8 +109,8 @@
   max-width: 450px;
   margin: 22px 0 0;
   color: #929da1;
-  font-size: 12px;
-  line-height: 1.8;
+  font-size: 14px;
+  line-height: 1.75;
 }
 
 .footer-socials {
@@ -124,9 +124,9 @@
 .social-label {
   margin-right: 4px;
   color: #dfe4e4;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: .14em;
+  letter-spacing: .12em;
   text-transform: uppercase;
 }
 
@@ -141,7 +141,7 @@
   background: rgba(255,255,255,.018);
   color: #b9c1c4;
   text-decoration: none;
-  font-size: 9px;
+  font-size: 11px;
   transition: border-color .2s ease, color .2s ease, background .2s ease, transform .2s ease;
 }
 
@@ -161,15 +161,15 @@
   display: block;
   margin-bottom: 9px;
   color: #e9b654;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
-  letter-spacing: .24em;
+  letter-spacing: .22em;
 }
 
 .footer-column h3 {
   margin: 0 0 20px;
   color: #f5f6f3;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 800;
 }
 
@@ -186,7 +186,7 @@
   padding: 6px 0;
   color: #8f9a9e;
   text-decoration: none;
-  font-size: 11px;
+  font-size: 13px;
   transition: color .18s ease, transform .18s ease;
 }
 
@@ -233,14 +233,14 @@
 
 .location-line strong {
   color: #dfe4e4;
-  font-size: 10px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .location-line small {
   margin-top: 3px;
   color: #727f84;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .location-arrow {
@@ -302,7 +302,7 @@
   border-radius: 6px;
   background: rgba(4,9,10,.88);
   color: #f1d69e;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -319,13 +319,13 @@
   justify-content: space-between;
   gap: 16px;
   color: #647075;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .footer-signoff {
   color: #aeb4b3;
   font-family: 'Brush Script MT', 'Segoe Script', cursive;
-  font-size: 19px;
+  font-size: 22px;
   font-style: italic;
 }
 
@@ -366,7 +366,7 @@
   }
 
   .footer-description {
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .footer-socials {
