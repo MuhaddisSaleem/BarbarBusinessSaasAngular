@@ -25,18 +25,17 @@
     <div class="gallery-carousel" *ngIf="filteredItems.length">
       <div class="gallery-stage">
         <button
-          *ngFor="let item of filteredItems; let i = index; trackBy: trackBySrc"
+          *ngFor="let item of filteredItems; let i = index; trackBy: trackByItem"
           type="button"
           class="gallery-card"
           [ngClass]="cardClass(i)"
           [attr.aria-label]="i === activeIndex ? 'Open ' + item.title : 'Show ' + item.title"
           (click)="selectSlide(i)">
-          <img
-            [src]="item.src"
-            [alt]="item.alt"
-            [style.object-position]="item.position || 'center'"
-            [attr.loading]="i === activeIndex ? 'eager' : 'lazy'"
-            decoding="async">
+          <span
+            class="gallery-card-photo"
+            [ngStyle]="photoStyle(item)"
+            aria-hidden="true">
+          </span>
           <span class="gallery-card-shade" aria-hidden="true"></span>
           <span class="gallery-card-copy">
             <small>{{ item.category }}</small>
@@ -57,7 +56,7 @@
 
       <div class="gallery-pagination d-flex align-items-center justify-content-center">
         <button
-          *ngFor="let item of filteredItems; let i = index; trackBy: trackBySrc"
+          *ngFor="let item of filteredItems; let i = index; trackBy: trackByItem"
           type="button"
           class="gallery-dot"
           [class.active]="i === activeIndex"
@@ -96,7 +95,12 @@
   </button>
 
   <figure (click)="$event.stopPropagation()">
-    <img [src]="activeItem.src" [alt]="activeItem.alt">
+    <span
+      class="lightbox-photo"
+      [ngStyle]="photoStyle(activeItem)"
+      role="img"
+      [attr.aria-label]="activeItem.alt">
+    </span>
     <figcaption>
       <small>{{ activeItem.category }}</small>
       <strong>{{ activeItem.title }}</strong>
