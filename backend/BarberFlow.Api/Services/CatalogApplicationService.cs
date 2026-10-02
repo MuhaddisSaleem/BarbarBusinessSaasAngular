@@ -215,9 +215,11 @@ public sealed class CatalogApplicationService(BarberFlowDbContext db)
         CancellationToken cancellationToken)
     {
         var salonId = await GetSalonIdAsync(cancellationToken);
-        var service = await db.Services.FirstOrDefaultAsync(
-            x => x.SalonId == salonId && x.PublicId == publicId,
-            cancellationToken);
+        var service = await db.Services
+            .Include(x => x.ServiceCategory)
+            .FirstOrDefaultAsync(
+                x => x.SalonId == salonId && x.PublicId == publicId,
+                cancellationToken);
         if (service is null) return new(false, "Service not found.");
 
         service.IsActive = !service.IsActive;
