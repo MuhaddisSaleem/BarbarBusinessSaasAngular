@@ -59,9 +59,6 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Property<Guid>("SalonId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("ServiceCategoryId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -799,6 +796,9 @@ namespace BarberFlow.Api.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<Guid>("SalonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ServiceCategoryId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
