@@ -37,12 +37,21 @@
 
 .hero-photo,
 .hero-media {
-  animation: heroBackgroundEnter 3s cubic-bezier(.25,.1,.25,1) both;
+  will-change: transform, opacity;
+  animation: heroBackgroundEnter 2.2s cubic-bezier(.16,1,.3,1) both;
 }
 
 @keyframes heroBackgroundEnter {
-  from { opacity: 0; transform: scale(1.08); }
-  to { opacity: 1; transform: scale(1.015); }
+  from {
+    opacity: 0;
+    transform: translate3d(0, -8px, 0) scale(1.09);
+    filter: saturate(.58) contrast(1.08) brightness(.62) blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, var(--hero-bg-y, 0px), 0) scale(var(--hero-bg-scale, 1.015));
+    filter: saturate(.72) contrast(1.08) brightness(.72) blur(0);
+  }
 }
 
 .hero-overlay {
@@ -68,9 +77,62 @@
   display: flex;
   align-items: flex-start;
   padding-top: 64px;
+  transform: translate3d(0, var(--hero-content-y, 0px), 0);
+  opacity: var(--hero-content-opacity, 1);
+  will-change: transform, opacity;
 }
 
 .hero-copy { width: 620px; max-width: 55%; }
+
+
+/* ===== Hero load motion ===== */
+.hero-load {
+  opacity: 0;
+  will-change: transform, opacity, filter;
+  animation: heroContentReveal .9s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+.hero-load-1 { animation-delay: .12s; }
+.hero-load-2 { animation-delay: .22s; }
+.hero-load-3 { animation-delay: .36s; }
+.hero-load-4 { animation-delay: .48s; }
+
+.hero-feature-load {
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: heroFeatureReveal .72s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+.hero-feature-load:nth-child(1) { animation-delay: .62s; }
+.hero-feature-load:nth-child(2) { animation-delay: .70s; }
+.hero-feature-load:nth-child(3) { animation-delay: .78s; }
+.hero-feature-load:nth-child(4) { animation-delay: .86s; }
+
+@keyframes heroContentReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+    filter: blur(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes heroFeatureReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
 
 .eyebrow {
   display: block;
@@ -235,5 +297,17 @@ h1 {
 
 @media (prefers-reduced-motion: reduce) {
   .hero-photo,
-  .hero-media { animation: none; }
+  .hero-media,
+  .hero-load,
+  .hero-feature-load {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+
+  .hero-content {
+    transform: none !important;
+    opacity: 1 !important;
+  }
 }
