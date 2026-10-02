@@ -8,6 +8,7 @@ import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { AdminBookingService } from '../admin/bookings/admin-booking.service';
 import { CatalogApiService } from '../core/catalog-api.service';
 import { BookingApiService } from '../core/booking-api.service';
+import { ScrollRevealDirective } from '../shared/scroll-reveal.directive';
 
 interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
@@ -20,7 +21,7 @@ interface PersonSchedule { personId: number; time: string; barber: Barber; sugge
 @Component({
   selector: 'app-booking',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ScrollRevealDirective],
   templateUrl: './booking.component.html',
   styleUrls: ['./booking.component.scss', './group-booking.component.scss']
 })

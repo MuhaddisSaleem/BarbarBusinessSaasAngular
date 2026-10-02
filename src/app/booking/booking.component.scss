@@ -170,17 +170,17 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .service-image {
-  height: 140px;
   padding: 9px 9px 0;
 
   img {
     width: 100%;
-    height: 100%;
+    height: auto;
+    aspect-ratio: 3 / 2;
     display: block;
-    object-fit: cover;
+    object-fit: contain;
     object-position: center;
     border-radius: 7px;
-    filter: saturate(.82) contrast(1.04) brightness(.92);
+    background: #0a1012;
   }
 }
 
@@ -939,7 +939,6 @@ button { -webkit-tap-highlight-color: transparent; }
 
   .services-grid { grid-template-columns: 1fr 1fr; }
   .barber-grid { grid-template-columns: 1fr 1fr; }
-  .service-image { height: 120px; }
   .date-section { max-width: none; }
   .footer-inner { grid-template-columns: 1fr; align-items: start; }
   .footer-feature { justify-content: flex-start; }
@@ -948,7 +947,7 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 430px) {
   .booking-content { padding-top: 20px; }
   .services-grid { gap: 9px; }
-  .service-image { height: 100px; padding: 7px 7px 0; }
+  .service-image { padding: 7px 7px 0; }
   .service-card-body { padding: 8px; }
   .service-title-row h3 { font-size: 12px; }
   .service-price { font-size: 13px; }

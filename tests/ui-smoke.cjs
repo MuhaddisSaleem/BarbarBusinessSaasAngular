@@ -460,6 +460,30 @@ let browser, activePage;
     const stored=async()=>apiBookings.map(item=>({...item}));
     const details=async()=>{await page.locator('#customer-name-input').fill('QA Customer');await page.locator('#customer-phone-input').fill('3001234567');};
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
+    await goto();
+    // Scroll reveals must leave every booking step reachable, including long
+    // sections on mobile, and must not hide a step again when scrolling back.
+    const revealSections=['#service-section','#barber-section','#date-time-section','#customer-details-section'];
+    for(const selector of revealSections){
+      await page.locator(selector).scrollIntoViewIfNeeded();
+      await page.waitForFunction(selector=>{
+        const element=document.querySelector(selector);
+        return element && getComputedStyle(element).opacity==='1'
+          && getComputedStyle(element).transform==='none';
+      },selector);
+    }
+    await page.locator('#service-section').scrollIntoViewIfNeeded();
+    assert.equal(await page.locator('.booking-reveal-pending').count(),0,'Revealed sections must stay visible');
+    const imageFit=await page.locator('.salon-services-grid .service-image img').first().evaluate(img=>{
+      const box=img.getBoundingClientRect();
+      return {ratio:box.width/box.height,fit:getComputedStyle(img).objectFit};
+    });
+    assert.ok(Math.abs(imageFit.ratio-1.5)<.02,'Service photos must keep a consistent 3:2 frame');
+    assert.equal(imageFit.fit,'contain','Service photos must show the complete uploaded image');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    await goto();
+    assert.equal(await page.locator('.booking-reveal-pending').count(),0,'Reduced motion must never hide booking sections');
+    await page.emulateMedia({reducedMotion:'no-preference'});
     await goto();await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();await day();
     const firstSlot=page.locator('.time-slot').filter({hasText:/^5:00 PM$/});
     await firstSlot.waitFor();
@@ -511,6 +535,10 @@ let browser, activePage;
     assert.equal(await page.locator('.salon-choice-action-panel.visible .booking-for-toggle').count(),0,'Just Me / group choices must be visually hidden while Home Service is active');
     assert.equal(await page.locator('.home-catalog-motion.expanded .home-service-content').count(),1,'Home Service catalog must be expanded when Home Service is active');
 
+    // Measure the final layout, not the selector's scale/height mid-transition.
+    await page.locator('#service-section').evaluate(async element=>{
+      await Promise.all(element.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>{})));
+    });
     const salonButtonBox=await page.locator('.select-salon-service-btn').boundingBox();
     const salonActionBox=await page.locator('.salon-choice-action-stage').boundingBox();
     assert.ok(
@@ -526,9 +554,12 @@ let browser, activePage;
     }
 
     const actionStageBox=await page.locator('.salon-choice-action-stage').boundingBox();
-    assert.ok(actionStageBox&&actionStageBox.height<=100,'Home mode must not keep the hidden stacked salon-choice height');
+    const salonIntroBox=await page.locator('.salon-service-intro').boundingBox();
+    // Desktop grid items stretch to the visible intro, which can wrap with
+    // different fonts. Only mobile uses the formerly stacked 154px stage.
+    const homeStageLimit=width<=390?100:Math.max(100,salonIntroBox?.height||0)+2;
+    assert.ok(actionStageBox&&actionStageBox.height<=homeStageLimit,'Home mode must not keep the hidden stacked salon-choice height');
 
-    await page.waitForTimeout(550);
     const selectorGeometry=await page.evaluate(()=>{
       const salon=document.querySelector('.salon-service-choice')?.getBoundingClientRect();
       const salonButton=document.querySelector('.select-salon-service-btn')?.getBoundingClientRect();

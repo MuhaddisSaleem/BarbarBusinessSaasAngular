@@ -5,6 +5,28 @@ html {
   background: #274856;
 }
 
+/* One-time booking section entrances; the DOM keeps its natural height. */
+.booking-page .booking-reveal {
+  opacity: 1;
+  transform: none;
+  transition: opacity 650ms ease var(--reveal-delay, 0ms),
+    transform 650ms cubic-bezier(.2,.75,.25,1) var(--reveal-delay, 0ms);
+}
+
+.booking-page .booking-reveal-pending {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .booking-page .booking-reveal,
+  .booking-page .booking-reveal-pending {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 html,
 body {
   margin: 0;
