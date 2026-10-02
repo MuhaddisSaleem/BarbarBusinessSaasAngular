@@ -3,14 +3,24 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, map } from 'rxjs';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
-import { AdminServiceService } from '../admin/services/admin-service.service';
+import { AdminServiceCategory, AdminServiceService } from '../admin/services/admin-service.service';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { AdminBookingService } from '../admin/bookings/admin-booking.service';
 import { CatalogApiService } from '../core/catalog-api.service';
 import { BookingApiService } from '../core/booking-api.service';
 import { ScrollRevealDirective } from '../shared/scroll-reveal.directive';
 
-interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
+interface Service {
+  id: number;
+  name: string;
+  categoryId: number;
+  categoryName: string;
+  duration: number;
+  price: number;
+  originalPrice: number;
+  discountPrice: number | null;
+  image: string;
+}
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
 interface BookingDate { date: Date; day: string; dateNumber: number; month: string; fullDate: string; }
 interface CalendarCell { date: Date | null; dayNumber: number | null; fullDate: string | null; }
@@ -30,6 +40,8 @@ export class BookingComponent implements OnInit {
     return this.serviceService.active.map(service => ({
       id: service.id,
       name: service.name,
+      categoryId: service.categoryId,
+      categoryName: service.categoryName,
       duration: service.duration,
       price: this.serviceService.effectivePrice(service),
       originalPrice: service.originalPrice,
@@ -42,6 +54,8 @@ export class BookingComponent implements OnInit {
     return this.serviceService.homeActive.map(service => ({
       id: service.id,
       name: service.name,
+      categoryId: service.categoryId,
+      categoryName: service.categoryName,
       duration: service.duration,
       price: this.serviceService.effectiveHomePrice(service),
       originalPrice: Number(service.homeOriginalPrice),
@@ -52,6 +66,30 @@ export class BookingComponent implements OnInit {
 
   get services(): Service[] {
     return this.serviceLocation === 'home' ? this.homeServices : this.salonServices;
+  }
+
+  get serviceCategories(): AdminServiceCategory[] {
+    const source = this.serviceLocation === 'home' ? this.homeServices : this.salonServices;
+    const availableIds = new Set(source.map(service => service.categoryId));
+
+    return this.serviceService.activeCategories
+      .filter(category => availableIds.has(category.id));
+  }
+
+  get visibleSalonServices(): Service[] {
+    return this.filterServicesByCategory(this.salonServices);
+  }
+
+  get visibleHomeServices(): Service[] {
+    return this.filterServicesByCategory(this.homeServices);
+  }
+
+  selectServiceCategory(category: 'all' | number): void {
+    this.selectedServiceCategory = category;
+  }
+
+  isServiceCategorySelected(category: 'all' | number): boolean {
+    return this.selectedServiceCategory === category;
   }
 
   get barbers(): Barber[] {
@@ -65,6 +103,7 @@ export class BookingComponent implements OnInit {
   }
 
   serviceLocation: 'salon' | 'home' = 'salon';
+  selectedServiceCategory: 'all' | number = 'all';
   bookingMode: 'single' | 'group' = 'single';
   groupStrategy: 'parallel' | 'sequential' = 'parallel';
   homeAddress = '';
@@ -300,6 +339,7 @@ export class BookingComponent implements OnInit {
     const destinationById = new Map(destinationServices.map(service => [service.id, service]));
 
     this.serviceLocation = location;
+    this.selectedServiceCategory = 'all';
     this.clearValidationMessage();
     this.clearSelectedTime();
 
@@ -1054,8 +1094,21 @@ export class BookingComponent implements OnInit {
     this.resetBookingForm();
   }
 
+  private filterServicesByCategory(source: Service[]): Service[] {
+    if (this.selectedServiceCategory === 'all') return source;
+
+    const categoryExists = this.serviceCategories.some(
+      category => category.id === this.selectedServiceCategory
+    );
+
+    if (!categoryExists) return source;
+
+    return source.filter(service => service.categoryId === this.selectedServiceCategory);
+  }
+
   private resetBookingForm(): void {
     this.serviceLocation = 'salon';
+    this.selectedServiceCategory = 'all';
     this.homeAddress = '';
     this.specialHomeService = '';
     this.bookingMode = 'single';
