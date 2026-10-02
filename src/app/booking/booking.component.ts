@@ -37,7 +37,9 @@ interface PersonSchedule { personId: number; time: string; barber: Barber; sugge
 })
 export class BookingComponent implements OnInit {
   get salonServices(): Service[] {
-    return this.serviceService.active.map(service => ({
+    return this.serviceService.active
+      .filter(service => this.serviceService.getCategoryById(service.categoryId)?.status !== 'Inactive')
+      .map(service => ({
       id: service.id,
       name: service.name,
       categoryId: service.categoryId,
@@ -51,7 +53,9 @@ export class BookingComponent implements OnInit {
   }
 
   get homeServices(): Service[] {
-    return this.serviceService.homeActive.map(service => ({
+    return this.serviceService.homeActive
+      .filter(service => this.serviceService.getCategoryById(service.categoryId)?.status !== 'Inactive')
+      .map(service => ({
       id: service.id,
       name: service.name,
       categoryId: service.categoryId,
