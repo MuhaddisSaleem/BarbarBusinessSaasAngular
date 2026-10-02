@@ -77,7 +77,7 @@
         <small>READY FOR YOUR TURN?</small>
         <h3>Experience The Trim Town in person.</h3>
       </div>
-      <a [routerLink]="['/']" fragment="services" class="gallery-book-btn d-inline-flex align-items-center justify-content-center">
+      <a [routerLink]="['/']" fragment="booking" class="gallery-book-btn d-inline-flex align-items-center justify-content-center">
         Book Your Experience
         <i class="bi bi-arrow-right"></i>
       </a>
@@ -85,7 +85,7 @@
   </div>
 </section>
 
-<div class="gallery-lightbox d-flex align-items-center justify-content-center" *ngIf="lightboxOpen && activeItem" (click)="closeLightbox()">
+<div class="gallery-lightbox d-flex align-items-center justify-content-center" *ngIf="lightboxOpen && activeItem as item" (click)="closeLightbox()">
   <button type="button" class="lightbox-close d-flex align-items-center justify-content-center" aria-label="Close gallery image" (click)="closeLightbox(); $event.stopPropagation()">
     <i class="bi bi-x-lg"></i>
   </button>
@@ -97,13 +97,13 @@
   <figure (click)="$event.stopPropagation()">
     <span
       class="lightbox-photo"
-      [ngStyle]="photoStyle(activeItem)"
+      [ngStyle]="photoStyle(item)"
       role="img"
-      [attr.aria-label]="activeItem.alt">
+      [attr.aria-label]="item.alt">
     </span>
     <figcaption>
-      <small>{{ activeItem.category }}</small>
-      <strong>{{ activeItem.title }}</strong>
+      <small>{{ item.category }}</small>
+      <strong>{{ item.title }}</strong>
     </figcaption>
   </figure>
 
