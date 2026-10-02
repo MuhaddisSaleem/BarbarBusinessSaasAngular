@@ -4,10 +4,21 @@ import { AdminBarberService } from '../barbers/admin-barber.service';
 import { CatalogApiService } from '../../core/catalog-api.service';
 
 export type ServiceStatus = 'Active' | 'Inactive';
+export type ServiceCategoryStatus = ServiceStatus;
+
+export interface AdminServiceCategory {
+  id: number;
+  name: string;
+  sortOrder: number;
+  status: ServiceCategoryStatus;
+  serviceCount: number;
+}
 
 export interface AdminService {
   id: number;
   name: string;
+  categoryId: number;
+  categoryName: string;
   duration: number;
   originalPrice: number;
   discountPrice: number | null;
@@ -30,12 +41,17 @@ export class AdminServiceService {
     private readonly barberService: AdminBarberService,
     private readonly api?: CatalogApiService
   ) {
+    this.categories = this.api
+      ? this.normalizeCategories(this.api.categorySnapshot)
+      : this.loadCategories();
+
     this.services = this.api
       ? this.normalizeServices(this.api.serviceSnapshot)
       : this.loadServices();
 
     if (this.api && typeof window !== 'undefined') {
       window.localStorage.removeItem(this.storageKey);
+      window.localStorage.removeItem(this.categoryStorageKey);
       window.localStorage.removeItem(this.demoCleanupKey);
     }
 
@@ -44,11 +60,18 @@ export class AdminServiceService {
       if (changed === 'services' && this.api) {
         this.services = this.normalizeServices(this.api.serviceSnapshot);
       }
-    });  }
+
+      if (changed === 'categories' && this.api) {
+        this.categories = this.normalizeCategories(this.api.categorySnapshot);
+      }
+    });
+  }
 
   private readonly storageKey = 'royal-barbers.admin-services.v1';
+  private readonly categoryStorageKey = 'royal-barbers.admin-service-categories.v1';
   private readonly demoCleanupKey = 'royal-barbers.admin-services.demo-cleaned.v1';
   private services: AdminService[] = [];
+  private categories: AdminServiceCategory[] = [];
 
   refreshFromStorage(): void {
     if (this.api) {
@@ -68,12 +91,34 @@ export class AdminServiceService {
     });
   }
 
+  refreshCategoriesFromApi(): void {
+    if (!this.api) return;
+    this.api.getServiceCategories().subscribe({
+      next: categories => {
+        this.categories = this.normalizeCategories(categories);
+        this.api!.categorySnapshot = this.categories.map(item => ({ ...item }));
+      }
+    });
+  }
+
   get apiEnabled(): boolean {
     return !!this.api;
   }
 
   get all(): AdminService[] {
     return this.services;
+  }
+
+  get allCategories(): AdminServiceCategory[] {
+    return [...this.categories].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+  }
+
+  get activeCategories(): AdminServiceCategory[] {
+    return this.allCategories.filter(item => item.status === 'Active');
+  }
+
+  getCategoryById(id: number): AdminServiceCategory | undefined {
+    return this.categories.find(item => item.id === id);
   }
 
   get active(): AdminService[] {
@@ -125,6 +170,156 @@ export class AdminServiceService {
     return Math.round(((service.originalPrice - Number(service.discountPrice)) / service.originalPrice) * 100);
   }
 
+  addCategoryThroughApi(
+    input: Omit<AdminServiceCategory, 'id' | 'serviceCount'>,
+    done: (result: ServiceMutationResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    this.api.addServiceCategory({ ...input, serviceCount: 0 }).subscribe({
+      next: response => {
+        if (response.item) {
+          const item = this.normalizeCategory(response.item);
+          this.categories = [...this.categories.filter(existing => existing.id !== item.id), item];
+          this.api!.categorySnapshot = this.allCategories.map(category => ({ ...category }));
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not save this category.') })
+    });
+
+    return true;
+  }
+
+  updateCategoryThroughApi(
+    id: number,
+    changes: Omit<AdminServiceCategory, 'id' | 'serviceCount'>,
+    done: (result: ServiceMutationResult) => void
+  ): boolean {
+    if (!this.api) return false;
+
+    const current = this.getCategoryById(id);
+    this.api.updateServiceCategory(id, {
+      ...changes,
+      serviceCount: current?.serviceCount ?? 0
+    }).subscribe({
+      next: response => {
+        if (response.item) {
+          const item = this.normalizeCategory(response.item);
+          const index = this.categories.findIndex(category => category.id === id);
+          if (index >= 0) this.categories[index] = item;
+          this.api!.categorySnapshot = this.allCategories.map(category => ({ ...category }));
+          this.services = this.services.map(service =>
+            service.categoryId === id ? { ...service, categoryName: item.name } : service
+          );
+          this.api!.serviceSnapshot = this.services.map(service => ({ ...service }));
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not update this category.') })
+    });
+
+    return true;
+  }
+
+  toggleCategoryStatusThroughApi(id: number, done: (result: ServiceMutationResult) => void): boolean {
+    if (!this.api) return false;
+
+    this.api.toggleServiceCategoryStatus(id).subscribe({
+      next: response => {
+        if (response.item) {
+          const item = this.normalizeCategory(response.item);
+          const index = this.categories.findIndex(category => category.id === id);
+          if (index >= 0) this.categories[index] = item;
+          this.api!.categorySnapshot = this.allCategories.map(category => ({ ...category }));
+        }
+        done({ success: response.success, message: response.message });
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not change this category status.') })
+    });
+
+    return true;
+  }
+
+  deleteCategoryThroughApi(id: number, done: (result: ServiceMutationResult) => void): boolean {
+    if (!this.api) return false;
+
+    this.api.deleteServiceCategory(id).subscribe({
+      next: response => {
+        if (response.success) {
+          this.categories = this.categories.filter(category => category.id !== id);
+          this.api!.categorySnapshot = this.allCategories.map(category => ({ ...category }));
+        }
+        done(response);
+      },
+      error: error => done({ success: false, message: this.apiError(error, 'Could not delete this category.') })
+    });
+
+    return true;
+  }
+
+  addCategory(input: Omit<AdminServiceCategory, 'id' | 'serviceCount'>): ServiceMutationResult {
+    const name = input.name.trim();
+    if (!name) return { success: false, message: 'Category name is required.' };
+    if (this.categories.some(item => item.name.toLowerCase() === name.toLowerCase())) {
+      return { success: false, message: 'A service category with this name already exists.' };
+    }
+
+    const nextId = this.categories.length ? Math.max(...this.categories.map(item => item.id)) + 1 : 1;
+    this.categories.push({
+      id: nextId,
+      name,
+      sortOrder: Number(input.sortOrder) > 0 ? Number(input.sortOrder) : nextId,
+      status: input.status,
+      serviceCount: 0
+    });
+    this.persistCategories();
+    return { success: true, message: name + ' category added successfully.' };
+  }
+
+  updateCategory(
+    id: number,
+    changes: Omit<AdminServiceCategory, 'id' | 'serviceCount'>
+  ): ServiceMutationResult {
+    const category = this.getCategoryById(id);
+    if (!category) return { success: false, message: 'Service category not found.' };
+
+    const name = changes.name.trim();
+    if (!name) return { success: false, message: 'Category name is required.' };
+    if (this.categories.some(item => item.id !== id && item.name.toLowerCase() === name.toLowerCase())) {
+      return { success: false, message: 'Another service category already uses this name.' };
+    }
+
+    category.name = name;
+    category.sortOrder = Number(changes.sortOrder) > 0 ? Number(changes.sortOrder) : category.sortOrder;
+    category.status = changes.status;
+    this.services = this.services.map(service =>
+      service.categoryId === id ? { ...service, categoryName: name } : service
+    );
+    this.persistCategories();
+    this.persist();
+    return { success: true, message: name + ' category updated successfully.' };
+  }
+
+  toggleCategoryStatus(id: number): ServiceMutationResult {
+    const category = this.getCategoryById(id);
+    if (!category) return { success: false, message: 'Service category not found.' };
+    category.status = category.status === 'Active' ? 'Inactive' : 'Active';
+    this.persistCategories();
+    return { success: true, message: category.name + ' category is now ' + category.status.toLowerCase() + '.' };
+  }
+
+  deleteCategory(id: number): ServiceMutationResult {
+    const category = this.getCategoryById(id);
+    if (!category) return { success: false, message: 'Service category not found.' };
+    if (this.services.some(service => service.categoryId === id)) {
+      return { success: false, message: 'Move or delete the services in this category before deleting it.' };
+    }
+    this.categories = this.categories.filter(item => item.id !== id);
+    this.persistCategories();
+    return { success: true, message: category.name + ' category deleted successfully.' };
+  }
+
   addServiceThroughApi(
     input: Omit<AdminService, 'id'>,
     done: (result: ServiceMutationResult) => void
@@ -138,6 +333,7 @@ export class AdminServiceService {
           this.services = [...this.services.filter(existing => existing.id !== item.id), item]
             .sort((a, b) => a.id - b.id);
           this.api!.serviceSnapshot = this.services.map(service => ({ ...service }));
+          this.refreshCategoriesFromApi();
           this.barberService.refreshFromStorage();
           this.notificationService.add({
             type: 'system',
@@ -169,6 +365,7 @@ export class AdminServiceService {
           const index = this.services.findIndex(service => service.id === id);
           if (index >= 0) this.services[index] = item;
           this.api!.serviceSnapshot = this.services.map(service => ({ ...service }));
+          this.refreshCategoriesFromApi();
           this.barberService.refreshFromStorage();
           this.notificationService.add({
             type: 'system',
@@ -221,6 +418,7 @@ export class AdminServiceService {
         if (response.success) {
           this.services = this.services.filter(item => item.id !== id);
           this.api!.serviceSnapshot = this.services.map(item => ({ ...item }));
+          this.refreshCategoriesFromApi();
           this.barberService.refreshFromStorage();
           if (service) {
             this.notificationService.add({
@@ -253,6 +451,8 @@ export class AdminServiceService {
       ...input,
       id: nextId,
       name: input.name.trim(),
+      categoryId: Number(input.categoryId),
+      categoryName: this.getCategoryById(Number(input.categoryId))?.name || input.categoryName || '',
       originalPrice: Number(input.originalPrice),
       discountPrice: input.discountPrice ? Number(input.discountPrice) : null,
       homeServiceEnabled: input.homeServiceEnabled !== false,
@@ -303,6 +503,8 @@ export class AdminServiceService {
 
     const previous = { ...service };
     service.name = changes.name.trim();
+    service.categoryId = Number(changes.categoryId);
+    service.categoryName = this.getCategoryById(service.categoryId)?.name || changes.categoryName || '';
     service.duration = Number(changes.duration);
     service.originalPrice = Number(changes.originalPrice);
     service.discountPrice = changes.discountPrice ? Number(changes.discountPrice) : null;
@@ -394,6 +596,9 @@ export class AdminServiceService {
   }
 
   private validateService(input: Omit<AdminService, 'id'>): ServiceMutationResult {
+    if (!input.categoryId || !this.getCategoryById(Number(input.categoryId))) {
+      return { success: false, message: 'Select a valid service category.' };
+    }
     if (!input.name.trim()) return { success: false, message: 'Service name is required.' };
     if (!input.image) return { success: false, message: 'Service image is required.' };
 
@@ -465,6 +670,8 @@ export class AdminServiceService {
         )
         .map((item): AdminService => ({
           ...item,
+          categoryId: Number(item.categoryId || this.categories[0]?.id || 1),
+          categoryName: item.categoryName || this.categories.find(category => category.id === Number(item.categoryId))?.name || 'Haircut',
           duration: Number(item.duration),
           originalPrice: Number(item.originalPrice),
           discountPrice: item.discountPrice === null ? null : Number(item.discountPrice),
@@ -490,6 +697,58 @@ export class AdminServiceService {
     }
   }
 
+  private loadCategories(): AdminServiceCategory[] {
+    if (typeof window === 'undefined') return [{ id: 1, name: 'Haircut', sortOrder: 1, status: 'Active', serviceCount: 0 }];
+
+    try {
+      const raw = window.localStorage.getItem(this.categoryStorageKey);
+      if (!raw) {
+        const defaults: AdminServiceCategory[] = [
+          { id: 1, name: 'Haircut', sortOrder: 1, status: 'Active', serviceCount: 0 }
+        ];
+        window.localStorage.setItem(this.categoryStorageKey, JSON.stringify(defaults));
+        return defaults;
+      }
+
+      const parsed = JSON.parse(raw) as AdminServiceCategory[];
+      return this.normalizeCategories(parsed);
+    } catch {
+      return [{ id: 1, name: 'Haircut', sortOrder: 1, status: 'Active', serviceCount: 0 }];
+    }
+  }
+
+  private persistCategories(): boolean {
+    if (this.api) return true;
+    if (typeof window === 'undefined') return true;
+
+    try {
+      const counts = new Map<number, number>();
+      this.services.forEach(service => counts.set(service.categoryId, (counts.get(service.categoryId) || 0) + 1));
+      this.categories = this.categories.map(category => ({
+        ...category,
+        serviceCount: counts.get(category.id) || 0
+      }));
+      window.localStorage.setItem(this.categoryStorageKey, JSON.stringify(this.categories));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private normalizeCategories(categories: AdminServiceCategory[]): AdminServiceCategory[] {
+    return (Array.isArray(categories) ? categories : []).map(category => this.normalizeCategory(category));
+  }
+
+  private normalizeCategory(category: AdminServiceCategory): AdminServiceCategory {
+    return {
+      id: Number(category.id),
+      name: String(category.name || '').trim(),
+      sortOrder: Number(category.sortOrder) || Number(category.id),
+      status: category.status === 'Inactive' ? 'Inactive' : 'Active',
+      serviceCount: Number(category.serviceCount) || 0
+    };
+  }
+
   private persist(): boolean {
     if (this.api) return true;
     if (typeof window === 'undefined') return true;
@@ -510,6 +769,10 @@ export class AdminServiceService {
     return {
       ...service,
       id: Number(service.id),
+      categoryId: Number(service.categoryId || this.categories[0]?.id || 1),
+      categoryName: service.categoryName
+        || this.categories.find(category => category.id === Number(service.categoryId))?.name
+        || 'Haircut',
       duration: Number(service.duration),
       originalPrice: Number(service.originalPrice),
       discountPrice: service.discountPrice === null ? null : Number(service.discountPrice),
