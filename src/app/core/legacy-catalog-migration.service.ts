@@ -37,7 +37,12 @@ export class LegacyCatalogMigrationService {
         }));
 
         if (result.success && result.imported) {
+          // Verify SQL can be read successfully before removing the browser backup.
+          // This prevents a temporary backend/migration failure from making the
+          // existing service/barber catalog appear lost.
+          await this.api.preload();
           this.clearLegacyKeys();
+          return;
         }
       } catch {
         // Keep the old browser data untouched when SQL/API migration is unavailable.
