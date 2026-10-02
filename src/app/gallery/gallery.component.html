@@ -9,7 +9,7 @@
       <p>Real people. Real styles. Real atmosphere.</p>
     </div>
 
-    <header class="gallery-heading">
+    <header class="gallery-heading scroll-reveal reveal-heading">
       <div>
         <span class="gallery-kicker">THE TRIM TOWN / VISUAL JOURNAL</span>
         <h1 id="gallery-title">Inside <em>The Trim Town</em></h1>
@@ -20,8 +20,9 @@
       <button
         *ngFor="let image of images; let i = index; trackBy: trackBySrc"
         type="button"
-        class="gallery-tile"
+        class="gallery-tile scroll-reveal reveal-tile"
         [ngClass]="image.className"
+        [style.--reveal-delay]="((i % 4) * 90) + 'ms'"
         [attr.aria-label]="'Open ' + image.label"
         (click)="openImage(i)">
         <img
