@@ -15,6 +15,7 @@ export class FooterComponent {
   readonly instagramUrl = 'https://www.instagram.com/thetrimtownstudio/';
   readonly facebookUrl = 'https://www.facebook.com/trimtownstudio';
   readonly locationUrl = 'https://maps.app.goo.gl/qXg3irTRuPDktw9h7';
+  readonly contactEmail = 'thetrimtown@gmail.com';
 
   constructor(
     private readonly settingsService: AdminSettingsService,
@@ -39,9 +40,6 @@ export class FooterComponent {
     return location || 'The Trim Town Studio, Bahawalpur';
   }
 
-  get contactEmail(): string {
-    return this.settingsService.current.email?.trim() || 'thetrimtown@gmail.com';
-  }
 
   get currentYear(): number {
     return new Date().getFullYear();
