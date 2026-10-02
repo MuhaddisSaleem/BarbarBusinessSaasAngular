@@ -11,7 +11,7 @@ import { StudioPictureGalleryComponent } from '../studio-picture-gallery/studio-
     <app-header></app-header>
     <main>
       <app-gallery></app-gallery>
-      <app-studio-picture-gallery></app-studio-picture-gallery>
+      <!-- <app-studio-picture-gallery></app-studio-picture-gallery> -->
     </main>
   `
 })
