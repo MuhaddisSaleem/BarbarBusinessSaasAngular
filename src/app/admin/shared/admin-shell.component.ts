@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, Input } from '@angular/core';
+import { Component, HostListener, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminNotification, NotificationService } from '../notifications/notification.service';
 import { AdminBookingService } from '../bookings/admin-booking.service';
@@ -14,7 +14,7 @@ import { AuthService } from '../../core/auth.service';
   templateUrl: './admin-shell.component.html',
   styleUrl: './admin-shell.component.scss'
 })
-export class AdminShellComponent {
+export class AdminShellComponent implements OnInit {
   @Input() eyebrow = 'ADMIN CENTER';
   @Input() title = 'Admin';
 
@@ -51,6 +51,16 @@ export class AdminShellComponent {
     public readonly brandingMedia: BrandingMediaService,
     private readonly authService: AuthService
   ) {}
+
+  ngOnInit(): void {
+    // Refresh the profile from SQL so the owner name is not stuck on an older
+    // browser session value such as "Royal Barbers Owner".
+    this.authService.me().subscribe({
+      error: () => {
+        // Keep the valid cached login profile if the refresh is temporarily unavailable.
+      }
+    });
+  }
 
   get businessName(): string {
     return this.settingsService.current.businessName || 'Salon';
