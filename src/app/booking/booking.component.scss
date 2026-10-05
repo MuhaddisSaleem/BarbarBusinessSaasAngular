@@ -21,6 +21,10 @@ button { -webkit-tap-highlight-color: transparent; }
   background:
     radial-gradient(circle at 32% 18%, rgba(33, 46, 51, .22), transparent 28%),
     linear-gradient(115deg, #070b0d 0%, #0b1114 52%, #274856 100%);
+  background-attachment: fixed;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .page-shell {
