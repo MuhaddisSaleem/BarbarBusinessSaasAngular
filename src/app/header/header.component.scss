@@ -115,21 +115,22 @@
   padding: 11px 18px;
   border: 1px solid #efc867;
   border-radius: 8px;
-  background: linear-gradient(180deg, #f7d477 0%, #dda544 100%);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .26), inset 0 1px rgba(255, 255, 255, .35);
+  background: #e9b654;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
   color: #111;
   font-size: 11px;
   line-height: 1;
   font-weight: 800;
   text-decoration: none;
-  transition: transform .22s ease, box-shadow .22s ease;
+  transition: none;
 }
 
 .book-button:hover,
 .book-button:focus {
   color: #111;
-  transform: translateY(-1px);
-  box-shadow: 0 9px 22px rgba(0, 0, 0, .3), inset 0 1px rgba(255, 255, 255, .35);
+  background: #e9b654;
+  transform: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
 }
 
 .navbar-toggler { color: #e9b654; }
