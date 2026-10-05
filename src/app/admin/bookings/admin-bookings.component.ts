@@ -31,6 +31,7 @@ export class AdminBookingsComponent implements OnInit {
   walkInServiceSearch = '';
   walkInServiceDropdownOpen = false;
   walkInServiceOverlayStyle: Record<string, string> = {};
+  walkInSelectedServiceNames: string[] = [];
   walkInBarberOptions: WalkInBarberOption[] = [];
   private walkInServiceTriggerElement?: HTMLElement;
 
@@ -143,10 +144,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   get selectedWalkInServiceNames(): string[] {
-    return this.newBooking.service
-      .split(',')
-      .map(name => name.trim())
-      .filter(Boolean);
+    return this.walkInSelectedServiceNames;
   }
 
   get selectedWalkInServices() {
@@ -200,9 +198,10 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   toggleWalkInService(serviceName: string, event: Event): void {
+    event.preventDefault();
     event.stopPropagation();
 
-    const selected = new Set(this.selectedWalkInServiceNames);
+    const selected = new Set(this.walkInSelectedServiceNames);
 
     if (selected.has(serviceName)) {
       selected.delete(serviceName);
@@ -210,11 +209,13 @@ export class AdminBookingsComponent implements OnInit {
       selected.add(serviceName);
     }
 
-    this.newBooking.service = this.bookingService.services
+    // Keep UI selection state independent from the serialized booking value.
+    // Preserve the catalogue order so the displayed/posted service list is stable.
+    this.walkInSelectedServiceNames = this.bookingService.services
       .filter(service => selected.has(service.name))
-      .map(service => service.name)
-      .join(', ');
+      .map(service => service.name);
 
+    this.newBooking.service = this.walkInSelectedServiceNames.join(', ');
     this.onCreateServiceOrDateChange();
   }
 
@@ -469,6 +470,7 @@ export class AdminBookingsComponent implements OnInit {
     this.feedbackMessage = '';
     this.walkInServiceSearch = '';
     this.walkInServiceDropdownOpen = false;
+    this.walkInSelectedServiceNames = [];
     this.walkInBarberOptions = [];
     this.newBooking = {
       customerName: '',
@@ -485,6 +487,7 @@ export class AdminBookingsComponent implements OnInit {
     this.walkInServiceDropdownOpen = false;
     this.walkInServiceSearch = '';
     this.walkInServiceOverlayStyle = {};
+    this.walkInSelectedServiceNames = [];
     this.walkInBarberOptions = [];
     this.createModalOpen = false;
     this.walkInServiceTriggerElement = undefined;
