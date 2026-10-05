@@ -75,6 +75,7 @@ export class BookingApiService {
     duration: number;
     barber?: string;
     ignoreBookingId?: number;
+    serviceLocation?: 'Salon' | 'Home';
   }): Observable<AvailabilityApiResult> {
     return this.http.post<AvailabilityApiResult>(this.baseUrl + '/availability', payload);
   }
