@@ -3,6 +3,8 @@ import { Component } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { BrandingMediaService } from '../admin/settings/branding-media.service';
+import { AuthService } from '../core/auth.service';
+import { NotificationService } from '../admin/notifications/notification.service';
 
 @Component({
   selector: 'app-header',
@@ -15,6 +17,8 @@ export class HeaderComponent {
   constructor(
     private readonly settingsService: AdminSettingsService,
     public readonly brandingMedia: BrandingMediaService,
+    public readonly notificationService: NotificationService,
+    private readonly authService: AuthService,
     private readonly router: Router
   ) {}
 
@@ -28,6 +32,10 @@ export class HeaderComponent {
 
   get brandSubtitle(): string {
     return this.settingsService.current.brandSubtitle || '';
+  }
+
+  get isAdminLoggedIn(): boolean {
+    return this.authService.isAuthenticated();
   }
 
 
