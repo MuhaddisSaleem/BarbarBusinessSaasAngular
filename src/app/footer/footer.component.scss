@@ -447,6 +447,8 @@
 
   .footer-bottom-actions {
     width: 100%;
+    margin-right: 0;
+    padding-right: 62px;
     justify-content: space-between;
   }
 }
@@ -495,6 +497,7 @@
   display: inline-flex;
   align-items: center;
   gap: 14px;
+  margin-right: 76px;
 }
 
 .footer-top-button {
