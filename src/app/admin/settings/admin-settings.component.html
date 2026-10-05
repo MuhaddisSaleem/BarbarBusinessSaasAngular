@@ -95,6 +95,174 @@
         </div>
       </section>
 
+      <section class="settings-card full-width account-security-card">
+        <div class="card-head">
+          <span class="section-icon"><i class="bi bi-shield-lock"></i></span>
+          <div>
+            <h3>Account &amp; Security</h3>
+            <p>Manage The Trim Town owner login email and password. Security changes are saved immediately.</p>
+          </div>
+        </div>
+
+        <div class="card-body account-security-grid">
+          <article class="security-panel">
+            <div class="security-panel-head">
+              <span class="security-panel-icon"><i class="bi bi-envelope-check"></i></span>
+              <div>
+                <strong>Login Email</strong>
+                <small>Used to sign in and recover the admin account.</small>
+              </div>
+            </div>
+
+            <div class="current-account-row">
+              <span>
+                <small>Owner</small>
+                <strong>{{ currentOwnerName }}</strong>
+              </span>
+              <span>
+                <small>Current login email</small>
+                <strong>{{ currentLoginEmail }}</strong>
+              </span>
+            </div>
+
+            <ng-container *ngIf="!emailVerificationSent; else emailVerificationStep">
+              <div class="security-form-grid">
+                <label>
+                  <span>New Login Email</span>
+                  <input
+                    type="email"
+                    maxlength="254"
+                    [(ngModel)]="newLoginEmail"
+                    placeholder="newemail@example.com"
+                    autocomplete="email">
+                </label>
+
+                <label>
+                  <span>Current Password</span>
+                  <input
+                    type="password"
+                    [(ngModel)]="emailCurrentPassword"
+                    placeholder="Enter current password"
+                    autocomplete="current-password">
+                </label>
+              </div>
+
+              <button
+                type="button"
+                class="security-action-btn"
+                (click)="requestLoginEmailChange()"
+                [disabled]="emailSecurityBusy">
+                <i class="bi" [ngClass]="emailSecurityBusy ? 'bi-arrow-clockwise spin' : 'bi-send-check'"></i>
+                {{ emailSecurityBusy ? 'Sending code...' : 'Send Verification Code' }}
+              </button>
+            </ng-container>
+
+            <ng-template #emailVerificationStep>
+              <div class="verification-step">
+                <div class="verification-message">
+                  <i class="bi bi-envelope-check"></i>
+                  <span>
+                    <strong>Check {{ newLoginEmail }}</strong>
+                    <small>Enter the 6-digit code. It expires after 10 minutes.</small>
+                  </span>
+                </div>
+
+                <label class="verification-code-field">
+                  <span>Verification Code</span>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="6"
+                    [ngModel]="emailVerificationCode"
+                    (input)="onEmailVerificationInput($event)"
+                    placeholder="000000"
+                    autocomplete="one-time-code">
+                </label>
+
+                <div class="security-actions">
+                  <button
+                    type="button"
+                    class="security-secondary-btn"
+                    (click)="cancelLoginEmailChange()"
+                    [disabled]="emailSecurityBusy">
+                    Change details
+                  </button>
+                  <button
+                    type="button"
+                    class="security-action-btn"
+                    (click)="confirmLoginEmailChange()"
+                    [disabled]="emailSecurityBusy">
+                    <i class="bi" [ngClass]="emailSecurityBusy ? 'bi-arrow-clockwise spin' : 'bi-check2-circle'"></i>
+                    {{ emailSecurityBusy ? 'Verifying...' : 'Verify & Change Email' }}
+                  </button>
+                </div>
+              </div>
+            </ng-template>
+          </article>
+
+          <article class="security-panel">
+            <div class="security-panel-head">
+              <span class="security-panel-icon"><i class="bi bi-key"></i></span>
+              <div>
+                <strong>Change Password</strong>
+                <small>Update the password used for the owner admin account.</small>
+              </div>
+            </div>
+
+            <div class="password-security-fields">
+              <label>
+                <span>Current Password</span>
+                <input
+                  type="password"
+                  [(ngModel)]="currentPassword"
+                  placeholder="Current password"
+                  autocomplete="current-password">
+              </label>
+
+              <label>
+                <span>New Password</span>
+                <input
+                  type="password"
+                  [(ngModel)]="newPassword"
+                  placeholder="Minimum 8 characters"
+                  autocomplete="new-password">
+              </label>
+
+              <label>
+                <span>Confirm New Password</span>
+                <input
+                  type="password"
+                  [(ngModel)]="confirmNewPassword"
+                  placeholder="Repeat new password"
+                  autocomplete="new-password">
+              </label>
+            </div>
+
+            <div class="password-rule">
+              <i class="bi bi-info-circle"></i>
+              <span>Use at least 8 characters with at least one letter and one number.</span>
+            </div>
+
+            <button
+              type="button"
+              class="security-action-btn"
+              (click)="changeAdminPassword()"
+              [disabled]="passwordSecurityBusy">
+              <i class="bi" [ngClass]="passwordSecurityBusy ? 'bi-arrow-clockwise spin' : 'bi-shield-check'"></i>
+              {{ passwordSecurityBusy ? 'Changing password...' : 'Change Password' }}
+            </button>
+          </article>
+        </div>
+
+        <div class="security-card-note">
+          <i class="bi bi-lock-fill"></i>
+          <span>
+            Verification codes expire after 10 minutes, can be used once, and are blocked after 5 incorrect attempts.
+            Normal business settings never modify your login credentials.
+          </span>
+        </div>
+      </section>
+
       <section class="settings-card">
         <div class="card-head">
           <span class="section-icon"><i class="bi bi-calendar2-check"></i></span>
