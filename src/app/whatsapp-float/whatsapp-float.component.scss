@@ -8,10 +8,9 @@
 
 .whatsapp-float {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  width: 50px;
+  height: 50px;
+  display: block;
   color: #fff;
   text-decoration: none;
   pointer-events: auto;
@@ -49,6 +48,9 @@
 }
 
 .whatsapp-label {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
   padding: 10px 12px;
   border: 1px solid rgba(233,182,84,.22);
   border-radius: 8px;
@@ -60,7 +62,7 @@
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
-  transform: translateX(8px);
+  transform: translate(8px, -50%);
   box-shadow: 0 12px 32px rgba(0,0,0,.26);
   backdrop-filter: blur(10px);
   transition:
@@ -73,7 +75,7 @@
 .whatsapp-float:focus-visible .whatsapp-label {
   opacity: 1;
   visibility: visible;
-  transform: translateX(0);
+  transform: translate(0, -50%);
 }
 
 .whatsapp-float:hover .whatsapp-button,
@@ -113,6 +115,11 @@
   :host {
     right: 14px;
     bottom: 14px;
+  }
+
+  .whatsapp-float {
+    width: 46px;
+    height: 46px;
   }
 
   .whatsapp-button {
