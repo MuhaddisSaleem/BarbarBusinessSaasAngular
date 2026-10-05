@@ -322,7 +322,7 @@
       <button type="button" class="icon-btn" (click)="closeCreateModal()"><i class="bi bi-x-lg"></i></button>
     </div>
 
-    <div class="modal-body">
+    <div class="modal-body" (scroll)="positionWalkInServicePanel()">
       <div class="walkin-main-grid">
         <label>
           <span>Customer Name *</span>
