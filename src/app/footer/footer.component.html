@@ -96,7 +96,19 @@
 
     <div class="footer-bottom">
       <span>&copy; {{ currentYear }} {{ businessName }}. All rights reserved.</span>
-      <span class="footer-signoff">Stay Sharp <i class="bi bi-gem"></i></span>
+
+      <div class="footer-bottom-actions">
+        <span class="footer-signoff">Stay Sharp <i class="bi bi-gem"></i></span>
+
+        <button
+          type="button"
+          class="footer-top-button"
+          (click)="scrollToTop()"
+          aria-label="Go to top of page"
+          title="Go to top">
+          <i class="bi bi-arrow-up"></i>
+        </button>
+      </div>
     </div>
   </div>
 </footer>
