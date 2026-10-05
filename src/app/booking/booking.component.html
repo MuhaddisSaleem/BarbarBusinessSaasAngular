@@ -264,7 +264,7 @@
                   appLoadMore (reached)="loadRemainingServices()" [attr.aria-busy]="loadingMoreServices">
                   <span class="service-loading-spinner" *ngIf="loadingMoreServices" aria-hidden="true"></span>
                   <span role="status" *ngIf="loadingMoreServices">Loading more services…</span>
-                  <button type="button" *ngIf="!loadingMoreServices" (click)="loadRemainingServices()">Show all services</button>
+                  <button type="button" *ngIf="!loadingMoreServices" (click)="loadRemainingServices()">Show more services</button>
                 </div>
 
                 <div class="service-search-empty" *ngIf="serviceSearchTerm.trim() && !visibleSalonServices.length">
@@ -373,7 +373,7 @@
                   appLoadMore (reached)="loadRemainingServices()" [attr.aria-busy]="loadingMoreServices">
                   <span class="service-loading-spinner" *ngIf="loadingMoreServices" aria-hidden="true"></span>
                   <span role="status" *ngIf="loadingMoreServices">Loading more services…</span>
-                  <button type="button" *ngIf="!loadingMoreServices" (click)="loadRemainingServices()">Show all services</button>
+                  <button type="button" *ngIf="!loadingMoreServices" (click)="loadRemainingServices()">Show more services</button>
                 </div>
 
                   <div class="no-home-services" *ngIf="!homeServices.length">
