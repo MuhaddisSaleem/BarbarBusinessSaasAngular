@@ -800,7 +800,8 @@ export class BookingComponent implements OnInit, OnDestroy {
           date: this.selectedDate!.fullDate,
           time,
           duration,
-          barber
+          barber,
+          serviceLocation: this.serviceLocation === 'home' ? 'Home' : 'Salon'
         }).pipe(map(result => ({ time, available: result.available })))
       )).subscribe({
         next: results => {
@@ -888,7 +889,8 @@ export class BookingComponent implements OnInit, OnDestroy {
         date,
         time,
         duration: this.getPersonDuration(person),
-        barber: requestedBarber
+        barber: requestedBarber,
+        serviceLocation: this.serviceLocation === 'home' ? 'Home' : 'Salon'
       }).subscribe({
         next: result => {
           // Ignore an old response if the customer changed date/time while the request was running.
