@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, map } from 'rxjs';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
@@ -8,6 +8,7 @@ import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { AdminBookingService } from '../admin/bookings/admin-booking.service';
 import { CatalogApiService } from '../core/catalog-api.service';
 import { BookingApiService } from '../core/booking-api.service';
+import { LoadMoreDirective } from '../shared/load-more.directive';
 import { ScrollRevealDirective } from '../shared/scroll-reveal.directive';
 
 interface Service {
@@ -31,11 +32,11 @@ interface PersonSchedule { personId: number; time: string; barber: Barber; sugge
 @Component({
   selector: 'app-booking',
   standalone: true,
-  imports: [CommonModule, FormsModule, ScrollRevealDirective],
+  imports: [CommonModule, FormsModule, ScrollRevealDirective, LoadMoreDirective],
   templateUrl: './booking.component.html',
   styleUrls: ['./booking.component.scss', './group-booking.component.scss']
 })
-export class BookingComponent implements OnInit {
+export class BookingComponent implements OnInit, OnDestroy {
   get salonServices(): Service[] {
     return this.serviceService.active
       .filter(service => this.serviceService.getCategoryById(service.categoryId)?.status !== 'Inactive')
@@ -80,7 +81,7 @@ export class BookingComponent implements OnInit {
       .filter(category => availableIds.has(category.id));
   }
 
-  get visibleSalonServices(): Service[] {
+  get filteredSalonServices(): Service[] {
     const services = this.filterServicesByCategory(this.salonServices);
     const term = this.serviceSearchTerm.trim().toLowerCase();
 
@@ -92,11 +93,58 @@ export class BookingComponent implements OnInit {
     );
   }
 
+  private allServicesExpanded = false;
+  loadingMoreServices = false;
+  private serviceRevealTimer?: ReturnType<typeof setTimeout>;
+
+  get visibleSalonServices(): Service[] {
+    const services = this.filteredSalonServices;
+    return this.limitInitialServices && !this.serviceSearchTerm.trim() ? services.slice(0, 12) : services;
+  }
+
   get visibleHomeServices(): Service[] {
-    return this.filterServicesByCategory(this.homeServices);
+    const services = this.filterServicesByCategory(this.homeServices);
+    return this.limitInitialServices ? services.slice(0, 12) : services;
+  }
+
+  private get limitInitialServices(): boolean {
+    return this.isServiceCategorySelected('all') && !this.allServicesExpanded;
+  }
+
+  get hasMoreServices(): boolean {
+    if (!this.limitInitialServices) return false;
+    return this.serviceLocation === 'salon'
+      ? !this.serviceSearchTerm.trim() && this.filteredSalonServices.length > 12
+      : this.homeServices.length > 12;
+  }
+
+  trackService(_index: number, service: Service): number {
+    return service.id;
+  }
+
+  loadRemainingServices(): void {
+    if (!this.hasMoreServices || this.loadingMoreServices) return;
+    this.loadingMoreServices = true;
+    this.serviceRevealTimer = setTimeout(() => {
+      this.allServicesExpanded = true;
+      this.loadingMoreServices = false;
+      this.serviceRevealTimer = undefined;
+    }, 300);
+  }
+
+  resetServiceReveal(): void {
+    clearTimeout(this.serviceRevealTimer);
+    this.serviceRevealTimer = undefined;
+    this.loadingMoreServices = false;
+    this.allServicesExpanded = false;
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.serviceRevealTimer);
   }
 
   selectServiceCategory(category: 'all' | number): void {
+    this.resetServiceReveal();
     this.selectedServiceCategory = category;
   }
 
@@ -364,6 +412,7 @@ export class BookingComponent implements OnInit {
     const destinationById = new Map(destinationServices.map(service => [service.id, service]));
 
     this.serviceLocation = location;
+    this.resetServiceReveal();
     this.selectedServiceCategory = 'all';
     this.clearValidationMessage();
     this.clearSelectedTime();
@@ -1133,6 +1182,7 @@ export class BookingComponent implements OnInit {
 
   private resetBookingForm(): void {
     this.serviceLocation = 'salon';
+    this.resetServiceReveal();
     this.selectedServiceCategory = 'all';
     this.homeAddress = '';
     this.specialHomeService = '';

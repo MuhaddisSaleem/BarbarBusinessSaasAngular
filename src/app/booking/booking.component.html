@@ -146,10 +146,10 @@
                   [attr.inert]="serviceLocation !== 'salon' ? '' : null">
                   <label class="service-search-box">
                     <i class="bi bi-search" aria-hidden="true"></i>
-                    <input type="search" [(ngModel)]="serviceSearchTerm" placeholder="Search services..."
+                    <input type="search" [(ngModel)]="serviceSearchTerm" (ngModelChange)="resetServiceReveal()" placeholder="Search services..."
                       autocomplete="off" aria-label="Search salon services">
                     <button type="button" class="service-search-clear" *ngIf="serviceSearchTerm"
-                      (click)="serviceSearchTerm = ''" aria-label="Clear service search">
+                      (click)="serviceSearchTerm = ''; resetServiceReveal()" aria-label="Clear service search">
                       <i class="bi bi-x-lg"></i>
                     </button>
                   </label>
@@ -233,7 +233,7 @@
                 </div>
 
                 <div class="services-grid salon-services-grid">
-                  <div class="service-col" *ngFor="let service of visibleSalonServices">
+                  <div class="service-col" *ngFor="let service of visibleSalonServices; let i = index; trackBy: trackService" [class.service-revealed]="i >= 12">
                     <button type="button" class="service-card h-100"
                       [class.selected]="isServiceSelectedForLocation(service.id, 'salon')"
                       [class.disabled]="isServiceDisabled(service)" [disabled]="isServiceDisabled(service)"
@@ -258,6 +258,13 @@
                       </div>
                     </button>
                   </div>
+                </div>
+
+                <div class="service-load-more" *ngIf="serviceLocation === 'salon' && hasMoreServices"
+                  appLoadMore (reached)="loadRemainingServices()" [attr.aria-busy]="loadingMoreServices">
+                  <span class="service-loading-spinner" *ngIf="loadingMoreServices" aria-hidden="true"></span>
+                  <span role="status" *ngIf="loadingMoreServices">Loading more services…</span>
+                  <button type="button" *ngIf="!loadingMoreServices" (click)="loadRemainingServices()">Show all services</button>
                 </div>
 
                 <div class="service-search-empty" *ngIf="serviceSearchTerm.trim() && !visibleSalonServices.length">
@@ -335,7 +342,7 @@
                   </div>
 
                   <div class="services-grid home-services-grid">
-                    <div class="service-col" *ngFor="let service of visibleHomeServices">
+                    <div class="service-col" *ngFor="let service of visibleHomeServices; let i = index; trackBy: trackService" [class.service-revealed]="i >= 12">
                       <button type="button" class="service-card home-service-card h-100"
                         [class.selected]="isServiceSelectedForLocation(service.id, 'home')"
                         [class.disabled]="isServiceDisabled(service)" [disabled]="isServiceDisabled(service)"
@@ -361,6 +368,13 @@
                       </button>
                     </div>
                   </div>
+
+                <div class="service-load-more" *ngIf="serviceLocation === 'home' && hasMoreServices"
+                  appLoadMore (reached)="loadRemainingServices()" [attr.aria-busy]="loadingMoreServices">
+                  <span class="service-loading-spinner" *ngIf="loadingMoreServices" aria-hidden="true"></span>
+                  <span role="status" *ngIf="loadingMoreServices">Loading more services…</span>
+                  <button type="button" *ngIf="!loadingMoreServices" (click)="loadRemainingServices()">Show all services</button>
+                </div>
 
                   <div class="no-home-services" *ngIf="!homeServices.length">
                     No home-service prices are configured yet. Add them from Admin → Services.
