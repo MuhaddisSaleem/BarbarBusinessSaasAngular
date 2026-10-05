@@ -452,7 +452,10 @@
       *ngFor="let service of filteredWalkInServices"
       [class.selected]="isWalkInServiceSelected(service.name)"
       [attr.aria-selected]="isWalkInServiceSelected(service.name)"
-      (click)="toggleWalkInService(service.name, $event)">
+      (pointerdown)="toggleWalkInService(service.name, $event)"
+      (click)="$event.preventDefault(); $event.stopPropagation()"
+      (keydown.enter)="toggleWalkInService(service.name, $event)"
+      (keydown.space)="toggleWalkInService(service.name, $event)">
       <span class="walkin-service-check">
         <i class="bi bi-check-lg" *ngIf="isWalkInServiceSelected(service.name)"></i>
       </span>
