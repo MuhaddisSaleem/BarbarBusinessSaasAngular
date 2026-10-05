@@ -316,8 +316,11 @@ export class NotificationService {
       try {
         const start = context.currentTime;
 
-        this.playTone(context, 880, start, 0.16, 0.11);
-        this.playTone(context, 1175, start + 0.17, 0.24, 0.09);
+        // Strong three-tone alert so a new online booking is hard to miss.
+        // Final loudness still respects the browser/OS device volume.
+        this.playTone(context, 740, start, 0.18, 0.34);
+        this.playTone(context, 988, start + 0.19, 0.20, 0.31);
+        this.playTone(context, 1318, start + 0.40, 0.32, 0.28);
       } catch {
         // Never allow notification audio to affect the admin UI.
       }
