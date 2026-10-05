@@ -10,6 +10,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
     public DbSet<Salon> Salons => Set<Salon>();
     public DbSet<SalonSettings> SalonSettings => Set<SalonSettings>();
     public DbSet<SalonUser> SalonUsers => Set<SalonUser>();
+    public DbSet<AccountVerificationCode> AccountVerificationCodes => Set<AccountVerificationCode>();
     public DbSet<BusinessHour> BusinessHours => Set<BusinessHour>();
     public DbSet<Barber> Barbers => Set<Barber>();
     public DbSet<BarberService> BarberServices => Set<BarberService>();
@@ -30,6 +31,7 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
 
         ConfigureSalon(modelBuilder);
         ConfigureSalonUser(modelBuilder);
+        ConfigureAccountVerificationCode(modelBuilder);
         ConfigureServiceCategory(modelBuilder);
         ConfigureService(modelBuilder);
         ConfigureBarber(modelBuilder);
@@ -99,6 +101,23 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
         });
     }
 
+
+    private static void ConfigureAccountVerificationCode(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<AccountVerificationCode>(entity =>
+        {
+            entity.ToTable("AccountVerificationCodes");
+            entity.Property(x => x.Purpose).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.DestinationEmail).HasMaxLength(254).IsRequired();
+            entity.Property(x => x.CodeHash).HasMaxLength(128).IsRequired();
+            entity.HasIndex(x => new { x.SalonUserId, x.Purpose, x.CreatedAtUtc });
+            entity.HasIndex(x => x.ExpiresAtUtc);
+            entity.HasOne(x => x.SalonUser)
+                .WithMany()
+                .HasForeignKey(x => x.SalonUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
 
     private static void ConfigureServiceCategory(ModelBuilder modelBuilder)
     {
