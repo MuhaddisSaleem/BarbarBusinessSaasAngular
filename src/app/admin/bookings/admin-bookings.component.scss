@@ -860,7 +860,7 @@ button,input,select,textarea { font:inherit; }
   font-size: 10px;
 }
 
-.walkin-main-grid .walkin-service-search input {
+.walkin-service-panel .walkin-service-search input {
   width: 100%;
   min-height: 36px;
   padding: 0;
@@ -873,7 +873,7 @@ button,input,select,textarea { font:inherit; }
   font-size: 9px;
 }
 
-.walkin-main-grid .walkin-service-search input::placeholder {
+.walkin-service-panel .walkin-service-search input::placeholder {
   color: #68767b;
 }
 
