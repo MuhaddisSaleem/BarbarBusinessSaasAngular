@@ -93,29 +93,40 @@ export class BookingComponent implements OnInit, OnDestroy {
     );
   }
 
-  private allServicesExpanded = false;
+  private readonly initialVisibleServiceCount = 12;
+  private readonly serviceLoadBatchSize = 4;
+  private visibleServiceLimit = this.initialVisibleServiceCount;
   loadingMoreServices = false;
   private serviceRevealTimer?: ReturnType<typeof setTimeout>;
 
   get visibleSalonServices(): Service[] {
     const services = this.filteredSalonServices;
-    return this.limitInitialServices && !this.serviceSearchTerm.trim() ? services.slice(0, 12) : services;
+
+    if (!this.isServiceCategorySelected('all') || this.serviceSearchTerm.trim()) {
+      return services;
+    }
+
+    return services.slice(0, this.visibleServiceLimit);
   }
 
   get visibleHomeServices(): Service[] {
     const services = this.filterServicesByCategory(this.homeServices);
-    return this.limitInitialServices ? services.slice(0, 12) : services;
-  }
 
-  private get limitInitialServices(): boolean {
-    return this.isServiceCategorySelected('all') && !this.allServicesExpanded;
+    if (!this.isServiceCategorySelected('all')) {
+      return services;
+    }
+
+    return services.slice(0, this.visibleServiceLimit);
   }
 
   get hasMoreServices(): boolean {
-    if (!this.limitInitialServices) return false;
-    return this.serviceLocation === 'salon'
-      ? !this.serviceSearchTerm.trim() && this.filteredSalonServices.length > 12
-      : this.homeServices.length > 12;
+    if (!this.isServiceCategorySelected('all')) return false;
+
+    const total = this.serviceLocation === 'salon'
+      ? (this.serviceSearchTerm.trim() ? 0 : this.filteredSalonServices.length)
+      : this.filterServicesByCategory(this.homeServices).length;
+
+    return total > this.visibleServiceLimit;
   }
 
   trackService(_index: number, service: Service): number {
@@ -124,19 +135,31 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   loadRemainingServices(): void {
     if (!this.hasMoreServices || this.loadingMoreServices) return;
+
     this.loadingMoreServices = true;
+
+    // Add a small batch instead of inserting the full remaining catalog.
+    // This keeps the document height growing gradually and prevents scroll jumps.
     this.serviceRevealTimer = setTimeout(() => {
-      this.allServicesExpanded = true;
+      const total = this.serviceLocation === 'salon'
+        ? this.filteredSalonServices.length
+        : this.filterServicesByCategory(this.homeServices).length;
+
+      this.visibleServiceLimit = Math.min(
+        this.visibleServiceLimit + this.serviceLoadBatchSize,
+        total
+      );
+
       this.loadingMoreServices = false;
       this.serviceRevealTimer = undefined;
-    }, 300);
+    }, 160);
   }
 
   resetServiceReveal(): void {
     clearTimeout(this.serviceRevealTimer);
     this.serviceRevealTimer = undefined;
     this.loadingMoreServices = false;
-    this.allServicesExpanded = false;
+    this.visibleServiceLimit = this.initialVisibleServiceCount;
   }
 
   ngOnDestroy(): void {
