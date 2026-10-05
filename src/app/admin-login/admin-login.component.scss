@@ -573,3 +573,143 @@
     height: 52px;
   }
 }
+
+
+.password-label-row {
+  margin-top:16px;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.forgot-password-link,
+.return-login-btn,
+.resend-code-btn {
+  border:0;
+  background:transparent;
+  color:#b58d48;
+  font-size:10px;
+  font-weight:750;
+  cursor:pointer;
+  transition:color .18s ease;
+
+  &:hover:not(:disabled) {
+    color:#f1c96f;
+  }
+
+  &:disabled {
+    opacity:.48;
+    cursor:not-allowed;
+  }
+}
+
+.login-success,
+.recovery-message {
+  margin:0 0 16px;
+  padding:11px 12px;
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  border:1px solid rgba(103,212,154,.22);
+  border-radius:9px;
+  background:rgba(103,212,154,.05);
+  color:#a9dfbf;
+  font-size:10px;
+  line-height:1.45;
+
+  i {
+    margin-top:1px;
+    color:#67d49a;
+    font-size:13px;
+  }
+}
+
+.recovery-heading h2 {
+  font-size:38px;
+}
+
+.recovery-heading p strong {
+  color:#c7ccca;
+  font-weight:700;
+}
+
+.recovery-submit {
+  margin-top:18px;
+}
+
+.return-login-btn {
+  width:100%;
+  min-height:38px;
+  margin-top:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  border:1px solid #28353a;
+  border-radius:8px;
+  background:#0b1316;
+  color:#8f9ca1;
+}
+
+.recovery-field {
+  margin-top:15px;
+}
+
+.otp-wrap input {
+  font-size:18px;
+  font-weight:850;
+  letter-spacing:.28em;
+  text-align:center;
+}
+
+.password-guidance {
+  margin-top:10px;
+  display:flex;
+  align-items:flex-start;
+  gap:7px;
+  color:#66757a;
+  font-size:9px;
+  line-height:1.45;
+
+  i {
+    margin-top:1px;
+    color:#aa8442;
+  }
+}
+
+.recovery-actions {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:10px;
+
+  .return-login-btn {
+    width:auto;
+    flex:1 1 auto;
+    margin-top:0;
+  }
+
+  .resend-code-btn {
+    min-height:38px;
+    flex:0 0 auto;
+    padding:0 9px;
+  }
+}
+
+@media (max-width:575.98px) {
+  .recovery-heading h2 {
+    font-size:31px;
+  }
+
+  .recovery-actions {
+    flex-direction:column;
+
+    .return-login-btn,
+    .resend-code-btn {
+      width:100%;
+    }
+  }
+}
