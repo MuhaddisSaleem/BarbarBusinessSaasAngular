@@ -12,6 +12,7 @@ on:
       - main
       - codex/backend-database-setup
       - The_trim_town
+      - tt02-booking-server-totals-staging
     paths:
       - "backend/**"
       - ".config/dotnet-tools.json"
@@ -135,6 +136,22 @@ jobs:
             http://127.0.0.1:5080/api/bookings/online | grep '"success":true'
 
           curl --fail --silent -H "Authorization: Bearer $TOKEN" http://127.0.0.1:5080/api/bookings | grep '"customerName":"CI Customer"'
+
+          # TT-02 regression: catalogue duration and price are server-owned.
+          # Deliberately submit a huge client duration and zero amount; the persisted
+          # booking must still use the active Haircut catalogue values.
+          HAIRCUT_SERVICE=$(curl --fail --silent http://127.0.0.1:5080/api/services | \
+            python3 -c 'import json,sys; items=json.load(sys.stdin); print(json.dumps(next(x for x in items if x["name"]=="Haircut")))')
+          EXPECTED_HAIRCUT_DURATION=$(echo "$HAIRCUT_SERVICE" | \
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["duration"])')
+          EXPECTED_HAIRCUT_AMOUNT=$(echo "$HAIRCUT_SERVICE" | \
+            python3 -c 'import json,sys; x=json.load(sys.stdin); print(x["discountPrice"] if x["discountPrice"] and x["discountPrice"] > 0 else x["originalPrice"])')
+
+          TT02_RESPONSE=$(curl --fail --silent \
+            -H "Content-Type: application/json" \
+            -d "[{\"customerName\":\"TT02 Tamper Test\",\"phone\":\"+923001234569\",\"service\":\"Haircut\",\"duration\":1500,\"barber\":\"Falak Shair\",\"date\":\"$BOOKING_DATE\",\"time\":\"7:00 PM\",\"amount\":0,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Salon\",\"serviceAddress\":\"\",\"specialService\":\"\",\"specialServiceAmount\":0}]" \
+            http://127.0.0.1:5080/api/bookings/online)
+          echo "$TT02_RESPONSE" | python3 -c 'import json,sys,decimal; d=json.load(sys.stdin); b=d["booking"]; assert d["success"] is True; assert b["duration"] == int("'"$EXPECTED_HAIRCUT_DURATION"'"); assert decimal.Decimal(str(b["amount"])) == decimal.Decimal("'"$EXPECTED_HAIRCUT_AMOUNT"'")'
 
           curl --fail --silent http://127.0.0.1:5080/api/services | grep '"name":"Haircut"'
           curl --fail --silent \
