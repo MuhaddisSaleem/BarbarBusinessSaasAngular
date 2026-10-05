@@ -59,6 +59,151 @@
   margin: 0 auto;
 }
 
+
+.about-intro {
+  max-width: 1080px;
+  margin: 0 auto 105px;
+  padding: 4px 20px 0;
+}
+
+.about-intro-kicker {
+  display: inline-block;
+  margin-bottom: 17px;
+  color: #e9b654;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 850;
+  letter-spacing: 4.2px;
+}
+
+.about-intro h1 {
+  margin: 0;
+  color: #f4f1ea;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(52px, 6.2vw, 96px);
+  line-height: .94;
+  font-weight: 600;
+  letter-spacing: -.04em;
+}
+
+.about-intro h1 span {
+  display: block;
+  margin-top: 8px;
+  color: #e9b654;
+}
+
+.about-intro p {
+  margin: 21px auto 0;
+  color: #929b9e;
+  font-size: clamp(14px, 1.2vw, 19px);
+  line-height: 1.55;
+}
+
+/* Page-load motion: mirrors Gallery */
+.about-intro-kicker,
+.about-intro h1,
+.about-intro p {
+  opacity: 0;
+  will-change: transform, opacity, filter;
+}
+
+.about-intro-kicker {
+  animation: aboutIntroKicker .7s cubic-bezier(.2,.8,.2,1) .08s forwards;
+}
+
+.about-intro h1 {
+  animation: aboutIntroTitle 1s cubic-bezier(.16,1,.3,1) .18s forwards;
+}
+
+.about-intro p {
+  animation: aboutIntroCopy .8s cubic-bezier(.2,.8,.2,1) .42s forwards;
+}
+
+.about-ambient-one {
+  animation: aboutAmbientOne 7.5s ease-in-out infinite alternate;
+}
+
+.about-ambient-two {
+  animation: aboutAmbientTwo 9s ease-in-out infinite alternate;
+}
+
+@keyframes aboutIntroKicker {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    letter-spacing: 6px;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    letter-spacing: 4.2px;
+  }
+}
+
+@keyframes aboutIntroTitle {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(.985);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes aboutIntroCopy {
+  from {
+    opacity: 0;
+    transform: translateY(17px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes aboutAmbientOne {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-25px, 30px, 0) scale(1.07); }
+}
+
+@keyframes aboutAmbientTwo {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(30px, -22px, 0) scale(1.08); }
+}
+
+/* Scroll reveal motion */
+.motion-ready .scroll-reveal {
+  opacity: 0;
+  filter: blur(3px);
+  will-change: transform, opacity, filter;
+}
+
+.motion-ready .reveal-story {
+  transform: translateY(42px);
+  transition:
+    opacity .82s ease,
+    transform 1s cubic-bezier(.16,1,.3,1),
+    filter .8s ease;
+}
+
+.motion-ready .reveal-value {
+  transform: translateY(30px);
+  transition:
+    opacity .68s ease var(--reveal-delay, 0ms),
+    transform .82s cubic-bezier(.16,1,.3,1) var(--reveal-delay, 0ms),
+    filter .72s ease var(--reveal-delay, 0ms),
+    background .25s ease;
+}
+
+.motion-ready .scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
 .about-layout {
   display: grid;
   grid-template-columns: minmax(0, .88fr) minmax(500px, 1.12fr);
@@ -296,6 +441,10 @@
   border-right: 0;
 }
 
+.about-value:hover {
+  background: rgba(233,182,84,.025);
+}
+
 .value-index {
   color: #e9b654;
   font-family: Georgia, 'Times New Roman', serif;
@@ -348,6 +497,27 @@
 
   .about-shell {
     width: min(100% - 28px, 1460px);
+  }
+
+  .about-intro {
+    margin-bottom: 68px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .about-intro-kicker {
+    margin-bottom: 13px;
+    font-size: 9px;
+    letter-spacing: 3.2px;
+  }
+
+  .about-intro h1 {
+    font-size: clamp(42px, 12vw, 62px);
+  }
+
+  .about-intro p {
+    margin-top: 16px;
+    font-size: 13px;
   }
 
   .about-layout {
@@ -415,10 +585,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .about-intro-kicker,
+  .about-intro h1,
+  .about-intro p,
+  .about-ambient,
+  .scroll-reveal,
   .about-image img,
   .about-primary,
   .about-secondary {
+    opacity: 1 !important;
     transition: none !important;
+    animation: none !important;
     transform: none !important;
+    filter: none !important;
   }
 }
