@@ -2,7 +2,7 @@ name: Phase 1 QA
 
 on:
   push:
-    branches: [main, The_trim_town, tt03-home-service-validation-staging]
+    branches: [main, The_trim_town]
   workflow_dispatch:
 
 jobs:
