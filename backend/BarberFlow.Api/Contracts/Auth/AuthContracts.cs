@@ -20,3 +20,35 @@ public sealed record LoginResponse(
     DateTimeOffset? ExpiresAt = null,
     AuthUserDto? User = null
 );
+
+
+public sealed record ChangePasswordRequest(
+    string CurrentPassword,
+    string NewPassword
+);
+
+public sealed record RequestEmailChangeRequest(
+    string CurrentPassword,
+    string NewEmail
+);
+
+public sealed record ConfirmEmailChangeRequest(
+    string NewEmail,
+    string Code
+);
+
+public sealed record PasswordResetRequest(
+    string Email
+);
+
+public sealed record ConfirmPasswordResetRequest(
+    string Email,
+    string Code,
+    string NewPassword
+);
+
+public sealed record AuthMutationResponse(
+    bool Success,
+    string Message,
+    AuthUserDto? User = null
+);
