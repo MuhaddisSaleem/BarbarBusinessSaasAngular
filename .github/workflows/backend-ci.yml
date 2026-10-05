@@ -12,7 +12,6 @@ on:
       - main
       - codex/backend-database-setup
       - The_trim_town
-      - tt03-home-service-validation-staging
     paths:
       - "backend/**"
       - ".config/dotnet-tools.json"
