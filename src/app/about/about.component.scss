@@ -80,7 +80,7 @@
   margin: 0;
   color: #f4f1ea;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(52px, 6.2vw, 96px);
+  font-size: clamp(24px, 3.8vw, 66px);
   line-height: .94;
   font-weight: 600;
   letter-spacing: -.04em;
@@ -229,7 +229,7 @@
   margin: 0;
   color: #f4f1ea;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(52px, 5.3vw, 82px);
+  font-size: clamp(24px, 4vw, 66px);
   line-height: .94;
   font-weight: 500;
   letter-spacing: -.045em;
@@ -428,7 +428,7 @@
 
 .about-value {
   min-width: 0;
-  min-height: 132px;
+  // min-height: 132px;
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 14px;
