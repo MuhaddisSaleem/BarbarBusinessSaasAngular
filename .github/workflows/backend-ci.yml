@@ -12,6 +12,7 @@ on:
       - main
       - codex/backend-database-setup
       - The_trim_town
+      - tt03-home-service-validation-staging
     paths:
       - "backend/**"
       - ".config/dotnet-tools.json"
@@ -151,6 +152,73 @@ jobs:
             -d "[{\"customerName\":\"TT02 Tamper Test\",\"phone\":\"+923001234569\",\"service\":\"Haircut\",\"duration\":1500,\"barber\":\"Falak Shair\",\"date\":\"$BOOKING_DATE\",\"time\":\"7:00 PM\",\"amount\":0,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Salon\",\"serviceAddress\":\"\",\"specialService\":\"\",\"specialServiceAmount\":0}]" \
             http://127.0.0.1:5080/api/bookings/online)
           echo "$TT02_RESPONSE" | python3 -c 'import json,sys,decimal; d=json.load(sys.stdin); b=d["booking"]; assert d["success"] is True; assert b["duration"] == int("'"$EXPECTED_HAIRCUT_DURATION"'"); assert decimal.Decimal(str(b["amount"])) == decimal.Decimal("'"$EXPECTED_HAIRCUT_AMOUNT"'")'
+
+          # TT-03 regression: home-service eligibility, home address, and active
+          # service-category rules must be enforced by the API, not only by Angular.
+          BEARD_CATEGORY_ID=$(echo "$CATEGORY_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["item"]["id"])')
+
+          TT03_SALON_ONLY=$(curl --fail --silent \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"TT03 Salon Only\",\"duration\":20,\"originalPrice\":300,\"discountPrice\":null,\"homeServiceEnabled\":false,\"homeOriginalPrice\":null,\"homeDiscountPrice\":null,\"image\":\"assets/images/service-placeholder.svg\",\"status\":\"Active\",\"categoryId\":$BEARD_CATEGORY_ID}" \
+            http://127.0.0.1:5080/api/services)
+          echo "$TT03_SALON_ONLY" | grep '"success":true'
+
+          TT03_HOME_SERVICE=$(curl --fail --silent \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"TT03 Home Eligible\",\"duration\":20,\"originalPrice\":300,\"discountPrice\":null,\"homeServiceEnabled\":true,\"homeOriginalPrice\":500,\"homeDiscountPrice\":null,\"image\":\"assets/images/service-placeholder.svg\",\"status\":\"Active\",\"categoryId\":$BEARD_CATEGORY_ID}" \
+            http://127.0.0.1:5080/api/services)
+          echo "$TT03_HOME_SERVICE" | grep '"success":true'
+
+          TT03_HOME_AVAILABILITY=$(curl --fail --silent \
+            -H "Content-Type: application/json" \
+            -d "{\"service\":\"TT03 Salon Only\",\"date\":\"$BOOKING_DATE\",\"time\":\"4:30 PM\",\"duration\":20,\"barber\":\"Falak Shair\",\"serviceLocation\":\"Home\"}" \
+            http://127.0.0.1:5080/api/bookings/availability)
+          echo "$TT03_HOME_AVAILABILITY" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["available"] is False; assert "home service" in d["message"].lower()'
+
+          TT03_SALON_ONLY_STATUS=$(curl --silent -o /tmp/tt03-salon-only.json -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "[{\"customerName\":\"TT03 Invalid Home\",\"phone\":\"+923001234570\",\"service\":\"TT03 Salon Only\",\"duration\":20,\"barber\":\"Falak Shair\",\"date\":\"$BOOKING_DATE\",\"time\":\"4:30 PM\",\"amount\":300,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Home\",\"serviceAddress\":\"CI Home Address\",\"specialService\":\"\",\"specialServiceAmount\":0}]" \
+            http://127.0.0.1:5080/api/bookings/online)
+          test "$TT03_SALON_ONLY_STATUS" = "409"
+          grep -i 'not available for home service' /tmp/tt03-salon-only.json
+
+          TT03_MISSING_ADDRESS_STATUS=$(curl --silent -o /tmp/tt03-missing-address.json -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "[{\"customerName\":\"TT03 Missing Address\",\"phone\":\"+923001234571\",\"service\":\"TT03 Home Eligible\",\"duration\":20,\"barber\":\"Falak Shair\",\"date\":\"$BOOKING_DATE\",\"time\":\"4:30 PM\",\"amount\":500,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Home\",\"serviceAddress\":\"\",\"specialService\":\"\",\"specialServiceAmount\":0}]" \
+            http://127.0.0.1:5080/api/bookings/online)
+          test "$TT03_MISSING_ADDRESS_STATUS" = "409"
+          grep -i 'address is required' /tmp/tt03-missing-address.json
+
+          TT03_VALID_HOME=$(curl --fail --silent \
+            -H "Content-Type: application/json" \
+            -d "[{\"customerName\":\"TT03 Valid Home\",\"phone\":\"+923001234572\",\"service\":\"TT03 Home Eligible\",\"duration\":1500,\"barber\":\"Falak Shair\",\"date\":\"$BOOKING_DATE\",\"time\":\"4:00 PM\",\"amount\":0,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Home\",\"serviceAddress\":\"CI Home Address\",\"specialService\":\"\",\"specialServiceAmount\":0}]" \
+            http://127.0.0.1:5080/api/bookings/online)
+          echo "$TT03_VALID_HOME" | python3 -c 'import json,sys,decimal; d=json.load(sys.stdin); b=d["booking"]; assert d["success"] is True; assert b["duration"] == 20; assert decimal.Decimal(str(b["amount"])) == decimal.Decimal("500"); assert b["serviceLocation"] == "Home"'
+
+          TT03_CATEGORY=$(curl --fail --silent \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"TT03 Category","sortOrder":99,"status":"Active"}' \
+            http://127.0.0.1:5080/api/service-categories)
+          TT03_CATEGORY_ID=$(echo "$TT03_CATEGORY" | python3 -c 'import json,sys; print(json.load(sys.stdin)["item"]["id"])')
+
+          TT03_CATEGORY_SERVICE=$(curl --fail --silent \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"TT03 Category Service\",\"duration\":20,\"originalPrice\":350,\"discountPrice\":null,\"homeServiceEnabled\":false,\"homeOriginalPrice\":null,\"homeDiscountPrice\":null,\"image\":\"assets/images/service-placeholder.svg\",\"status\":\"Active\",\"categoryId\":$TT03_CATEGORY_ID}" \
+            http://127.0.0.1:5080/api/services)
+          echo "$TT03_CATEGORY_SERVICE" | grep '"success":true'
+          curl --fail --silent -X PATCH -H "Authorization: Bearer $TOKEN" \
+            http://127.0.0.1:5080/api/service-categories/$TT03_CATEGORY_ID/status | grep '"status":"Inactive"'
+
+          TT03_INACTIVE_CATEGORY_STATUS=$(curl --silent -o /tmp/tt03-inactive-category.json -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "[{\"customerName\":\"TT03 Inactive Category\",\"phone\":\"+923001234573\",\"service\":\"TT03 Category Service\",\"duration\":20,\"barber\":\"Falak Shair\",\"date\":\"$BOOKING_DATE\",\"time\":\"3:00 PM\",\"amount\":350,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Salon\",\"serviceAddress\":\"\",\"specialService\":\"\",\"specialServiceAmount\":0}]" \
+            http://127.0.0.1:5080/api/bookings/online)
+          test "$TT03_INACTIVE_CATEGORY_STATUS" = "409"
+          grep -i 'not available' /tmp/tt03-inactive-category.json
 
           curl --fail --silent http://127.0.0.1:5080/api/services | grep '"name":"Haircut"'
           curl --fail --silent \
