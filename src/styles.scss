@@ -18,8 +18,23 @@ html {
   transform: translateY(20px);
 }
 
+/* Each card reveals when it reaches the viewport, staggered across its row. */
+.booking-page .service-col.booking-reveal {
+  transition-duration: 550ms;
+  transition-delay: 0ms;
+}
+
+.booking-page .service-col.booking-reveal:nth-child(3n + 2) { transition-delay: 90ms; }
+.booking-page .service-col.booking-reveal:nth-child(3n) { transition-delay: 180ms; }
+
+@media (max-width: 767.98px) {
+  .booking-page .service-col.booking-reveal:nth-child(odd) { transition-delay: 0ms; }
+  .booking-page .service-col.booking-reveal:nth-child(even) { transition-delay: 90ms; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .booking-page .booking-reveal,
+  .booking-page .service-col.booking-reveal,
   .booking-page .booking-reveal-pending {
     opacity: 1;
     transform: none;

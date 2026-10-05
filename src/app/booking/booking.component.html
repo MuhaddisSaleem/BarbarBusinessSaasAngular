@@ -233,7 +233,7 @@
                 </div>
 
                 <div class="services-grid salon-services-grid">
-                  <div class="service-col" *ngFor="let service of visibleSalonServices; let i = index; trackBy: trackService" [class.service-revealed]="i >= 12">
+                  <div class="service-col" *ngFor="let service of visibleSalonServices; trackBy: trackService" [appScrollReveal]="0">
                     <button type="button" class="service-card h-100"
                       [class.selected]="isServiceSelectedForLocation(service.id, 'salon')"
                       [class.disabled]="isServiceDisabled(service)" [disabled]="isServiceDisabled(service)"
@@ -342,7 +342,7 @@
                   </div>
 
                   <div class="services-grid home-services-grid">
-                    <div class="service-col" *ngFor="let service of visibleHomeServices; let i = index; trackBy: trackService" [class.service-revealed]="i >= 12">
+                    <div class="service-col" *ngFor="let service of visibleHomeServices; trackBy: trackService" [appScrollReveal]="0">
                       <button type="button" class="service-card home-service-card h-100"
                         [class.selected]="isServiceSelectedForLocation(service.id, 'home')"
                         [class.disabled]="isServiceDisabled(service)" [disabled]="isServiceDisabled(service)"

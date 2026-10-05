@@ -2419,16 +2419,8 @@ button { -webkit-tap-highlight-color: transparent; }
   animation: service-spin 700ms linear infinite;
 }
 
-.service-revealed {
-  animation: service-appear 400ms ease-out both;
-}
-
 @keyframes service-spin { to { transform: rotate(360deg); } }
-@keyframes service-appear {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
 
 @media (prefers-reduced-motion: reduce) {
-  .service-revealed, .service-loading-spinner { animation: none; }
+  .service-loading-spinner { animation: none; }
 }
