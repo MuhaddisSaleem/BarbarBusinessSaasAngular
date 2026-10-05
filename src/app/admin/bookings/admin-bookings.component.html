@@ -337,15 +337,69 @@
           </div>
         </label>
 
-        <label>
+        <div class="walkin-field">
           <span>Service *</span>
-          <select [(ngModel)]="newBooking.service" (ngModelChange)="onCreateServiceOrDateChange()">
-            <option value="">Select service</option>
-            <option *ngFor="let service of bookingService.services" [value]="service.name">
-              {{ service.name }} · {{ service.duration }} min · Rs. {{ service.amount | number }}
-            </option>
-          </select>
-        </label>
+
+          <div
+            class="walkin-service-multiselect"
+            [class.open]="walkInServiceDropdownOpen"
+            (click)="$event.stopPropagation()">
+            <button
+              type="button"
+              class="walkin-service-trigger"
+              [class.has-selection]="selectedWalkInServiceNames.length"
+              (click)="toggleWalkInServiceDropdown($event)"
+              [attr.aria-expanded]="walkInServiceDropdownOpen">
+              <span class="walkin-service-trigger-copy">
+                <strong>{{ walkInServiceButtonLabel }}</strong>
+                <small *ngIf="selectedWalkInServiceNames.length">
+                  {{ selectedWalkInServiceNames.join(', ') }}
+                </small>
+              </span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+
+            <div class="walkin-service-panel" *ngIf="walkInServiceDropdownOpen">
+              <label class="walkin-service-search" (click)="$event.stopPropagation()">
+                <i class="bi bi-search"></i>
+                <input
+                  type="search"
+                  [(ngModel)]="walkInServiceSearch"
+                  placeholder="Search services..."
+                  autocomplete="off"
+                  (click)="$event.stopPropagation()">
+              </label>
+
+              <div class="walkin-service-options" role="listbox" aria-multiselectable="true">
+                <button
+                  type="button"
+                  class="walkin-service-option"
+                  *ngFor="let service of filteredWalkInServices"
+                  [class.selected]="isWalkInServiceSelected(service.name)"
+                  [attr.aria-selected]="isWalkInServiceSelected(service.name)"
+                  (click)="toggleWalkInService(service.name, $event)">
+                  <span class="walkin-service-check">
+                    <i class="bi bi-check-lg" *ngIf="isWalkInServiceSelected(service.name)"></i>
+                  </span>
+                  <span class="walkin-service-option-copy">
+                    <strong>{{ service.name }}</strong>
+                    <small>{{ service.duration }} min · Rs. {{ service.amount | number }}</small>
+                  </span>
+                </button>
+
+                <div class="walkin-service-empty" *ngIf="!filteredWalkInServices.length">
+                  <i class="bi bi-search"></i>
+                  No services found
+                </div>
+              </div>
+
+              <div class="walkin-service-selected-summary" *ngIf="selectedWalkInServiceNames.length">
+                <span>{{ selectedWalkInServiceNames.length }} selected</span>
+                <strong>{{ walkInDuration }} min · Rs. {{ walkInAmount | number }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <label>
           <span>Barber *</span>
