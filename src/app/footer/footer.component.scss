@@ -306,10 +306,12 @@
   height: 188px;
   display: block;
   overflow: hidden;
-  border: 1px solid #263238;
+  border: 1px solid rgba(233,182,84,.24);
   border-radius: 11px;
-  background: #091012;
-  box-shadow: 0 18px 50px rgba(0,0,0,.22);
+  background: #11181a;
+  box-shadow:
+    0 18px 50px rgba(0,0,0,.18),
+    inset 0 0 0 1px rgba(255,255,255,.025);
 }
 
 .map-frame::before {
@@ -318,8 +320,9 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  border: 1px solid rgba(233,182,84,.1);
+  border: 1px solid rgba(233,182,84,.14);
   border-radius: inherit;
+  box-shadow: inset 0 0 24px rgba(233,182,84,.018);
 }
 
 .map-frame iframe {
@@ -327,8 +330,9 @@
   height: 100%;
   border: 0;
   pointer-events: none;
-  filter: grayscale(1) saturate(.28) brightness(.52) contrast(1.22);
-  transform: scale(1.02);
+  filter: saturate(.82) brightness(.92) contrast(1.06);
+  transform: scale(1.015);
+  transform-origin: center;
 }
 
 .map-overlay {
@@ -337,8 +341,8 @@
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(3,7,8,.03), rgba(3,7,8,.24)),
-    linear-gradient(100deg, rgba(233,182,84,.055), transparent 45%);
+    linear-gradient(180deg, rgba(3,7,8,0), rgba(3,7,8,.07)),
+    linear-gradient(100deg, rgba(233,182,84,.018), transparent 42%);
 }
 
 .map-cta {
