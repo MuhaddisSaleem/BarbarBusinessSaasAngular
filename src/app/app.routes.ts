@@ -77,6 +77,13 @@ export const routes: Routes = [
     title: 'Settings'
   },
   {
+    path: 'admin/account-security',
+    canActivate: [adminAuthGuard],
+    loadComponent: () =>
+      import('./admin/account-security/account-security.component').then(m => m.AccountSecurityComponent),
+    title: 'Account & Security'
+  },
+  {
     path: 'admin/notifications',
     canActivate: [adminAuthGuard],
     loadComponent: () =>
