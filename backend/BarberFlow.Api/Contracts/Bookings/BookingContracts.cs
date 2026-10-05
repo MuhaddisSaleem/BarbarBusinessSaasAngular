@@ -59,7 +59,8 @@ public sealed record AvailabilityRequest(
     string Time,
     int Duration,
     string? Barber = null,
-    int? IgnoreBookingId = null
+    int? IgnoreBookingId = null,
+    string? ServiceLocation = null
 );
 
 public sealed record AvailabilityResponse(
