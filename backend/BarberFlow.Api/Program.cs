@@ -29,6 +29,7 @@ builder.Services.AddHttpClient<WhatsAppCloudApiClient>(client =>
 });
 builder.Services.AddScoped<CatalogApplicationService>();
 builder.Services.AddScoped<AuthApplicationService>();
+builder.Services.AddScoped<AccountEmailService>();
 builder.Services.AddScoped<IPasswordHasher<SalonUser>, PasswordHasher<SalonUser>>();
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
