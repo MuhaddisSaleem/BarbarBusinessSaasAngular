@@ -143,6 +143,11 @@ public static class DevelopmentDataSeeder
 
         var owner = await db.SalonUsers
             .FirstOrDefaultAsync(
+                x => x.SalonId == salon.Id && x.Role == SalonUserRole.Owner,
+                cancellationToken);
+
+        owner ??= await db.SalonUsers
+            .FirstOrDefaultAsync(
                 x => x.SalonId == salon.Id && x.Email.ToLower() == adminEmail,
                 cancellationToken);
 
@@ -162,6 +167,8 @@ public static class DevelopmentDataSeeder
         }
         else if (string.IsNullOrWhiteSpace(owner.PasswordHash))
         {
+            // Seed credentials are bootstrap-only. Once an owner has a password,
+            // later email/password changes made through the admin portal are preserved.
             owner.PasswordHash = passwordHasher.HashPassword(owner, adminPassword);
             owner.FullName = string.IsNullOrWhiteSpace(owner.FullName) ? adminName : owner.FullName;
             owner.Role = SalonUserRole.Owner;
