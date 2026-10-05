@@ -30,6 +30,10 @@ export class HeaderComponent {
     return this.settingsService.current.brandSubtitle || '';
   }
 
+  get isAboutPage(): boolean {
+    return this.router.url.split('?')[0].startsWith('/about');
+  }
+
   get isGalleryPage(): boolean {
     return this.router.url.split('?')[0].startsWith('/gallery');
   }
