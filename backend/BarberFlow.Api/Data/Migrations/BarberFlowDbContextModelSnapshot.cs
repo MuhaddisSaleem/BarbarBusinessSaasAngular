@@ -664,6 +664,54 @@ namespace BarberFlow.Api.Data.Migrations
                     b.ToTable("SalonSettings", (string)null);
                 });
 
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.AccountVerificationCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DestinationEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid>("SalonUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("SalonUserId", "Purpose", "CreatedAtUtc");
+
+                    b.ToTable("AccountVerificationCodes", (string)null);
+                });
+
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.SalonUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -977,6 +1025,17 @@ namespace BarberFlow.Api.Data.Migrations
                     b.Navigation("Booking");
 
                     b.Navigation("Salon");
+                });
+
+            modelBuilder.Entity("BarberFlow.Api.Domain.Entities.AccountVerificationCode", b =>
+                {
+                    b.HasOne("BarberFlow.Api.Domain.Entities.SalonUser", "SalonUser")
+                        .WithMany()
+                        .HasForeignKey("SalonUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SalonUser");
                 });
 
             modelBuilder.Entity("BarberFlow.Api.Domain.Entities.SalonSettings", b =>
