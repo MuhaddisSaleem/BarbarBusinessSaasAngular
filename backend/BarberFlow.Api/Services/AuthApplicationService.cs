@@ -418,11 +418,16 @@ public sealed class AuthApplicationService(
         CancellationToken cancellationToken,
         Guid? exceptId = null)
     {
-        var activeCodes = await db.AccountVerificationCodes
-            .Where(x => x.SalonUserId == userId
-                        && !x.IsUsed
-                        && (!exceptId.HasValue || x.Id != exceptId.Value))
-            .ToListAsync(cancellationToken);
+        IQueryable<AccountVerificationCode> query = db.AccountVerificationCodes
+            .Where(x => x.SalonUserId == userId && !x.IsUsed);
+
+        if (exceptId.HasValue)
+        {
+            var preservedId = exceptId.Value;
+            query = query.Where(x => x.Id != preservedId);
+        }
+
+        var activeCodes = await query.ToListAsync(cancellationToken);
 
         foreach (var code in activeCodes)
             code.IsUsed = true;
