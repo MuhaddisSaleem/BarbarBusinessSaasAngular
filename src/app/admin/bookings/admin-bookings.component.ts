@@ -190,11 +190,12 @@ export class AdminBookingsComponent implements OnInit {
     this.walkInServiceDropdownOpen = !this.walkInServiceDropdownOpen;
 
     if (this.walkInServiceDropdownOpen) {
-      queueMicrotask(() => this.positionWalkInServicePanel());
+      this.positionWalkInServicePanel();
       return;
     }
 
     this.walkInServiceSearch = '';
+    this.walkInServiceOverlayStyle = {};
   }
 
   toggleWalkInService(serviceName: string, event: Event): void {
