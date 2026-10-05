@@ -44,14 +44,42 @@
         <a class="nav-link" href="/#contact" (click)="goToContact($event)" data-bs-toggle="collapse" data-bs-target=".navbar-collapse.show">Contact</a>
       </nav>
 
-      <a
-        class="book-button d-flex align-items-center justify-content-center mt-3 mt-xl-0"
-        [routerLink]="['/']"
-        fragment="booking"
-        data-bs-toggle="collapse"
-        data-bs-target=".navbar-collapse.show">
-        Book Appointment
-      </a>
+      <div class="public-admin-actions d-flex align-items-center mt-3 mt-xl-0" *ngIf="isAdminLoggedIn; else visitorBookingAction">
+        <a
+          class="public-notification-button"
+          [routerLink]="['/admin/notifications']"
+          aria-label="Open admin notifications"
+          title="Notifications"
+          data-bs-toggle="collapse"
+          data-bs-target=".navbar-collapse.show">
+          <i class="bi bi-bell-fill"></i>
+          <span
+            class="public-notification-badge"
+            [class.empty]="notificationService.unreadCount === 0">
+            {{ notificationService.unreadCount }}
+          </span>
+        </a>
+
+        <a
+          class="dashboard-button d-flex align-items-center justify-content-center"
+          [routerLink]="['/admin']"
+          data-bs-toggle="collapse"
+          data-bs-target=".navbar-collapse.show">
+          <i class="bi bi-grid-1x2-fill"></i>
+          View Dashboard
+        </a>
+      </div>
+
+      <ng-template #visitorBookingAction>
+        <a
+          class="book-button d-flex align-items-center justify-content-center mt-3 mt-xl-0"
+          [routerLink]="['/']"
+          fragment="booking"
+          data-bs-toggle="collapse"
+          data-bs-target=".navbar-collapse.show">
+          Book Appointment
+        </a>
+      </ng-template>
     </div>
   </div>
 </header>
