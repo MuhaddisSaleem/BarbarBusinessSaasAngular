@@ -12,10 +12,15 @@ export class LoadMoreDirective implements AfterViewInit, OnDestroy {
     if (typeof IntersectionObserver === 'undefined') return;
     this.zone.runOutsideAngular(() => {
       this.observer = new IntersectionObserver(entries => {
-        if (entries.some(entry => entry.isIntersecting)) {
-          this.observer?.disconnect();
-          this.zone.run(() => this.reached.emit());
-        }
+        if (!entries.some(entry => entry.isIntersecting)) return;
+
+        // Header deep-link navigation can cross the catalog sentinel while
+        // travelling to the footer. Do not treat that programmatic jump as
+        // genuine customer browsing; keep observing for the next manual pass.
+        if (document.documentElement.hasAttribute('data-programmatic-anchor-scroll')) return;
+
+        this.observer?.disconnect();
+        this.zone.run(() => this.reached.emit());
       }, { threshold: 0.1 });
       this.observer.observe(this.element.nativeElement);
     });
