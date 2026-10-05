@@ -19,16 +19,16 @@
 
 .whatsapp-button {
   position: relative;
-  width: 58px;
-  height: 58px;
-  flex: 0 0 58px;
+  width: 50px;
+  height: 50px;
+  flex: 0 0 50px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(255,255,255,.22);
   border-radius: 50%;
   background: #25d366;
   color: #fff;
-  font-size: 28px;
+  font-size: 24px;
   box-shadow:
     0 14px 34px rgba(0,0,0,.35),
     0 0 0 0 rgba(37,211,102,.34);
@@ -42,7 +42,7 @@
 .whatsapp-button::after {
   content: '';
   position: absolute;
-  inset: -5px;
+  inset: -4px;
   border: 1px solid rgba(37,211,102,.34);
   border-radius: 50%;
   pointer-events: none;
@@ -116,10 +116,10 @@
   }
 
   .whatsapp-button {
-    width: 52px;
-    height: 52px;
-    flex-basis: 52px;
-    font-size: 25px;
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
+    font-size: 22px;
   }
 
   .whatsapp-label {
