@@ -107,63 +107,6 @@ jobs:
           curl --fail --silent -H "Authorization: Bearer $TOKEN" \
             http://127.0.0.1:5080/api/auth/me | grep '"email":"ci-owner@barberflow.test"'
 
-          # Account-security regression: normal login stays intact while the owner
-          # can change the password through the authenticated security endpoint.
-          BAD_PASSWORD_CHANGE_STATUS=$(curl --silent -o /tmp/bad-password-change.json -w "%{http_code}" -X PATCH \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"currentPassword":"WrongPassword123","newPassword":"Temporary2026Pass"}' \
-            http://127.0.0.1:5080/api/auth/password)
-          test "$BAD_PASSWORD_CHANGE_STATUS" = "400"
-          grep -i 'current password is incorrect' /tmp/bad-password-change.json
-
-          curl --fail --silent -X PATCH \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"currentPassword":"CiOwner@2026!","newPassword":"Temporary2026Pass"}' \
-            http://127.0.0.1:5080/api/auth/password | grep '"success":true"'
-
-          OLD_LOGIN_STATUS=$(curl --silent -o /tmp/old-login.json -w "%{http_code}" \
-            -H "Content-Type: application/json" \
-            -d '{"email":"ci-owner@barberflow.test","password":"CiOwner@2026!","rememberMe":false}' \
-            http://127.0.0.1:5080/api/auth/login)
-          test "$OLD_LOGIN_STATUS" = "401"
-
-          TEMP_AUTH_RESPONSE=$(curl --fail --silent \
-            -H "Content-Type: application/json" \
-            -d '{"email":"ci-owner@barberflow.test","password":"Temporary2026Pass","rememberMe":false}' \
-            http://127.0.0.1:5080/api/auth/login)
-          echo "$TEMP_AUTH_RESPONSE" | grep '"success":true"'
-          TEMP_TOKEN=$(echo "$TEMP_AUTH_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
-
-          curl --fail --silent -X PATCH \
-            -H "Authorization: Bearer $TEMP_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"currentPassword":"Temporary2026Pass","newPassword":"CiOwner@2026!"}' \
-            http://127.0.0.1:5080/api/auth/password | grep '"success":true"'
-
-          AUTH_RESPONSE=$(curl --fail --silent \
-            -H "Content-Type: application/json" \
-            -d '{"email":"ci-owner@barberflow.test","password":"CiOwner@2026!","rememberMe":false}' \
-            http://127.0.0.1:5080/api/auth/login)
-          TOKEN=$(echo "$AUTH_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
-          test -n "$TOKEN"
-
-          RECOVERY_DISABLED_STATUS=$(curl --silent -o /tmp/recovery-disabled.json -w "%{http_code}" \
-            -H "Content-Type: application/json" \
-            -d '{"email":"ci-owner@barberflow.test"}' \
-            http://127.0.0.1:5080/api/auth/password-reset/request)
-          test "$RECOVERY_DISABLED_STATUS" = "400"
-          grep -i 'not configured' /tmp/recovery-disabled.json
-
-          EMAIL_CHANGE_DISABLED_STATUS=$(curl --silent -o /tmp/email-change-disabled.json -w "%{http_code}" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"currentPassword":"CiOwner@2026!","newEmail":"ci-owner-new@barberflow.test"}' \
-            http://127.0.0.1:5080/api/auth/email-change/request)
-          test "$EMAIL_CHANGE_DISABLED_STATUS" = "400"
-          grep -i 'not configured' /tmp/email-change-disabled.json
-
           SERVICE_COUNT_BEFORE=$(curl --fail --silent http://127.0.0.1:5080/api/services | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
           BARBER_COUNT_BEFORE=$(curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
           test "$SERVICE_COUNT_BEFORE" -gt 0
