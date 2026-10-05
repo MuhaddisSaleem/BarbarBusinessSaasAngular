@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { LegacyCatalogMigrationService } from '../core/legacy-catalog-migration.service';
+import { BrandingMediaService } from '../admin/settings/branding-media.service';
 
 @Component({
   selector: 'app-admin-login',
@@ -24,7 +25,8 @@ export class AdminLoginComponent {
     private readonly auth: AuthService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
-    private readonly migration: LegacyCatalogMigrationService
+    private readonly migration: LegacyCatalogMigrationService,
+    public readonly brandingMedia: BrandingMediaService
   ) {
     if (this.auth.isAuthenticated()) {
       void this.router.navigateByUrl('/admin');
