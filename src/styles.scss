@@ -496,3 +496,157 @@ body {
 @media (max-width:575.98px) {
   app-booking .salon-choice-action-stage.home-active { min-height:60px; }
 }
+
+
+/* Logged-in admin: live new-booking popup shared by public pages and admin. */
+.live-booking-alert {
+  position: fixed;
+  top: 92px;
+  right: 22px;
+  z-index: 6000;
+  width: min(390px, calc(100vw - 28px));
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 30px;
+  gap: 12px;
+  align-items: start;
+  padding: 15px;
+  border: 1px solid rgba(233, 182, 84, .62);
+  border-radius: 13px;
+  background:
+    linear-gradient(135deg, rgba(233, 182, 84, .075), transparent 44%),
+    rgba(8, 14, 16, .985);
+  color: #eef2f1;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, .48),
+    0 0 0 1px rgba(255, 255, 255, .025);
+  backdrop-filter: blur(16px);
+  animation: liveBookingAlertIn .48s cubic-bezier(.16,1,.3,1) both;
+}
+
+.live-booking-alert::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 0 0 13px 13px;
+  background: #e9b654;
+  transform-origin: left;
+  animation: liveBookingAlertTimer 9s linear both;
+}
+
+.live-booking-alert-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(233, 182, 84, .36);
+  border-radius: 11px;
+  background: rgba(233, 182, 84, .11);
+  color: #f1c766;
+  font-size: 21px;
+  box-shadow: inset 0 1px rgba(255,255,255,.04);
+}
+
+.live-booking-alert-copy {
+  min-width: 0;
+}
+
+.live-booking-alert-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #e9b654;
+  font-size: 9px !important;
+  line-height: 1.2 !important;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+}
+
+.live-booking-alert-copy > strong {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.live-booking-alert-copy > p {
+  margin: 5px 0 10px !important;
+  color: #aeb8bb;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+}
+
+.live-booking-alert-copy > button {
+  min-height: 32px;
+  padding: 7px 12px;
+  border: 1px solid #edc566;
+  border-radius: 7px;
+  background: #e9b654;
+  color: #101314;
+  font-size: 10px !important;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.live-booking-alert-close {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #899397;
+  cursor: pointer;
+}
+
+.live-booking-alert-close:hover,
+.live-booking-alert-close:focus-visible {
+  background: rgba(255,255,255,.055);
+  color: #fff;
+  outline: none;
+}
+
+@keyframes liveBookingAlertIn {
+  from {
+    opacity: 0;
+    transform: translate3d(24px, -12px, 0) scale(.97);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes liveBookingAlertTimer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@media (max-width: 575.98px) {
+  .live-booking-alert {
+    top: 82px;
+    right: 14px;
+    left: 14px;
+    width: auto;
+    grid-template-columns: 42px minmax(0, 1fr) 28px;
+    padding: 13px;
+  }
+
+  .live-booking-alert-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-booking-alert,
+  .live-booking-alert::before {
+    animation: none;
+  }
+}
