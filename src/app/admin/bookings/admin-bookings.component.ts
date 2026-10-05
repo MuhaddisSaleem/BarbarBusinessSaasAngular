@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
@@ -15,7 +15,7 @@ type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
   templateUrl: './admin-bookings.component.html',
   styleUrl: './admin-bookings.component.scss'
 })
-export class AdminBookingsComponent implements OnInit {
+export class AdminBookingsComponent implements OnInit, OnDestroy {
   activeTab: BookingTab = 'today';
   searchTerm = '';
   selectedBarber = 'All';
@@ -30,6 +30,23 @@ export class AdminBookingsComponent implements OnInit {
   feedbackType: 'success' | 'error' = 'success';
   walkInServiceSearch = '';
   walkInServiceDropdownOpen = false;
+  private walkInServiceTriggerElement?: HTMLElement;
+  private walkInServicePanelElement?: HTMLElement;
+
+  @ViewChild('walkInServicePanel')
+  set walkInServicePanel(panel: ElementRef<HTMLElement> | undefined) {
+    if (!panel) {
+      this.walkInServicePanelElement = undefined;
+      return;
+    }
+
+    this.walkInServicePanelElement = panel.nativeElement;
+    this.renderer.appendChild(document.body, panel.nativeElement);
+
+    if (this.walkInServiceDropdownOpen) {
+      queueMicrotask(() => this.positionWalkInServicePanel());
+    }
+  }
 
   editBarber = '';
   editDate = '';
@@ -49,7 +66,8 @@ export class AdminBookingsComponent implements OnInit {
   constructor(
     public readonly bookingService: AdminBookingService,
     private readonly route: ActivatedRoute,
-    private readonly settingsService: AdminSettingsService
+    private readonly settingsService: AdminSettingsService,
+    private readonly renderer: Renderer2
   ) {}
 
   ngOnInit(): void {
@@ -184,11 +202,15 @@ export class AdminBookingsComponent implements OnInit {
 
   toggleWalkInServiceDropdown(event: Event): void {
     event.stopPropagation();
+    this.walkInServiceTriggerElement = event.currentTarget as HTMLElement;
     this.walkInServiceDropdownOpen = !this.walkInServiceDropdownOpen;
 
-    if (!this.walkInServiceDropdownOpen) {
-      this.walkInServiceSearch = '';
+    if (this.walkInServiceDropdownOpen) {
+      queueMicrotask(() => this.positionWalkInServicePanel());
+      return;
     }
+
+    this.walkInServiceSearch = '';
   }
 
   toggleWalkInService(serviceName: string, event: Event): void {
@@ -215,6 +237,50 @@ export class AdminBookingsComponent implements OnInit {
     if (!this.walkInServiceDropdownOpen) return;
     this.walkInServiceDropdownOpen = false;
     this.walkInServiceSearch = '';
+  }
+
+  @HostListener('window:resize')
+  @HostListener('window:scroll')
+  repositionWalkInServiceDropdown(): void {
+    if (this.walkInServiceDropdownOpen) {
+      this.positionWalkInServicePanel();
+    }
+  }
+
+  positionWalkInServicePanel(): void {
+    const trigger = this.walkInServiceTriggerElement;
+    const panel = this.walkInServicePanelElement;
+    if (!trigger || !panel || !this.walkInServiceDropdownOpen) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 10;
+    const preferredWidth = rect.width;
+    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const availableAbove = rect.top - viewportPadding;
+    const openAbove = availableBelow < 260 && availableAbove > availableBelow;
+
+    this.renderer.setStyle(panel, 'position', 'fixed');
+    this.renderer.setStyle(panel, 'left', Math.max(viewportPadding, rect.left) + 'px');
+    this.renderer.setStyle(
+      panel,
+      'width',
+      Math.min(preferredWidth, window.innerWidth - Math.max(viewportPadding, rect.left) - viewportPadding) + 'px'
+    );
+    this.renderer.setStyle(panel, 'z-index', '5000');
+
+    if (openAbove) {
+      this.renderer.setStyle(panel, 'top', 'auto');
+      this.renderer.setStyle(panel, 'bottom', (window.innerHeight - rect.top + 6) + 'px');
+    } else {
+      this.renderer.setStyle(panel, 'bottom', 'auto');
+      this.renderer.setStyle(panel, 'top', (rect.bottom + 6) + 'px');
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.walkInServicePanelElement?.parentNode === document.body) {
+      this.renderer.removeChild(document.body, this.walkInServicePanelElement);
+    }
   }
 
   get currentWalkInTime(): string {
@@ -431,9 +497,10 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   closeCreateModal(): void {
-    this.createModalOpen = false;
-    this.walkInServiceSearch = '';
     this.walkInServiceDropdownOpen = false;
+    this.walkInServiceSearch = '';
+    this.createModalOpen = false;
+    this.walkInServiceTriggerElement = undefined;
   }
 
   get canCreateWalkIn(): boolean {
