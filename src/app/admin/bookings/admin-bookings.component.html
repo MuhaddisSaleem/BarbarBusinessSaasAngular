@@ -424,9 +424,15 @@
 </app-admin-shell>
 
 <div
+  class="walkin-service-overlay-backdrop"
+  *ngIf="createModalOpen && walkInServiceDropdownOpen"
+  (click)="closeWalkInServiceDropdown()"></div>
+
+<div
   class="walkin-service-panel walkin-service-overlay"
   *ngIf="createModalOpen && walkInServiceDropdownOpen"
   [ngStyle]="walkInServiceOverlayStyle"
+  (pointerdown)="$event.stopPropagation()"
   (click)="$event.stopPropagation()">
   <label class="walkin-service-search" (click)="$event.stopPropagation()">
     <i class="bi bi-search"></i>
