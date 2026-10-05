@@ -83,3 +83,29 @@
     </div>
   </div>
 </header>
+
+<div
+  class="live-booking-alert"
+  *ngIf="isAdminLoggedIn && notificationService.liveBookingAlert as liveAlert"
+  role="alert"
+  aria-live="assertive">
+  <div class="live-booking-alert-icon">
+    <i class="bi bi-calendar2-check-fill"></i>
+  </div>
+
+  <div class="live-booking-alert-copy">
+    <span class="live-booking-alert-kicker">NEW BOOKING RECEIVED</span>
+    <strong>{{ liveAlert.title }}</strong>
+    <p>{{ liveAlert.message }}</p>
+    <button type="button" (click)="openLiveBookingAlert()">View booking</button>
+  </div>
+
+  <button
+    type="button"
+    class="live-booking-alert-close"
+    (click)="notificationService.dismissLiveBookingAlert()"
+    aria-label="Dismiss booking notification">
+    <i class="bi bi-x-lg"></i>
+  </button>
+</div>
+
