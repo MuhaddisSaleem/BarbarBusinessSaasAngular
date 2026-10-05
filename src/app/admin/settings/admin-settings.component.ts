@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminSettings, AdminSettingsService } from './admin-settings.service';
 import { BrandingMediaService } from './branding-media.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-admin-settings',
@@ -21,13 +22,160 @@ export class AdminSettingsComponent {
   savingSettings = false;
   resettingSettings = false;
 
+  newLoginEmail = '';
+  emailCurrentPassword = '';
+  emailVerificationCode = '';
+  emailVerificationSent = false;
+  emailSecurityBusy = false;
+
+  currentPassword = '';
+  newPassword = '';
+  confirmNewPassword = '';
+  passwordSecurityBusy = false;
+
   readonly bookingIntervals = [10, 15, 20, 30, 45, 60];
 
   constructor(
     public readonly settingsService: AdminSettingsService,
-    public readonly brandingMedia: BrandingMediaService
+    public readonly brandingMedia: BrandingMediaService,
+    public readonly authService: AuthService
   ) {
     this.settings = this.withDeferredMessagingPaused(this.settingsService.current);
+  }
+
+  get currentLoginEmail(): string {
+    return this.authService.currentUser?.email || 'Loading...';
+  }
+
+  get currentOwnerName(): string {
+    return this.authService.currentUser?.fullName || 'The Trim Town Owner';
+  }
+
+  requestLoginEmailChange(): void {
+    if (this.emailSecurityBusy) return;
+
+    const email = this.newLoginEmail.trim();
+    if (!email) {
+      this.showSecurityFeedback(false, 'Enter the new login email address.');
+      return;
+    }
+
+    if (!this.emailCurrentPassword) {
+      this.showSecurityFeedback(false, 'Enter your current password to change the login email.');
+      return;
+    }
+
+    this.emailSecurityBusy = true;
+    this.authService.requestEmailChange(this.emailCurrentPassword, email).subscribe({
+      next: response => {
+        this.emailSecurityBusy = false;
+        this.emailVerificationSent = response.success;
+
+        if (response.success) {
+          this.emailVerificationCode = '';
+          this.showSecurityFeedback(true, response.message);
+          return;
+        }
+
+        this.showSecurityFeedback(false, response.message);
+      },
+      error: error => {
+        this.emailSecurityBusy = false;
+        this.showSecurityFeedback(false, this.securityApiError(error, 'Could not send the verification code.'));
+      }
+    });
+  }
+
+  confirmLoginEmailChange(): void {
+    if (this.emailSecurityBusy) return;
+
+    const code = this.emailVerificationCode.replace(/\D/g, '').slice(0, 6);
+    if (code.length !== 6) {
+      this.showSecurityFeedback(false, 'Enter the 6-digit verification code.');
+      return;
+    }
+
+    this.emailSecurityBusy = true;
+    this.authService.confirmEmailChange(this.newLoginEmail, code).subscribe({
+      next: response => {
+        this.emailSecurityBusy = false;
+
+        if (!response.success) {
+          this.showSecurityFeedback(false, response.message);
+          return;
+        }
+
+        this.newLoginEmail = '';
+        this.emailCurrentPassword = '';
+        this.emailVerificationCode = '';
+        this.emailVerificationSent = false;
+        this.showSecurityFeedback(true, response.message);
+      },
+      error: error => {
+        this.emailSecurityBusy = false;
+        this.showSecurityFeedback(false, this.securityApiError(error, 'Could not verify the new login email.'));
+      }
+    });
+  }
+
+  cancelLoginEmailChange(): void {
+    if (this.emailSecurityBusy) return;
+    this.newLoginEmail = '';
+    this.emailCurrentPassword = '';
+    this.emailVerificationCode = '';
+    this.emailVerificationSent = false;
+  }
+
+  onEmailVerificationInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.replace(/\D/g, '').slice(0, 6);
+    this.emailVerificationCode = value;
+    input.value = value;
+  }
+
+  changeAdminPassword(): void {
+    if (this.passwordSecurityBusy) return;
+
+    if (!this.currentPassword) {
+      this.showSecurityFeedback(false, 'Enter your current password.');
+      return;
+    }
+
+    if (this.newPassword.length < 8) {
+      this.showSecurityFeedback(false, 'New password must contain at least 8 characters.');
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(this.newPassword) || !/\d/.test(this.newPassword)) {
+      this.showSecurityFeedback(false, 'New password must include at least one letter and one number.');
+      return;
+    }
+
+    if (this.newPassword !== this.confirmNewPassword) {
+      this.showSecurityFeedback(false, 'New password and confirmation do not match.');
+      return;
+    }
+
+    this.passwordSecurityBusy = true;
+    this.authService.changePassword(this.currentPassword, this.newPassword).subscribe({
+      next: response => {
+        this.passwordSecurityBusy = false;
+
+        if (!response.success) {
+          this.showSecurityFeedback(false, response.message);
+          return;
+        }
+
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.confirmNewPassword = '';
+        this.showSecurityFeedback(true, 'Password changed successfully. Use the new password the next time you sign in.');
+      },
+      error: error => {
+        this.passwordSecurityBusy = false;
+        this.showSecurityFeedback(false, this.securityApiError(error, 'Could not change the password.'));
+      }
+    });
   }
 
   saveSettings(): void {
@@ -166,6 +314,19 @@ export class AdminSettingsComponent {
 
   copyBusinessPhoneToWhatsapp(): void {
     this.settings.whatsappNumber = this.settings.businessPhone;
+  }
+
+  private showSecurityFeedback(success: boolean, message: string): void {
+    this.feedbackType = success ? 'success' : 'error';
+    this.feedbackMessage = message;
+
+    window.setTimeout(() => {
+      if (this.feedbackMessage === message) this.feedbackMessage = '';
+    }, 5000);
+  }
+
+  private securityApiError(error: unknown, fallback: string): string {
+    return (error as any)?.error?.message || fallback;
   }
 
   private withDeferredMessagingPaused(settings: AdminSettings): AdminSettings {
