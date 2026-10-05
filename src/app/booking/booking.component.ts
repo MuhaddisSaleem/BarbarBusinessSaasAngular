@@ -157,6 +157,10 @@ export class BookingComponent implements OnInit, OnDestroy {
     return this.selectedServiceCategory === category;
   }
 
+  trackBarber(_index: number, barber: Barber): number {
+    return barber.id;
+  }
+
   get barbers(): Barber[] {
     return this.barberService.active.map(barber => ({
       id: barber.id,

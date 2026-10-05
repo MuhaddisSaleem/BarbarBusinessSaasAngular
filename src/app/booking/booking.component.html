@@ -428,7 +428,7 @@
             </div>
 
             <div class="barber-grid row g-3">
-              <div class="barber-col col-6" *ngFor="let barber of barbers">
+              <div class="barber-col col-6" *ngFor="let barber of barbers; trackBy: trackBarber" [appScrollReveal]="0">
                 <button type="button" class="barber-card w-100 h-100"
                   [class.selected]="selectedBarber !== 'any' && selectedBarber?.id === barber.id"
                   [class.unavailable]="isBarberUnavailable(barber)" [disabled]="isBarberUnavailable(barber)"
@@ -447,7 +447,7 @@
                 </button>
               </div>
 
-              <div class="barber-col col-6">
+              <div class="barber-col col-6" [appScrollReveal]="0">
                 <button type="button"
                   class="barber-card any-barber w-100 h-100 d-flex flex-column justify-content-center"
                   [class.selected]="selectedBarber === 'any'" (click)="selectBarber('any')">
