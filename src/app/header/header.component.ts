@@ -38,6 +38,15 @@ export class HeaderComponent {
     return this.authService.isAuthenticated();
   }
 
+  openLiveBookingAlert(): void {
+    const notification = this.notificationService.liveBookingAlert;
+    if (!notification) return;
+
+    this.notificationService.markAsRead(notification.id);
+    this.notificationService.dismissLiveBookingAlert();
+    void this.router.navigateByUrl(notification.url || '/admin/bookings');
+  }
+
 
   goToContact(event: Event): void {
     event.preventDefault();
