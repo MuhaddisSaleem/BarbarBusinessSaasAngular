@@ -576,7 +576,16 @@ public sealed class BookingApplicationService(
         if (date == today)
         {
             var now = TimeOnly.FromDateTime(salonNow.DateTime);
-            if (allowWalkInCurrentMinute ? time < now : time <= now)
+
+            // Walk-ins are selected and transmitted with minute precision (for example 4:52 PM).
+            // Compare them against the salon's current minute, not current seconds, otherwise
+            // 4:52 PM would be rejected at 4:52:15 PM as already passed.
+            var currentMinute = new TimeOnly(now.Hour, now.Minute);
+            var isPast = allowWalkInCurrentMinute
+                ? time < currentMinute
+                : time <= now;
+
+            if (isPast)
                 return (false, "The selected appointment time has already passed.");
         }
 
