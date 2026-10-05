@@ -13,6 +13,7 @@ public sealed class BookingApplicationService(
     WhatsAppMessagingService whatsAppMessaging)
 {
     private const string DefaultSalonSlug = "royal-barbers";
+    private const int CustomHomeServiceDurationMinutes = 60;
 
     public async Task<IReadOnlyList<BookingResponse>> GetAllAsync(CancellationToken cancellationToken)
     {
@@ -326,22 +327,35 @@ public sealed class BookingApplicationService(
         if (!DateOnly.TryParse(request.Date, out var date) || !TryParseTime(request.Time, out var time))
             return new(false, "Select a valid appointment date and time.", []);
 
+        var serviceLocation = Enum.TryParse<ServiceLocation>(request.ServiceLocation, true, out var parsedLocation)
+            ? parsedLocation
+            : ServiceLocation.Salon;
+
         var serviceNames = SplitServices(request.Service);
-        var customHomeService = serviceNames.Count == 1
+        if (serviceNames.Count == 0)
+            return new(false, "Select at least one service.", []);
+
+        var customHomeService = serviceLocation == ServiceLocation.Home
+            && serviceNames.Count == 1
             && string.Equals(serviceNames[0], "Custom Home Service", StringComparison.OrdinalIgnoreCase);
 
-        List<Service> services = customHomeService || serviceNames.Count == 0
+        List<Service> services = customHomeService
             ? []
             : await db.Services
-                .Where(x => x.SalonId == salon.Id && x.IsActive && serviceNames.Contains(x.Name))
+                .Where(x => x.SalonId == salon.Id
+                            && x.IsActive
+                            && x.ServiceCategory.IsActive
+                            && serviceNames.Contains(x.Name))
                 .ToListAsync(cancellationToken);
 
-        if (!customHomeService && serviceNames.Count > 0 && services.Count != serviceNames.Count)
+        if (!customHomeService && services.Count != serviceNames.Count)
             return new(false, "One or more selected services are not available.", []);
 
-        var effectiveDuration = services.Count > 0
-            ? services.Sum(x => x.DurationMinutes)
-            : request.Duration;
+        if (serviceLocation == ServiceLocation.Home && services.Any(x => !x.HomeServiceEnabled))
+            return new(false, "One or more selected services are not available for home service.", []);
+
+        var effectiveDuration = services.Sum(x => x.DurationMinutes)
+            + (customHomeService ? CustomHomeServiceDurationMinutes : 0);
 
         if (!IsValidAppointmentDuration(effectiveDuration))
             return new(false, "Booking duration is invalid.", []);
@@ -407,25 +421,41 @@ public sealed class BookingApplicationService(
             ? location
             : ServiceLocation.Salon;
 
-        var serviceNames = SplitServices(request.Service);
-        var customHomeService = string.Equals(request.Service, "Custom Home Service", StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(request.SpecialService);
+        if (serviceLocation == ServiceLocation.Home && string.IsNullOrWhiteSpace(request.ServiceAddress))
+            return (false, "Complete home-service address is required.", null);
 
-        List<Service> services = customHomeService || serviceNames.Count == 0
+        if (serviceLocation != ServiceLocation.Home && !string.IsNullOrWhiteSpace(request.SpecialService))
+            return (false, "Custom service requests are only available for home bookings.", null);
+
+        var hasCustomHomeService = serviceLocation == ServiceLocation.Home
+            && !string.IsNullOrWhiteSpace(request.SpecialService);
+        var serviceNames = SplitServices(request.Service);
+
+        if (serviceNames.Count == 0)
+            return (false, "Select at least one service.", null);
+
+        var customHomeService = hasCustomHomeService
+            && serviceNames.Count == 1
+            && string.Equals(serviceNames[0], "Custom Home Service", StringComparison.OrdinalIgnoreCase);
+
+        List<Service> services = customHomeService
             ? []
             : await db.Services
-                .Where(x => x.SalonId == salon.Id && x.IsActive && serviceNames.Contains(x.Name))
+                .Where(x => x.SalonId == salon.Id
+                            && x.IsActive
+                            && x.ServiceCategory.IsActive
+                            && serviceNames.Contains(x.Name))
                 .ToListAsync(cancellationToken);
 
         if (!customHomeService && services.Count != serviceNames.Count)
             return (false, "One or more selected services are not available.", null);
 
-        var effectiveDuration = services.Count > 0
-            ? services.Sum(x => x.DurationMinutes)
-            : request.Duration;
-        var effectiveAmount = services.Count > 0
-            ? services.Sum(x => GetServicePrice(x, serviceLocation))
-            : request.Amount;
+        if (serviceLocation == ServiceLocation.Home && services.Any(x => !x.HomeServiceEnabled))
+            return (false, "One or more selected services are not available for home service.", null);
+
+        var effectiveDuration = services.Sum(x => x.DurationMinutes)
+            + (hasCustomHomeService ? CustomHomeServiceDurationMinutes : 0);
+        var effectiveAmount = services.Sum(x => GetServicePrice(x, serviceLocation));
 
         if (!IsValidAppointmentDuration(effectiveDuration) || effectiveAmount < 0)
             return (false, "Booking duration or amount is invalid.", null);
@@ -497,9 +527,13 @@ public sealed class BookingApplicationService(
 
         var status = source == BookingSource.WalkIn
             ? BookingStatus.Confirmed
-            : (serviceLocation == ServiceLocation.Home && !string.IsNullOrWhiteSpace(request.SpecialService)
+            : (hasCustomHomeService
                 ? BookingStatus.Pending
                 : (salon.Settings?.AutoConfirmBookings == false ? BookingStatus.Pending : BookingStatus.Confirmed));
+
+        var trustedSpecialServiceAmount = source == BookingSource.Admin && hasCustomHomeService
+            ? request.SpecialServiceAmount
+            : null;
 
         var booking = new Booking
         {
@@ -521,9 +555,9 @@ public sealed class BookingApplicationService(
             ServiceLocation = serviceLocation,
             GroupSize = Math.Max(1, request.GroupSize),
             Notes = request.Notes?.Trim(),
-            ServiceAddress = request.ServiceAddress?.Trim(),
-            SpecialService = request.SpecialService?.Trim(),
-            SpecialServiceAmount = request.SpecialServiceAmount
+            ServiceAddress = serviceLocation == ServiceLocation.Home ? request.ServiceAddress?.Trim() : null,
+            SpecialService = hasCustomHomeService ? request.SpecialService?.Trim() : null,
+            SpecialServiceAmount = trustedSpecialServiceAmount
         };
 
         if (services.Count > 0)
