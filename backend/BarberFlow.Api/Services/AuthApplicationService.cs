@@ -97,7 +97,6 @@ public sealed class AuthApplicationService(
             return new(false, "Choose a new password that is different from your current password.");
 
         user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
-        await InvalidateVerificationCodesAsync(user.Id, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         return new(true, "Password changed successfully.", MapUser(user));
@@ -181,7 +180,7 @@ public sealed class AuthApplicationService(
             newEmail,
             cancellationToken);
 
-        var codeError = await ValidateVerificationCodeAsync(entry, request.Code, cancellationToken);
+        var codeError = await ValidateVerificationCodeAsync(entry, request.Code, user.PasswordHash, cancellationToken);
         if (codeError is not null) return new(false, codeError);
 
         var emailInUse = await db.SalonUsers.AnyAsync(
@@ -285,7 +284,7 @@ public sealed class AuthApplicationService(
             email,
             cancellationToken);
 
-        var codeError = await ValidateVerificationCodeAsync(entry, request.Code, cancellationToken);
+        var codeError = await ValidateVerificationCodeAsync(entry, request.Code, user.PasswordHash, cancellationToken);
         if (codeError is not null) return new(false, codeError);
 
         if (!string.IsNullOrWhiteSpace(user.PasswordHash))
@@ -340,7 +339,7 @@ public sealed class AuthApplicationService(
             IsUsed = false
         };
 
-        entry.CodeHash = HashVerificationCode(entry.Id, code);
+        entry.CodeHash = HashVerificationCode(entry.Id, code, user.PasswordHash);
         return (entry, code);
     }
 
@@ -360,6 +359,7 @@ public sealed class AuthApplicationService(
     private async Task<string?> ValidateVerificationCodeAsync(
         AccountVerificationCode? entry,
         string rawCode,
+        string? currentPasswordHash,
         CancellationToken cancellationToken)
     {
         if (entry is null || entry.ExpiresAtUtc <= DateTimeOffset.UtcNow)
@@ -381,7 +381,7 @@ public sealed class AuthApplicationService(
         }
 
         var code = new string((rawCode ?? "").Where(char.IsDigit).ToArray());
-        var matches = code.Length == 6 && VerificationCodeMatches(entry, code);
+        var matches = code.Length == 6 && VerificationCodeMatches(entry, code, currentPasswordHash);
 
         if (!matches)
         {
@@ -433,20 +433,30 @@ public sealed class AuthApplicationService(
             code.IsUsed = true;
     }
 
-    private string HashVerificationCode(Guid requestId, string code)
+    private string HashVerificationCode(Guid requestId, string code, string? passwordHash)
     {
         var signingKey = configuration["Jwt:SigningKey"];
         if (string.IsNullOrWhiteSpace(signingKey))
             throw new InvalidOperationException("Jwt:SigningKey is required.");
 
-        var payload = Encoding.UTF8.GetBytes($"{requestId:N}:{code}:{signingKey}");
+        var passwordFingerprint = Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(passwordHash ?? string.Empty)));
+
+        var payload = Encoding.UTF8.GetBytes(
+            $"{requestId:N}:{code}:{passwordFingerprint}:{signingKey}");
+
         return Convert.ToHexString(SHA256.HashData(payload));
     }
 
-    private bool VerificationCodeMatches(AccountVerificationCode entry, string code)
+    private bool VerificationCodeMatches(
+        AccountVerificationCode entry,
+        string code,
+        string? currentPasswordHash)
     {
         var expected = Convert.FromHexString(entry.CodeHash);
-        var actual = Convert.FromHexString(HashVerificationCode(entry.Id, code));
+        var actual = Convert.FromHexString(
+            HashVerificationCode(entry.Id, code, currentPasswordHash));
+
         return CryptographicOperations.FixedTimeEquals(expected, actual);
     }
 
