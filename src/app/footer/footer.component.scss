@@ -498,35 +498,39 @@
 }
 
 .footer-top-button {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px solid rgba(233,182,84,.34);
-  border-radius: 8px;
-  background: rgba(233,182,84,.055);
-  color: #e9b654;
+  border: 1px solid #f0c86c;
+  border-radius: 50%;
+  background: #e9b654;
+  color: #0b0d0e;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+  box-shadow:
+    0 8px 24px rgba(233,182,84,.18),
+    inset 0 1px 0 rgba(255,255,255,.3);
   transition:
     transform .2s ease,
-    border-color .2s ease,
-    background .2s ease,
-    color .2s ease;
+    box-shadow .2s ease,
+    background .2s ease;
 
   i {
-    font-size: 15px;
+    font-size: 18px;
     line-height: 1;
+    font-weight: 800;
   }
 
   &:hover,
   &:focus-visible {
-    border-color: rgba(233,182,84,.72);
-    background: rgba(233,182,84,.11);
-    color: #ffd16f;
-    transform: translateY(-2px);
+    background: #f2bf5a;
+    color: #0b0d0e;
+    transform: translateY(-3px);
+    box-shadow:
+      0 12px 28px rgba(233,182,84,.26),
+      inset 0 1px 0 rgba(255,255,255,.34);
     outline: none;
   }
 }
