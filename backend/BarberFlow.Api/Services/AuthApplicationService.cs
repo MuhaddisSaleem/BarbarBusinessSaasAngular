@@ -98,13 +98,12 @@ public sealed class AuthApplicationService(
 
         var newPasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
 
-        var updatedRows = await db.SalonUsers
-            .Where(x => x.Id == user.Id && x.IsActive)
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(x => x.PasswordHash, newPasswordHash)
-                    .SetProperty(x => x.UpdatedAtUtc, DateTimeOffset.UtcNow),
-                cancellationToken);
+        var updatedRows = await db.Database.ExecuteSqlInterpolatedAsync(
+            $@"UPDATE SalonUsers
+               SET PasswordHash = {newPasswordHash},
+                   UpdatedAtUtc = {DateTimeOffset.UtcNow}
+               WHERE Id = {user.Id} AND IsActive = 1",
+            cancellationToken);
 
         if (updatedRows != 1)
             return new(false, "The password could not be changed. Please sign in again and retry.");
