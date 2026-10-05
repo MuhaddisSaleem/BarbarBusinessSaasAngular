@@ -999,3 +999,30 @@ button,input,select,textarea { font:inherit; }
     max-height: 190px;
   }
 }
+
+
+.walkin-service-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.walkin-service-overlay {
+  pointer-events: auto !important;
+  isolation: isolate;
+}
+
+.walkin-service-overlay .walkin-service-options,
+.walkin-service-overlay .walkin-service-option,
+.walkin-service-overlay .walkin-service-search,
+.walkin-service-overlay .walkin-service-search input {
+  pointer-events: auto !important;
+}
+
+.walkin-service-overlay .walkin-service-option {
+  position: relative;
+  z-index: 1;
+  user-select: none;
+}
