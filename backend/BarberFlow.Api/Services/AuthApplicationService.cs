@@ -96,20 +96,28 @@ public sealed class AuthApplicationService(
         if (samePassword != PasswordVerificationResult.Failed)
             return new(false, "Choose a new password that is different from your current password.");
 
-        var newPasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
+        user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
+        await db.SaveChangesAsync(cancellationToken);
 
-        var updatedRows = await db.Database.ExecuteSqlInterpolatedAsync(
-            $@"UPDATE SalonUsers
-               SET PasswordHash = {newPasswordHash},
-                   UpdatedAtUtc = {DateTimeOffset.UtcNow}
-               WHERE Id = {user.Id} AND IsActive = 1",
-            cancellationToken);
+        // Never report success until the new hash has actually been persisted
+        // and can verify the requested password from a fresh database read.
+        var persistedUser = await db.SalonUsers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.Id == user.Id && x.IsActive,
+                cancellationToken);
 
-        if (updatedRows != 1)
-            return new(false, "The password could not be changed. Please sign in again and retry.");
+        if (persistedUser is null
+            || string.IsNullOrWhiteSpace(persistedUser.PasswordHash)
+            || passwordHasher.VerifyHashedPassword(
+                persistedUser,
+                persistedUser.PasswordHash,
+                request.NewPassword) == PasswordVerificationResult.Failed)
+        {
+            return new(false, "The password could not be verified after saving. Please retry.");
+        }
 
-        user.PasswordHash = newPasswordHash;
-        return new(true, "Password changed successfully.", MapUser(user));
+        return new(true, "Password changed and saved successfully.", MapUser(persistedUser));
     }
 
     public async Task<AuthMutationResponse> RequestEmailChangeAsync(
