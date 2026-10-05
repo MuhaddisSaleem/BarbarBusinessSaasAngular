@@ -31,6 +31,7 @@ export class AdminBookingsComponent implements OnInit {
   walkInServiceSearch = '';
   walkInServiceDropdownOpen = false;
   walkInServiceOverlayStyle: Record<string, string> = {};
+  walkInBarberOptions: WalkInBarberOption[] = [];
   private walkInServiceTriggerElement?: HTMLElement;
 
   editBarber = '';
@@ -255,7 +256,7 @@ export class AdminBookingsComponent implements OnInit {
       position: 'fixed',
       left: left + 'px',
       width: width + 'px',
-      zIndex: '5000',
+      zIndex: '10020',
       top: openAbove ? 'auto' : (rect.bottom + gap) + 'px',
       bottom: openAbove ? (window.innerHeight - rect.top + gap) + 'px' : 'auto'
     };
@@ -266,21 +267,25 @@ export class AdminBookingsComponent implements OnInit {
     return this.minutesToTime(now.getHours() * 60 + now.getMinutes());
   }
 
-  get walkInBarberOptions(): WalkInBarberOption[] {
-    const service = this.selectedWalkInService;
-    if (!service) return [];
+  get createBarbers(): string[] {
+    return this.walkInBarberOptions.map(option => option.name);
+  }
 
-    return this.bookingService.availableBarbersForWalkIn(
+  private refreshWalkInBarberOptions(): void {
+    const service = this.selectedWalkInService;
+
+    if (!service) {
+      this.walkInBarberOptions = [];
+      return;
+    }
+
+    this.walkInBarberOptions = this.bookingService.availableBarbersForWalkIn(
       service.name,
       this.todayKey,
       this.currentWalkInTime,
       service.duration,
       10
     );
-  }
-
-  get createBarbers(): string[] {
-    return this.walkInBarberOptions.map(option => option.name);
   }
 
   get selectedWalkInBarberOption(): WalkInBarberOption | undefined {
@@ -320,6 +325,7 @@ export class AdminBookingsComponent implements OnInit {
   onCreateServiceOrDateChange(): void {
     this.newBooking.barber = '';
     this.newBooking.time = this.currentWalkInTime;
+    this.refreshWalkInBarberOptions();
   }
 
   onEditDateChange(): void {
@@ -463,6 +469,7 @@ export class AdminBookingsComponent implements OnInit {
     this.feedbackMessage = '';
     this.walkInServiceSearch = '';
     this.walkInServiceDropdownOpen = false;
+    this.walkInBarberOptions = [];
     this.newBooking = {
       customerName: '',
       phone: '',
@@ -478,6 +485,7 @@ export class AdminBookingsComponent implements OnInit {
     this.walkInServiceDropdownOpen = false;
     this.walkInServiceSearch = '';
     this.walkInServiceOverlayStyle = {};
+    this.walkInBarberOptions = [];
     this.createModalOpen = false;
     this.walkInServiceTriggerElement = undefined;
   }
