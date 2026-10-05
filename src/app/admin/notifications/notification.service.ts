@@ -47,9 +47,11 @@ export class NotificationService {
   private hasNotificationBaseline = false;
   private knownNotificationIds = new Set<string>();
   private audioContext?: AudioContext;
+  private liveBookingAlertTimer?: number;
 
   loading = false;
   errorMessage = '';
+  liveBookingAlert: AdminNotification | null = null;
 
   constructor(
     private readonly api: NotificationApiService,
@@ -91,6 +93,11 @@ export class NotificationService {
         this.hasNotificationBaseline = false;
         this.knownNotificationIds.clear();
         this.items = [];
+        this.liveBookingAlert = null;
+        if (this.liveBookingAlertTimer !== undefined && typeof window !== 'undefined') {
+          window.clearTimeout(this.liveBookingAlertTimer);
+          this.liveBookingAlertTimer = undefined;
+        }
         this.loading = false;
         this.refreshInFlight = false;
         this.errorMessage = '';
@@ -272,7 +279,7 @@ export class NotificationService {
       return;
     }
 
-    const newOnlineBooking = persisted.some(item =>
+    const newOnlineBooking = persisted.find(item =>
       !this.knownNotificationIds.has(item.id)
       && item.unread
       && item.type === 'booking'
@@ -282,8 +289,35 @@ export class NotificationService {
     persisted.forEach(item => this.knownNotificationIds.add(item.id));
 
     if (newOnlineBooking) {
+      this.showLiveBookingAlert(newOnlineBooking);
       this.playBookingSound();
     }
+  }
+
+  dismissLiveBookingAlert(): void {
+    this.liveBookingAlert = null;
+
+    if (this.liveBookingAlertTimer !== undefined && typeof window !== 'undefined') {
+      window.clearTimeout(this.liveBookingAlertTimer);
+      this.liveBookingAlertTimer = undefined;
+    }
+  }
+
+  private showLiveBookingAlert(notification: AdminNotification): void {
+    this.liveBookingAlert = notification;
+
+    if (typeof window === 'undefined') return;
+
+    if (this.liveBookingAlertTimer !== undefined) {
+      window.clearTimeout(this.liveBookingAlertTimer);
+    }
+
+    this.liveBookingAlertTimer = window.setTimeout(() => {
+      if (this.liveBookingAlert?.id === notification.id) {
+        this.liveBookingAlert = null;
+      }
+      this.liveBookingAlertTimer = undefined;
+    }, 9000);
   }
 
   private unlockBookingSound(): void {
@@ -316,11 +350,20 @@ export class NotificationService {
       try {
         const start = context.currentTime;
 
-        // Strong three-tone alert so a new online booking is hard to miss.
-        // Final loudness still respects the browser/OS device volume.
-        this.playTone(context, 740, start, 0.18, 0.34);
-        this.playTone(context, 988, start + 0.19, 0.20, 0.31);
-        this.playTone(context, 1318, start + 0.40, 0.32, 0.28);
+        // Longer booking alert: two rising phrases over ~2.5 seconds.
+        // Final loudness still respects browser/OS device volume.
+        const notes = [
+          { f: 659, at: 0.00, d: 0.28, v: 0.42 },
+          { f: 880, at: 0.30, d: 0.30, v: 0.40 },
+          { f: 1175, at: 0.62, d: 0.42, v: 0.38 },
+          { f: 659, at: 1.18, d: 0.28, v: 0.42 },
+          { f: 880, at: 1.48, d: 0.30, v: 0.40 },
+          { f: 1318, at: 1.80, d: 0.62, v: 0.40 }
+        ];
+
+        notes.forEach(note =>
+          this.playTone(context, note.f, start + note.at, note.d, note.v)
+        );
       } catch {
         // Never allow notification audio to affect the admin UI.
       }
