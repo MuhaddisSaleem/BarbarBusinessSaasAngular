@@ -133,6 +133,92 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
 }
 
+
+
+.public-admin-actions {
+  gap: 10px;
+}
+
+.public-notification-button {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(233,182,84,.5);
+  border-radius: 10px;
+  background: rgba(233,182,84,.07);
+  color: #e9b654;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(0,0,0,.18);
+  transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.public-notification-button > i {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.public-notification-button:hover,
+.public-notification-button:focus {
+  border-color: #e9b654;
+  background: rgba(233,182,84,.13);
+  color: #ffd172;
+  transform: translateY(-1px);
+}
+
+.public-notification-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #070b0d;
+  border-radius: 999px;
+  background: #e04646;
+  color: #fff;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  box-shadow: 0 5px 14px rgba(224,70,70,.28);
+}
+
+.public-notification-badge.empty {
+  background: #394248;
+  color: #c6cccf;
+  box-shadow: none;
+}
+
+.dashboard-button {
+  min-width: 145px;
+  min-height: 42px;
+  gap: 8px;
+  padding: 11px 16px;
+  border: 1px solid #efc867;
+  border-radius: 8px;
+  background: #e9b654;
+  color: #111;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(0,0,0,.22);
+}
+
+.dashboard-button:hover,
+.dashboard-button:focus {
+  color: #111;
+  background: #e9b654;
+}
+
+.dashboard-button i {
+  font-size: 12px;
+}
+
 .navbar-toggler { color: #e9b654; }
 .navbar-toggler:focus { box-shadow: none; }
 .navbar-toggler-icon { width: 25px; height: 25px; }
@@ -169,6 +255,14 @@
 
   .main-nav .nav-link::after { display: none; }
   .book-button { width: 100%; }
+
+  .public-admin-actions {
+    width: 100%;
+  }
+
+  .dashboard-button {
+    flex: 1 1 auto;
+  }
 }
 
 @media (max-width: 760px) {
