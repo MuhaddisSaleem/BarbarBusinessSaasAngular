@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
@@ -28,6 +28,8 @@ export class AdminBookingsComponent implements OnInit {
   cancelDialogOpen = false;
   feedbackMessage = '';
   feedbackType: 'success' | 'error' = 'success';
+  walkInServiceSearch = '';
+  walkInServiceDropdownOpen = false;
 
   editBarber = '';
   editDate = '';
@@ -137,8 +139,82 @@ export class AdminBookingsComponent implements OnInit {
     );
   }
 
+  get selectedWalkInServiceNames(): string[] {
+    return this.newBooking.service
+      .split(',')
+      .map(name => name.trim())
+      .filter(Boolean);
+  }
+
+  get selectedWalkInServices() {
+    const selected = new Set(this.selectedWalkInServiceNames);
+    return this.bookingService.services.filter(service => selected.has(service.name));
+  }
+
   get selectedWalkInService() {
-    return this.bookingService.services.find(service => service.name === this.newBooking.service);
+    const services = this.selectedWalkInServices;
+    if (!services.length) return undefined;
+
+    return {
+      name: services.map(service => service.name).join(', '),
+      duration: services.reduce((total, service) => total + service.duration, 0),
+      amount: services.reduce((total, service) => total + service.amount, 0)
+    };
+  }
+
+  get filteredWalkInServices() {
+    const term = this.walkInServiceSearch.trim().toLowerCase();
+    if (!term) return this.bookingService.services;
+
+    return this.bookingService.services.filter(service =>
+      service.name.toLowerCase().includes(term)
+    );
+  }
+
+  get walkInServiceButtonLabel(): string {
+    const selected = this.selectedWalkInServiceNames;
+    if (!selected.length) return 'Select services';
+    if (selected.length === 1) return selected[0];
+    return selected.length + ' services selected';
+  }
+
+  isWalkInServiceSelected(serviceName: string): boolean {
+    return this.selectedWalkInServiceNames.includes(serviceName);
+  }
+
+  toggleWalkInServiceDropdown(event: Event): void {
+    event.stopPropagation();
+    this.walkInServiceDropdownOpen = !this.walkInServiceDropdownOpen;
+
+    if (!this.walkInServiceDropdownOpen) {
+      this.walkInServiceSearch = '';
+    }
+  }
+
+  toggleWalkInService(serviceName: string, event: Event): void {
+    event.stopPropagation();
+
+    const selected = new Set(this.selectedWalkInServiceNames);
+
+    if (selected.has(serviceName)) {
+      selected.delete(serviceName);
+    } else {
+      selected.add(serviceName);
+    }
+
+    this.newBooking.service = this.bookingService.services
+      .filter(service => selected.has(service.name))
+      .map(service => service.name)
+      .join(', ');
+
+    this.onCreateServiceOrDateChange();
+  }
+
+  @HostListener('document:click')
+  closeWalkInServiceDropdown(): void {
+    if (!this.walkInServiceDropdownOpen) return;
+    this.walkInServiceDropdownOpen = false;
+    this.walkInServiceSearch = '';
   }
 
   get currentWalkInTime(): string {
@@ -341,6 +417,8 @@ export class AdminBookingsComponent implements OnInit {
   openCreateModal(): void {
     this.createModalOpen = true;
     this.feedbackMessage = '';
+    this.walkInServiceSearch = '';
+    this.walkInServiceDropdownOpen = false;
     this.newBooking = {
       customerName: '',
       phone: '',
@@ -354,6 +432,8 @@ export class AdminBookingsComponent implements OnInit {
 
   closeCreateModal(): void {
     this.createModalOpen = false;
+    this.walkInServiceSearch = '';
+    this.walkInServiceDropdownOpen = false;
   }
 
   get canCreateWalkIn(): boolean {
