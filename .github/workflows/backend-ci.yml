@@ -12,7 +12,6 @@ on:
       - main
       - codex/backend-database-setup
       - The_trim_town
-      - tt02-booking-server-totals-staging
     paths:
       - "backend/**"
       - ".config/dotnet-tools.json"
