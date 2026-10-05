@@ -38,8 +38,15 @@ export interface CreateNotificationInput {
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private readonly maxItems = 100;
+  private readonly liveRefreshMs = 5000;
   private items: AdminNotification[] = [];
   private localCounter = 0;
+  private liveRefreshTimer?: number;
+  private refreshInFlight = false;
+  private activeUserId = '';
+  private hasNotificationBaseline = false;
+  private knownNotificationIds = new Set<string>();
+  private audioContext?: AudioContext;
 
   loading = false;
   errorMessage = '';
@@ -50,17 +57,42 @@ export class NotificationService {
   ) {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('royal-barbers.admin-notifications.v1');
+
+      // Browsers may block sound until the page has received a user gesture.
+      // Quietly prepare the audio context on normal admin interaction.
+      const unlockAudio = () => this.unlockBookingSound();
+      window.addEventListener('pointerdown', unlockAudio, { passive: true });
+      window.addEventListener('keydown', unlockAudio);
+
       window.addEventListener('focus', () => {
-        if (this.auth.isAuthenticated()) this.refresh();
+        if (this.auth.isAuthenticated()) this.refresh(true);
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && this.auth.isAuthenticated()) {
+          this.refresh(true);
+        }
       });
     }
 
     this.auth.currentUser$.subscribe(user => {
       if (user && this.auth.isAuthenticated()) {
+        if (this.activeUserId !== user.id) {
+          this.activeUserId = user.id;
+          this.hasNotificationBaseline = false;
+          this.knownNotificationIds.clear();
+        }
+
         this.refresh();
+        this.startLiveUpdates();
       } else {
+        this.stopLiveUpdates();
+        this.activeUserId = '';
+        this.hasNotificationBaseline = false;
+        this.knownNotificationIds.clear();
         this.items = [];
         this.loading = false;
+        this.refreshInFlight = false;
         this.errorMessage = '';
       }
     });
@@ -78,26 +110,36 @@ export class NotificationService {
     return this.items.slice(0, 5);
   }
 
-  refresh(): void {
+  refresh(silent = false): void {
     if (!this.auth.isAuthenticated()) {
       this.items = [];
       return;
     }
 
-    this.loading = true;
-    this.errorMessage = '';
+    if (this.refreshInFlight) return;
+
+    this.refreshInFlight = true;
+    if (!silent) {
+      this.loading = true;
+      this.errorMessage = '';
+    }
 
     this.api.getAll().subscribe({
       next: notifications => {
-        this.items = (Array.isArray(notifications) ? notifications : [])
+        const nextItems = (Array.isArray(notifications) ? notifications : [])
           .map(item => this.normalize(item))
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
           .slice(0, this.maxItems);
+
+        this.handleLiveNotifications(nextItems);
+        this.items = nextItems;
+        this.refreshInFlight = false;
         this.loading = false;
       },
       error: () => {
+        this.refreshInFlight = false;
         this.loading = false;
-        this.errorMessage = 'Could not load notifications.';
+        if (!silent) this.errorMessage = 'Could not load notifications.';
       }
     });
   }
@@ -198,6 +240,119 @@ export class NotificationService {
         this.errorMessage = 'Could not clear notifications.';
       }
     });
+  }
+
+  private startLiveUpdates(): void {
+    if (typeof window === 'undefined' || this.liveRefreshTimer !== undefined) return;
+
+    this.liveRefreshTimer = window.setInterval(() => {
+      if (
+        this.auth.isAuthenticated()
+        && document.visibilityState === 'visible'
+      ) {
+        this.refresh(true);
+      }
+    }, this.liveRefreshMs);
+  }
+
+  private stopLiveUpdates(): void {
+    if (typeof window === 'undefined' || this.liveRefreshTimer === undefined) return;
+    window.clearInterval(this.liveRefreshTimer);
+    this.liveRefreshTimer = undefined;
+  }
+
+  private handleLiveNotifications(nextItems: AdminNotification[]): void {
+    const persisted = nextItems.filter(item => !item.id.startsWith('local-'));
+
+    // The first successful fetch is only a baseline. Existing unread items should
+    // show their badge but must never make noise just because admin logged in/refreshed.
+    if (!this.hasNotificationBaseline) {
+      this.knownNotificationIds = new Set(persisted.map(item => item.id));
+      this.hasNotificationBaseline = true;
+      return;
+    }
+
+    const newOnlineBooking = persisted.some(item =>
+      !this.knownNotificationIds.has(item.id)
+      && item.unread
+      && item.type === 'booking'
+      && /^(New online booking|New group booking)$/i.test(item.title.trim())
+    );
+
+    persisted.forEach(item => this.knownNotificationIds.add(item.id));
+
+    if (newOnlineBooking) {
+      this.playBookingSound();
+    }
+  }
+
+  private unlockBookingSound(): void {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const AudioContextCtor = window.AudioContext
+        || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+      if (!AudioContextCtor) return;
+
+      this.audioContext ??= new AudioContextCtor();
+
+      if (this.audioContext.state === 'suspended') {
+        void this.audioContext.resume().catch(() => undefined);
+      }
+    } catch {
+      // Notification badge still works if the browser/device does not support audio.
+    }
+  }
+
+  private playBookingSound(): void {
+    if (typeof window === 'undefined') return;
+
+    this.unlockBookingSound();
+    const context = this.audioContext;
+    if (!context) return;
+
+    const play = () => {
+      try {
+        const start = context.currentTime;
+
+        this.playTone(context, 880, start, 0.16, 0.11);
+        this.playTone(context, 1175, start + 0.17, 0.24, 0.09);
+      } catch {
+        // Never allow notification audio to affect the admin UI.
+      }
+    };
+
+    if (context.state === 'suspended') {
+      void context.resume().then(play).catch(() => undefined);
+      return;
+    }
+
+    play();
+  }
+
+  private playTone(
+    context: AudioContext,
+    frequency: number,
+    start: number,
+    duration: number,
+    volume: number
+  ): void {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, start);
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
   }
 
   private createOptimistic(input: CreateNotificationInput): AdminNotification {
