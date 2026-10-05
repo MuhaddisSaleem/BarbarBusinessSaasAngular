@@ -4,7 +4,7 @@
   <div class="footer-shell">
     <div class="footer-grid">
       <section class="footer-column footer-brand" aria-label="About The Trim Town">
-        <a class="footer-logo" [routerLink]="['/']" fragment="home" [attr.aria-label]="businessName + ' home'">
+        <a class="footer-logo" [routerLink]="['/']" [attr.aria-label]="businessName + ' home'">
           <span class="footer-logo-mark" aria-hidden="true">
             <img *ngIf="brandingMedia.logoUrl(); else defaultFooterLogo" [src]="brandingMedia.logoUrl()" alt="">
             <ng-template #defaultFooterLogo>
@@ -66,8 +66,8 @@
         <h3>Site Links</h3>
 
         <nav class="footer-nav" aria-label="Footer navigation">
-          <a [routerLink]="['/']" fragment="home"><i class="bi bi-arrow-up-right"></i>Home</a>
-          <a [routerLink]="['/']" fragment="about"><i class="bi bi-arrow-up-right"></i>About</a>
+          <a [routerLink]="['/']"><i class="bi bi-arrow-up-right"></i>Home</a>
+          <a [routerLink]="['/about']"><i class="bi bi-arrow-up-right"></i>About</a>
           <a [routerLink]="['/']" fragment="services"><i class="bi bi-arrow-up-right"></i>Services</a>
           <a [routerLink]="['/']" fragment="booking"><i class="bi bi-arrow-up-right"></i>Booking</a>
           <a [routerLink]="['/gallery']"><i class="bi bi-arrow-up-right"></i>Gallery</a>
