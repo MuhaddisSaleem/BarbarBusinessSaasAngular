@@ -96,9 +96,20 @@ public sealed class AuthApplicationService(
         if (samePassword != PasswordVerificationResult.Failed)
             return new(false, "Choose a new password that is different from your current password.");
 
-        user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
-        await db.SaveChangesAsync(cancellationToken);
+        var newPasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
 
+        var updatedRows = await db.SalonUsers
+            .Where(x => x.Id == user.Id && x.IsActive)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(x => x.PasswordHash, newPasswordHash)
+                    .SetProperty(x => x.UpdatedAtUtc, DateTimeOffset.UtcNow),
+                cancellationToken);
+
+        if (updatedRows != 1)
+            return new(false, "The password could not be changed. Please sign in again and retry.");
+
+        user.PasswordHash = newPasswordHash;
         return new(true, "Password changed successfully.", MapUser(user));
     }
 
