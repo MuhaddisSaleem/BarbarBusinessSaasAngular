@@ -630,12 +630,62 @@ let browser, activePage;
       await timezoneForm.waitFor({state:'hidden'});
     };
     await verifySalonWalkInClock();
-    const cdp=await context.newCDPSession(page);
-    await cdp.send('Emulation.setTimezoneOverride',{timezoneId:''});
-    await cdp.send('Emulation.setTimezoneOverride',{timezoneId:'America/New_York'});
-    await verifySalonWalkInClock();
-    await cdp.send('Emulation.setTimezoneOverride',{timezoneId:''});
-    await cdp.send('Emulation.setTimezoneOverride',{timezoneId:'UTC'});
+
+    const nyContext=await browser.newContext({viewport:{width,height:1000},timezoneId:'America/New_York'});
+    await nyContext.route(/\/api\//,async nyRoute=>{
+      const req=nyRoute.request();
+      const pathname=new URL(req.url()).pathname;
+      if(req.method()==='OPTIONS')return await nyRoute.fulfill(apiResponse({}));
+      if(pathname==='/api/auth/me'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse({
+        id:'00000000-0000-0000-0000-000000000001',fullName:'QA Administrator',email:'qa-admin@example.test',role:'Owner'
+      }));
+      if(pathname==='/api/settings'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse(apiSettings));
+      if(pathname==='/api/services'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse(apiServices));
+      if(pathname==='/api/barbers'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse(apiBarbers));
+      if(pathname==='/api/bookings'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse(apiBookings));
+      if(pathname==='/api/bookings/busy-slots'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse(
+        apiBookings.filter(item=>item.status!=='Cancelled').map(item=>({
+          id:item.id,barber:item.barber,date:item.date,time:item.time,duration:item.duration,status:item.status
+        }))
+      ));
+      if(pathname==='/api/service-categories'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse([{id:1,name:'Haircut',status:'Active',sortOrder:0}]));
+      if(pathname==='/api/branding'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse(apiBranding));
+      if(pathname==='/api/notifications'&&req.method()==='GET')return await nyRoute.fulfill(apiResponse([]));
+      if(pathname==='/api/bootstrap/legacy-catalog'&&req.method()==='POST')return await nyRoute.fulfill(apiResponse({success:true,imported:false}));
+      return await nyRoute.fulfill(apiResponse({success:false,message:'Unhandled New York QA route: '+req.method()+' '+pathname},404));
+    });
+    const nyPage=await nyContext.newPage();
+    activePage=nyPage;
+    nyPage.setDefaultTimeout(15000);
+    await nyPage.clock.install({time:new Date('2026-09-28T11:30:00Z')});
+    await nyPage.addInitScript(()=>{
+      localStorage.setItem('adminToken','qa-admin-token');
+      localStorage.setItem('adminTokenExpiresAt','2099-12-31T23:59:59.000Z');
+      localStorage.setItem('adminUser',JSON.stringify({
+        id:'00000000-0000-0000-0000-000000000001',
+        fullName:'QA Administrator',
+        email:'qa-admin@example.test',
+        role:'Owner'
+      }));
+      localStorage.setItem('qa-seeded','1');
+    });
+    await nyPage.goto('http://127.0.0.1:4173/admin/bookings');
+    await nyPage.locator('app-admin-shell').waitFor();
+    await nyPage.locator('.create-booking-btn').click();
+    const nyForm=nyPage.locator('.create-modal');
+    await nyForm.locator('.walkin-service-trigger').click();
+    await nyPage.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();
+    await nyPage.locator('.walkin-service-overlay-backdrop').click({position:{x:5,y:5}});
+    const nyBarberOption=nyForm.locator('select option').filter({hasText:'Second Barber'});
+    await nyBarberOption.waitFor({state:'attached'});
+    assert.match((await nyBarberOption.textContent())||'',/Available now/);
+    await nyForm.locator('select').selectOption('Second Barber');
+    const nyClockRow=nyForm.locator('.walkin-now-row');
+    await nyClockRow.filter({hasText:'starts at'}).waitFor();
+    assert.match(await nyClockRow.innerText(),/28 Sep 2026/);
+    assert.match(await nyClockRow.innerText(),/4:30 PM/);
+    await nyContext.close();
+    activePage=page;
     scenarios++;
 
     // Customer's persisted booking overlaps Falak. Make Second Barber busy until 4:55 PM too,
