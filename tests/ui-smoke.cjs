@@ -30,6 +30,12 @@ let browser, activePage;
     let apiBookings=[];
     let apiServices=JSON.parse(JSON.stringify(seed['royal-barbers.admin-services.v1']));
     let apiBarbers=JSON.parse(JSON.stringify(seed['royal-barbers.admin-barbers.v1']));
+    let apiBranding=[];
+    let apiNotifications=[];
+    let bookingGetDelayMs=0;
+    let brandVersion=0;
+    let nextNotificationId=1;
+    const qaPixelPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQmcAAAAASUVORK5CYII=','base64');
     let apiSettings={
       businessName:'Royal Barbers',businessPhone:'+92 300 1234567',whatsappNumber:'+92 300 1234567',
       email:'owner@royalbarbers.local',address:'',city:'',currency:'PKR',timezone:'Asia/Karachi',
@@ -56,7 +62,9 @@ let browser, activePage;
     });
     const requestBody=req=>{
       const raw=req.postData();
-      return raw ? JSON.parse(raw) : null;
+      if(!raw)return null;
+      const contentType=String(req.headers()['content-type']||'').toLowerCase();
+      return contentType.includes('application/json') ? JSON.parse(raw) : raw;
     };
     const qaMinutes=value=>{
       const [clock,modifier]=String(value||'').split(' ');
@@ -223,7 +231,25 @@ let browser, activePage;
         }
 
         if(pathname==='/api/service-categories'&&req.method()==='GET')return await route.fulfill(apiResponse([{id:1,name:'Haircut',status:'Active',sortOrder:0}]));
-        if(pathname==='/api/branding'&&req.method()==='GET')return await route.fulfill(apiResponse([]));
+        if(pathname==='/api/branding'&&req.method()==='GET')return await route.fulfill(apiResponse(apiBranding));
+        const brandingMatch=pathname.match(/^\/api\/branding\/(logo|hero)$/);
+        if(brandingMatch){
+          const key=brandingMatch[1];
+          const existing=apiBranding.find(item=>item.key===key);
+          if(req.method()==='GET'){
+            if(!existing)return await route.fulfill(apiResponse({success:false,message:'Branding asset not found.'},404));
+            return await route.fulfill({status:200,contentType:existing.contentType,body:qaPixelPng});
+          }
+          if(req.method()==='PUT'){
+            const item={key,contentType:'image/png',url:`/api/branding/${key}?v=${++brandVersion}`};
+            apiBranding=[item,...apiBranding.filter(asset=>asset.key!==key)];
+            return await route.fulfill(apiResponse(item));
+          }
+          if(req.method()==='DELETE'){
+            apiBranding=apiBranding.filter(asset=>asset.key!==key);
+            return await route.fulfill(apiResponse({success:true}));
+          }
+        }
         if(pathname==='/api/services'&&req.method()==='GET')return await route.fulfill(apiResponse(apiServices));
         if(pathname==='/api/services'&&req.method()==='POST'){
           const item={...body,id:nextServiceId++};
@@ -306,6 +332,38 @@ let browser, activePage;
         if(pathname==='/api/settings/reset'&&req.method()==='POST'){
           apiSettings=JSON.parse(JSON.stringify(defaultApiSettings));
           return await route.fulfill(apiResponse({success:true,message:'Settings reset to defaults.',item:apiSettings}));
+        }
+
+        if(pathname==='/api/notifications'&&req.method()==='GET'){
+          return await route.fulfill(apiResponse(apiNotifications));
+        }
+        if(pathname==='/api/notifications'&&req.method()==='POST'){
+          const notification={
+            id:String(nextNotificationId++),
+            type:body.type||'system',
+            title:body.title||'Notification',
+            message:body.message||'',
+            createdAt:'2026-09-28T11:31:00.000Z',
+            icon:body.icon||'bi-bell',
+            unread:true,
+            url:body.url||null
+          };
+          apiNotifications=[notification,...apiNotifications];
+          return await route.fulfill(apiResponse({success:true,message:'Notification saved.',notification}));
+        }
+        if(pathname==='/api/notifications/read-all'&&req.method()==='PATCH'){
+          apiNotifications=apiNotifications.map(item=>({...item,unread:false}));
+          return await route.fulfill({status:204,body:''});
+        }
+        const notificationMatch=pathname.match(/^\/api\/notifications\/([^/]+)\/read$/);
+        if(notificationMatch&&req.method()==='PATCH'){
+          const id=decodeURIComponent(notificationMatch[1]);
+          apiNotifications=apiNotifications.map(item=>item.id===id?{...item,unread:false}:item);
+          return await route.fulfill({status:204,body:''});
+        }
+        if(pathname==='/api/notifications'&&req.method()==='DELETE'){
+          apiNotifications=[];
+          return await route.fulfill({status:204,body:''});
         }
 
         if(req.method()==='GET'&&pathname==='/api/dashboard'){
@@ -405,7 +463,10 @@ let browser, activePage;
             eligibleBarbers:eligible.map(x=>x.name)
           }));
         }
-        if(req.method()==='GET'&&pathname==='/api/bookings')return await route.fulfill(apiResponse(apiBookings));
+        if(req.method()==='GET'&&pathname==='/api/bookings'){
+          if(bookingGetDelayMs)await new Promise(resolve=>setTimeout(resolve,bookingGetDelayMs));
+          return await route.fulfill(apiResponse(apiBookings));
+        }
         if(req.method()==='POST'&&pathname==='/api/bookings/online'){
           const items=body;
           if(!Array.isArray(items))throw new Error('Online booking payload is not an array');
@@ -475,7 +536,13 @@ let browser, activePage;
       },selector);
     }
     await page.locator('#service-section').scrollIntoViewIfNeeded();
-    assert.equal(await page.locator('.booking-reveal-pending').count(),0,'Revealed sections must stay visible');
+    for(const selector of revealSections){
+      assert.equal(
+        await page.locator(selector).evaluate(element=>element.classList.contains('booking-reveal-pending')),
+        false,
+        selector+' must stay revealed after scroll-back'
+      );
+    }
     const imageFit=await page.locator('.salon-services-grid .service-image img').first().evaluate(img=>{
       const box=img.getBoundingClientRect();
       return {ratio:box.width/box.height,fit:getComputedStyle(img).objectFit};
@@ -508,6 +575,65 @@ let browser, activePage;
     assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-bookings.v1')),null,'Bookings must not be persisted to localStorage when API mode is active');
     assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-services.v1')),null,'Services must be migrated out of localStorage');
     assert.equal(await page.evaluate(()=>localStorage.getItem('royal-barbers.admin-barbers.v1')),null,'Barbers must be migrated out of localStorage');scenarios++;
+
+    // TT-05: a delayed booking payload must still honor the deep link, and a
+    // notification clicked while the Bookings component is already mounted must
+    // switch the open drawer to the newly requested booking.
+    const deepLinkFirst=apiBookings[0];
+    const deepLinkSecond={
+      id:850,code:'RB-LINK',customerName:'Deep Link QA',phone:'+92 300 8500000',
+      barber:'Second Barber',service:'Haircut',duration:40,date:'2026-09-28',time:'6:20 PM',
+      amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'
+    };
+    apiBookings.push(deepLinkSecond);
+    nextBookingId=Math.max(nextBookingId,851);
+    apiNotifications=[
+      {id:'qa-link-2',type:'booking',title:'Open second booking',message:deepLinkSecond.code,createdAt:'2026-09-28T11:32:00.000Z',icon:'bi-calendar2-check',unread:true,url:'/admin/bookings?booking='+deepLinkSecond.id},
+      {id:'qa-link-1',type:'booking',title:'Open first booking',message:deepLinkFirst.code,createdAt:'2026-09-28T11:31:00.000Z',icon:'bi-calendar2-check',unread:true,url:'/admin/bookings?booking='+deepLinkFirst.id}
+    ];
+    bookingGetDelayMs=150;
+    await goto('/admin/bookings?booking='+deepLinkFirst.id);
+    bookingGetDelayMs=0;
+    await page.locator('.booking-drawer.open h3').filter({hasText:deepLinkFirst.code}).waitFor();
+    await page.getByRole('button',{name:'Notifications'}).click();
+    await page.locator('.notification-preview').filter({hasText:'Open second booking'}).click();
+    await page.waitForURL('**/admin/bookings?booking='+deepLinkSecond.id);
+    await page.locator('.booking-drawer.open h3').filter({hasText:deepLinkSecond.code}).waitFor();
+    assert.equal(
+      (await page.locator('.booking-drawer.open h3').innerText()).trim(),
+      deepLinkSecond.code,
+      'Notification deep link must update the already-mounted booking drawer'
+    );
+    apiNotifications=[];
+    apiBookings=apiBookings.filter(item=>item.id!==deepLinkSecond.id);
+    scenarios++;
+
+    // TT-10: the walk-in date/time must follow the salon timezone, not the
+    // browser timezone. Verify the same Karachi wall clock from UTC and New York.
+    const verifySalonWalkInClock=async()=>{
+      await goto('/admin/bookings');
+      await page.locator('.create-booking-btn').click();
+      const timezoneForm=page.locator('.create-modal');
+      await timezoneForm.locator('.walkin-service-trigger').click();
+      await page.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();
+      await timezoneForm.locator('.walkin-service-trigger').click();
+      const secondBarberOption=timezoneForm.locator('select option').filter({hasText:'Second Barber'});
+      await secondBarberOption.waitFor();
+      assert.match(await secondBarberOption.innerText(),/Available now/);
+      await timezoneForm.locator('select').selectOption('Second Barber');
+      await timezoneForm.locator('.walkin-now-row').filter({hasText:'starts at'}).waitFor();
+      assert.match(await timezoneForm.locator('.walkin-now-row').innerText(),/28 Sep 2026/);
+      assert.match(await timezoneForm.locator('.walkin-now-row').innerText(),/4:30 PM/);
+      await timezoneForm.locator('.icon-btn').click();
+      await timezoneForm.waitFor({state:'hidden'});
+    };
+    await verifySalonWalkInClock();
+    const cdp=await context.newCDPSession(page);
+    await cdp.send('Emulation.setTimezoneOverride',{timezoneId:'America/New_York'});
+    await verifySalonWalkInClock();
+    await cdp.send('Emulation.setTimezoneOverride',{timezoneId:'UTC'});
+    scenarios++;
+
     // Customer's persisted booking overlaps Falak. Make Second Barber busy until 4:55 PM too,
     // so all eligible barbers are busy for more than ten minutes and the next-available fallback is exercised.
     apiBookings.push({id:900,code:'RB-WAIT',customerName:'Existing Customer',phone:'+92 300 0000000',barber:'Second Barber',service:'Haircut',duration:55,date:'2026-09-28',time:'4:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'});
@@ -533,6 +659,7 @@ let browser, activePage;
     await page.locator('.home-service-selector').click();
     await page.locator('.select-salon-service-btn').waitFor({state:'visible'});
     await page.locator('.home-catalog-motion.expanded').waitFor();
+    await page.waitForFunction(()=>document.querySelectorAll('.home-catalog-motion.expanded .booking-reveal-pending').length===0);
     assert.equal(await page.locator('.salon-catalog-motion.expanded').count(),0,'Salon service catalog must be collapsed while Home Service is active');
     assert.equal(await page.locator('.salon-choice-action-panel.visible .booking-for-toggle').count(),0,'Just Me / group choices must be visually hidden while Home Service is active');
     assert.equal(await page.locator('.home-catalog-motion.expanded .home-service-content').count(),1,'Home Service catalog must be expanded when Home Service is active');
@@ -722,6 +849,46 @@ let browser, activePage;
     assert.equal(apiSettings.sendWhatsappConfirmation,false);
     assert.equal(apiSettings.sendSmsFallback,false);
     assert.equal(apiSettings.sendAppointmentReminder,false);
+
+    // TT-04: publish logo + hero through the shared branding API, then prove a
+    // completely fresh browser context receives both assets without local state.
+    const brandingCards=page.locator('.branding-media-column .media-setting');
+    await brandingCards.nth(0).locator('input[type=file]').setInputFiles({
+      name:'qa-logo.png',mimeType:'image/png',buffer:await photo('#315868')
+    });
+    await page.locator('.logo-preview img').waitFor();
+    await brandingCards.nth(1).locator('input[type=file]').setInputFiles({
+      name:'qa-hero.png',mimeType:'image/png',buffer:await photo('#e9b654')
+    });
+    await page.locator('.hero-media-preview img').waitFor();
+    assert.deepEqual(apiBranding.map(item=>item.key).sort(),['hero','logo']);
+
+    const freshContext=await browser.newContext({viewport:{width,height:1000},timezoneId:'UTC'});
+    await freshContext.route(/\/api\//,async freshRoute=>{
+      const req=freshRoute.request();
+      const pathname=new URL(req.url()).pathname;
+      if(pathname==='/api/branding'&&req.method()==='GET')return await freshRoute.fulfill(apiResponse(apiBranding));
+      const brandingAsset=pathname.match(/^\/api\/branding\/(logo|hero)$/);
+      if(brandingAsset&&req.method()==='GET'){
+        const asset=apiBranding.find(item=>item.key===brandingAsset[1]);
+        if(!asset)return await freshRoute.fulfill(apiResponse({success:false},404));
+        return await freshRoute.fulfill({status:200,contentType:asset.contentType,body:qaPixelPng});
+      }
+      if(pathname==='/api/settings'&&req.method()==='GET')return await freshRoute.fulfill(apiResponse(apiSettings));
+      if(pathname==='/api/services'&&req.method()==='GET')return await freshRoute.fulfill(apiResponse(apiServices));
+      if(pathname==='/api/barbers'&&req.method()==='GET')return await freshRoute.fulfill(apiResponse(apiBarbers));
+      if(pathname==='/api/service-categories'&&req.method()==='GET')return await freshRoute.fulfill(apiResponse([{id:1,name:'Haircut',status:'Active',sortOrder:0}]));
+      if(pathname==='/api/bookings/busy-slots'&&req.method()==='GET')return await freshRoute.fulfill(apiResponse([]));
+      if(pathname==='/api/bootstrap/legacy-catalog'&&req.method()==='POST')return await freshRoute.fulfill(apiResponse({success:true,imported:false}));
+      return await freshRoute.fulfill(apiResponse({success:false,message:'Unhandled fresh-client route: '+req.method()+' '+pathname},404));
+    });
+    const freshPage=await freshContext.newPage();
+    await freshPage.goto('http://127.0.0.1:4173/');
+    await freshPage.locator('app-booking').waitFor();
+    await freshPage.locator('.public-header .brand-mark img[src*="/api/branding/logo"]').waitFor();
+    await freshPage.locator('.royal-hero .hero-media-image[src*="/api/branding/hero"]').waitFor();
+    await freshContext.close();
+    scenarios++;
 
     await page.reload();
     await page.locator('app-admin-shell').waitFor();
