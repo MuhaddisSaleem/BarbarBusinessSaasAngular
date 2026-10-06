@@ -595,7 +595,7 @@ let browser, activePage;
     await goto('/admin/bookings?booking='+deepLinkFirst.id);
     bookingGetDelayMs=0;
     await page.locator('.booking-drawer.open h3').filter({hasText:deepLinkFirst.code}).waitFor();
-    await page.getByRole('button',{name:'Notifications'}).click();
+    await page.getByRole('button',{name:'Notifications',exact:true}).click();
     await page.locator('.notification-preview').filter({hasText:'Open second booking'}).click();
     await page.waitForURL('**/admin/bookings?booking='+deepLinkSecond.id);
     await page.locator('.booking-drawer.open h3').filter({hasText:deepLinkSecond.code}).waitFor();
