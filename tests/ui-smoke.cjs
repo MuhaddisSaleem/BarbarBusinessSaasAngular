@@ -631,8 +631,10 @@ let browser, activePage;
     };
     await verifySalonWalkInClock();
     const cdp=await context.newCDPSession(page);
+    await cdp.send('Emulation.setTimezoneOverride',{timezoneId:''});
     await cdp.send('Emulation.setTimezoneOverride',{timezoneId:'America/New_York'});
     await verifySalonWalkInClock();
+    await cdp.send('Emulation.setTimezoneOverride',{timezoneId:''});
     await cdp.send('Emulation.setTimezoneOverride',{timezoneId:'UTC'});
     scenarios++;
 
