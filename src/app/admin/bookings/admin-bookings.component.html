@@ -404,7 +404,7 @@
         <span>No eligible barber has enough available time left today for this service.</span>
       </div>
 
-      <button type="button" class="submit-booking-btn" [disabled]="!canCreateWalkIn" (click)="createBooking()">
+      <button type="button" class="submit-booking-btn" [disabled]="creatingBooking || !canCreateWalkIn" (click)="createBooking()">
         <i class="bi bi-person-check"></i>
         Confirm Walk-in
       </button>

@@ -7,6 +7,7 @@ namespace BarberFlow.Api.Data;
 public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> options)
     : DbContext(options)
 {
+    public DbSet<BrandingAsset> BrandingAssets => Set<BrandingAsset>();
     public DbSet<Salon> Salons => Set<Salon>();
     public DbSet<SalonSettings> SalonSettings => Set<SalonSettings>();
     public DbSet<SalonUser> SalonUsers => Set<SalonUser>();
@@ -29,6 +30,15 @@ public sealed class BarberFlowDbContext(DbContextOptions<BarberFlowDbContext> op
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<BrandingAsset>(entity =>
+        {
+            entity.ToTable("BrandingAssets");
+            entity.HasKey(x => new { x.SalonId, x.Key });
+            entity.Property(x => x.Key).HasMaxLength(10);
+            entity.Property(x => x.ContentType).HasMaxLength(50);
+            entity.Property(x => x.Data).IsRequired();
+            entity.HasOne<Salon>().WithMany().HasForeignKey(x => x.SalonId).OnDelete(DeleteBehavior.Cascade);
+        });
         ConfigureSalon(modelBuilder);
         ConfigureSalonUser(modelBuilder);
         ConfigureAccountVerificationCode(modelBuilder);

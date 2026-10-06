@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus, WalkInBarberOption } from './admin-booking.service';
@@ -15,7 +16,10 @@ type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
   templateUrl: './admin-bookings.component.html',
   styleUrl: './admin-bookings.component.scss'
 })
-export class AdminBookingsComponent implements OnInit {
+export class AdminBookingsComponent implements OnInit, OnDestroy {
+  private readonly subscriptions = new Subscription();
+  private pendingBookingId: number | null = null;
+  creatingBooking = false;
   activeTab: BookingTab = 'today';
   searchTerm = '';
   selectedBarber = 'All';
@@ -57,34 +61,45 @@ export class AdminBookingsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const bookingId = Number(this.route.snapshot.queryParamMap.get('booking'));
-    const customer = this.route.snapshot.queryParamMap.get('customer');
+    this.subscriptions.add(this.route.queryParamMap.subscribe(params => {
+      const customer = params.get('customer');
+      if (customer) {
+        this.searchTerm = customer;
+        this.activeTab = 'all';
+      }
+      const id = Number(params.get('booking'));
+      this.pendingBookingId = Number.isSafeInteger(id) && id > 0 ? id : null;
+      this.openPendingBooking();
+    }));
+    this.subscriptions.add(this.bookingService.changes$.subscribe(() => this.openPendingBooking()));
+  }
 
-    if (customer) {
-      this.searchTerm = customer;
-      this.activeTab = 'all';
-    }
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
 
-    if (bookingId) {
-      const booking = this.bookingService.getById(bookingId);
-      if (booking) this.openBooking(booking);
-    }
+  private openPendingBooking(): void {
+    if (this.pendingBookingId === null) return;
+    const booking = this.bookingService.getById(this.pendingBookingId);
+    if (!booking) return;
+    this.pendingBookingId = null;
+    this.openBooking(booking);
   }
 
   get todayKey(): string {
-    return this.toDateKey(new Date());
+    return this.toDateKey(this.settingsService.salonNow());
   }
 
   get minDate(): string {
     if (this.settingsService.current.allowSameDayBooking) return this.todayKey;
 
-    const tomorrow = new Date();
+    const tomorrow = this.settingsService.salonNow();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return this.toDateKey(tomorrow);
   }
 
   get maxDate(): string {
-    const date = new Date();
+    const date = this.settingsService.salonNow();
     date.setDate(date.getDate() + this.settingsService.maxAdvanceDays);
     return this.toDateKey(date);
   }
@@ -98,8 +113,7 @@ export class AdminBookingsComponent implements OnInit {
 
   get filterServices(): string[] {
     const historicalServices = this.bookingService.all.flatMap(item =>
-      item.service
-        .split(',')
+      (item.serviceNames ?? item.service.split(','))
         .map(service => service.trim())
         .filter(Boolean)
     );
@@ -264,7 +278,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   get currentWalkInTime(): string {
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     return this.minutesToTime(now.getHours() * 60 + now.getMinutes());
   }
 
@@ -285,7 +299,8 @@ export class AdminBookingsComponent implements OnInit {
       this.todayKey,
       this.currentWalkInTime,
       service.duration,
-      10
+      10,
+      this.selectedWalkInServiceNames
     );
   }
 
@@ -355,8 +370,7 @@ export class AdminBookingsComponent implements OnInit {
       .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
       .filter(item =>
         this.selectedService === 'All'
-        || item.service
-          .split(',')
+        || (item.serviceNames ?? item.service.split(','))
           .map(service => service.trim())
           .includes(this.selectedService)
       )
@@ -466,6 +480,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   openCreateModal(): void {
+    if (this.creatingBooking) return;
     this.createModalOpen = true;
     this.feedbackMessage = '';
     this.walkInServiceSearch = '';
@@ -484,6 +499,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   closeCreateModal(): void {
+    if (this.creatingBooking) return;
     this.walkInServiceDropdownOpen = false;
     this.walkInServiceSearch = '';
     this.walkInServiceOverlayStyle = {};
@@ -506,6 +522,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   createBooking(): void {
+    if (this.creatingBooking) return;
     const form = this.newBooking;
     const digits = form.phone.replace(/\D/g, '');
     const service = this.selectedWalkInService;
@@ -525,7 +542,8 @@ export class AdminBookingsComponent implements OnInit {
       this.todayKey,
       this.currentWalkInTime,
       service.duration,
-      10
+      10,
+      this.selectedWalkInServiceNames
     );
     const selectedOption = freshOptions.find(option => option.name === form.barber);
 
@@ -541,6 +559,7 @@ export class AdminBookingsComponent implements OnInit {
       customerName: form.customerName.trim(),
       phone: digits ? '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3) : '',
       service: service.name,
+      serviceNames: [...this.selectedWalkInServiceNames],
       duration: service.duration,
       barber: form.barber,
       date: this.todayKey,
@@ -551,17 +570,23 @@ export class AdminBookingsComponent implements OnInit {
       serviceLocation: 'Salon' as const
     };
 
+    this.creatingBooking = true;
     if (this.bookingService.createWalkInThroughApi(
       bookingInput,
       result => {
+        this.creatingBooking = false;
         this.showFeedback(result.success, result.message);
         if (result.success) this.createModalOpen = false;
       },
-      message => this.showFeedback(false, message)
+      message => {
+        this.creatingBooking = false;
+        this.showFeedback(false, message);
+      }
     )) {
       return;
     }
 
+    this.creatingBooking = false;
     const result = this.bookingService.addWalkInBooking(bookingInput);
     this.showFeedback(result.success, result.message);
     if (result.success) this.createModalOpen = false;
@@ -611,7 +636,7 @@ export class AdminBookingsComponent implements OnInit {
     const slots: string[] = [];
     const interval = this.settingsService.bookingInterval;
 
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const isToday = dateKey === this.todayKey;
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 

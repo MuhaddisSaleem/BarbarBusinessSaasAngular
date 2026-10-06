@@ -525,6 +525,7 @@ public sealed class AuthApplicationService(
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim("salon_id", user.SalonId.ToString()),
+            new Claim(SessionStamp.Claim, SessionStamp.Create(user, signingKey)),
             new Claim(ClaimTypes.Name, user.FullName),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Role, user.Role.ToString())

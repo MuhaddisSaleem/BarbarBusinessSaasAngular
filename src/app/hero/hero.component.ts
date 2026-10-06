@@ -88,7 +88,7 @@ export class HeroComponent implements AfterViewInit, OnDestroy {
   }
 
   get businessHoursStatus(): { label: string; value: string } {
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const hours = this.settingsService.hoursForDate(now);
 
     if (!hours) {

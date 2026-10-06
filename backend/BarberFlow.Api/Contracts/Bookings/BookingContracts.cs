@@ -14,7 +14,8 @@ public sealed record BookingRequest(
     string ServiceLocation,
     string? ServiceAddress,
     string? SpecialService,
-    decimal? SpecialServiceAmount
+    decimal? SpecialServiceAmount,
+    IReadOnlyList<string>? ServiceNames = null
 );
 
 public sealed record BookingResponse(
@@ -35,7 +36,8 @@ public sealed record BookingResponse(
     string ServiceLocation,
     string ServiceAddress,
     string SpecialService,
-    decimal SpecialServiceAmount
+    decimal SpecialServiceAmount,
+    IReadOnlyList<string>? ServiceNames = null
 );
 
 public sealed record BookingBusySlotResponse(
@@ -60,7 +62,9 @@ public sealed record AvailabilityRequest(
     int Duration,
     string? Barber = null,
     int? IgnoreBookingId = null,
-    string? ServiceLocation = null
+    string? ServiceLocation = null,
+    IReadOnlyList<string>? ServiceNames = null,
+    string? SpecialService = null
 );
 
 public sealed record AvailabilityResponse(

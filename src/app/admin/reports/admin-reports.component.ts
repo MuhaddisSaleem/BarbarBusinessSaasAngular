@@ -183,13 +183,13 @@ export class AdminReportsComponent implements OnInit {
   }
 
   private firstDayOfMonth(): string {
-    const date = new Date();
+    const date = this.settingsService.salonNow();
     date.setDate(1);
     return this.toDateKey(date);
   }
 
   private todayKey(): string {
-    return this.toDateKey(new Date());
+    return this.toDateKey(this.settingsService.salonNow());
   }
 
   private toDateKey(date: Date): string {

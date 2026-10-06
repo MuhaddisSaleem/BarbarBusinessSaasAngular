@@ -7,7 +7,7 @@
     "start:4300": "ng serve --port 4300",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test:qa": "node --test tests/qa-regressions.test.cjs",
+    "test:qa": "node --test tests/*.test.cjs",
     "test:ui": "node tests/ui-smoke.cjs"
   },
   "private": true,

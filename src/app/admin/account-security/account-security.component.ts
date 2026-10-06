@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth.service';
 import { AdminShellComponent } from '../shared/admin-shell.component';
@@ -26,7 +27,7 @@ export class AccountSecurityComponent implements OnInit {
   confirmNewPassword = '';
   passwordSecurityBusy = false;
 
-  constructor(public readonly authService: AuthService) {}
+  constructor(public readonly authService: AuthService, private readonly router: Router) {}
 
   ngOnInit(): void {
     this.authService.me().subscribe({
@@ -163,6 +164,8 @@ export class AccountSecurityComponent implements OnInit {
         this.newPassword = '';
         this.confirmNewPassword = '';
         this.showFeedback(true, response.message);
+        this.authService.logout();
+        void this.router.navigateByUrl('/admin/login');
       },
       error: error => {
         this.passwordSecurityBusy = false;

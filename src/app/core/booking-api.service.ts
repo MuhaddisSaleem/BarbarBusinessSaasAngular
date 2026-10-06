@@ -70,6 +70,8 @@ export class BookingApiService {
 
   checkAvailability(payload: {
     service: string;
+    serviceNames?: string[];
+    specialService?: string;
     date: string;
     time: string;
     duration: number;

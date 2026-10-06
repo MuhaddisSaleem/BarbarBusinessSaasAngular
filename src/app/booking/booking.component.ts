@@ -209,7 +209,7 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
-  calendarDate = this.startOfMonth(new Date());
+  calendarDate = this.startOfMonth(this.settingsService.salonNow());
   calendarCells: CalendarCell[] = [];
   availableTimes: string[] = [];
   sequentialSchedule: PersonSchedule[] = [];
@@ -302,7 +302,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     if (!this.settingsService.isBookingDateAllowed(this.selectedDate.date)) {
       return 'This date is outside the salon’s booking window. Please choose an available date.';
     }
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const earliest = this.selectedDate.fullDate === this.formatDate(now)
       ? Math.max(hours.start, now.getHours() * 60 + now.getMinutes() + 1) : hours.start;
     const interval = this.bookingService.apiEnabled && this.bookingMode === 'single'
@@ -386,10 +386,10 @@ export class BookingComponent implements OnInit, OnDestroy {
   get totalPrice(): number { return this.participants.reduce((total, person) => total + this.getPersonPrice(person), 0); }
   get totalDuration(): number { return this.getPersonDuration(this.activeParticipant); }
   get monthLabel(): string { return this.calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
-  get canGoPreviousMonth(): boolean { return this.calendarDate.getTime() > this.startOfMonth(new Date()).getTime(); }
+  get canGoPreviousMonth(): boolean { return this.calendarDate.getTime() > this.startOfMonth(this.settingsService.salonNow()).getTime(); }
 
   get canGoNextMonth(): boolean {
-    const maxDate = new Date();
+    const maxDate = this.settingsService.salonNow();
     maxDate.setDate(maxDate.getDate() + this.settingsService.maxAdvanceDays);
     return this.calendarDate.getTime() < this.startOfMonth(maxDate).getTime();
   }
@@ -655,7 +655,7 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   isPastDate(date: Date | null): boolean {
     if (!date) return false;
-    return this.startOfDay(date).getTime() < this.startOfDay(new Date()).getTime();
+    return this.startOfDay(date).getTime() < this.startOfDay(this.settingsService.salonNow()).getTime();
   }
 
   isDateDisabled(date: Date | null): boolean {
@@ -677,14 +677,14 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   private get barberStatusDate(): string {
-    return this.selectedDate?.fullDate || this.formatDate(new Date());
+    return this.selectedDate?.fullDate || this.formatDate(this.settingsService.salonNow());
   }
 
   previousMonth(): void {
     if (!this.canGoPreviousMonth) return;
 
     const previous = new Date(this.calendarDate.getFullYear(), this.calendarDate.getMonth() - 1, 1);
-    const currentMonth = this.startOfMonth(new Date());
+    const currentMonth = this.startOfMonth(this.settingsService.salonNow());
     this.calendarDate = previous.getTime() < currentMonth.getTime() ? currentMonth : previous;
     this.buildCalendar();
   }
@@ -733,9 +733,9 @@ export class BookingComponent implements OnInit, OnDestroy {
     }
 
     const slots: string[] = [];
-    const today = this.startOfDay(new Date());
+    const today = this.startOfDay(this.settingsService.salonNow());
     const selectedDay = this.startOfDay(this.selectedDate.date);
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     const apiSingleBooking = this.bookingService.apiEnabled && this.bookingMode === 'single';
     const singleDuration = Math.max(1, this.getPersonDuration(this.activeParticipant));
@@ -797,6 +797,8 @@ export class BookingComponent implements OnInit, OnDestroy {
       forkJoin(slots.map(time =>
         this.bookingApi.checkAvailability({
           service,
+          serviceNames: person.selectedServices.map(item => item.name),
+          specialService: this.specialHomeService.trim(),
           date: this.selectedDate!.fullDate,
           time,
           duration,
@@ -886,6 +888,8 @@ export class BookingComponent implements OnInit, OnDestroy {
 
       this.bookingApi.checkAvailability({
         service,
+        serviceNames: person.selectedServices.map(item => item.name),
+        specialService: this.specialHomeService.trim(),
         date,
         time,
         duration: this.getPersonDuration(person),
@@ -973,6 +977,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         customerName: this.customer.name.trim(),
         phone,
         service: standardServices || 'Custom Home Service',
+        serviceNames: person.selectedServices.map(item => item.name),
         duration: this.getPersonDuration(person),
         barber: barber?.name || '',
         date: this.selectedDate!.fullDate,
@@ -1222,7 +1227,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.nextPersonId = 2;
     this.selectedDate = null;
     this.clearSelectedTime();
-    this.calendarDate = this.startOfMonth(new Date());
+    this.calendarDate = this.startOfMonth(this.settingsService.salonNow());
     this.customer = { name: '', phone: '', notes: '' };
     this.phoneTouched = false;
     this.bookingValidationMessage = '';
@@ -1264,7 +1269,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   private get businessWindows(): { start: number; end: number }[] {
-    const date = this.selectedDate?.date || new Date();
+    const date = this.selectedDate?.date || this.settingsService.salonNow();
     const hours = this.settingsService.hoursForDate(date);
     return hours ? [hours] : [];
   }

@@ -306,15 +306,14 @@ export class AdminServicesComponent {
     return this.bookingService.all.filter(booking =>
       booking.date >= today
       && (booking.status === 'Pending' || booking.status === 'Confirmed')
-      && booking.service
-        .split(',')
+      && (booking.serviceNames ?? booking.service.split(','))
         .map(name => name.trim().toLowerCase())
         .includes(target)
     );
   }
 
   private todayKey(): string {
-    const date = new Date();
+    const date = this.bookingService.salonNow();
     return [
       date.getFullYear(),
       String(date.getMonth() + 1).padStart(2, '0'),

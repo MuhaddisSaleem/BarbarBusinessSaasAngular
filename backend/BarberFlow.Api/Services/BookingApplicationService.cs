@@ -309,6 +309,19 @@ public sealed class BookingApplicationService(
         var previous = booking.SpecialServiceAmount ?? 0;
         booking.SpecialServiceAmount = amount;
         booking.TotalAmount = Math.Max(0, booking.TotalAmount - previous) + amount;
+        var customLine = booking.Services.FirstOrDefault(x => x.ServiceId == null
+            && x.ServiceName == "Custom Home Service");
+        if (customLine is null)
+        {
+            customLine = new BookingService
+            {
+                ServiceName = "Custom Home Service",
+                DurationMinutes = CustomHomeServiceDurationMinutes,
+                SortOrder = booking.Services.Count
+            };
+            booking.Services.Add(customLine);
+        }
+        customLine.Amount = amount;
 
         await db.SaveChangesAsync(cancellationToken);
         return new(true, "Custom home-service price updated.", Map(booking));
@@ -331,7 +344,9 @@ public sealed class BookingApplicationService(
             ? parsedLocation
             : ServiceLocation.Salon;
 
-        var serviceNames = SplitServices(request.Service);
+        var serviceNames = request.ServiceNames is { Count: > 0 }
+            ? request.ServiceNames.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            : SplitServices(request.Service);
         if (serviceNames.Count == 0)
             return new(false, "Select at least one service.", []);
 
@@ -355,7 +370,8 @@ public sealed class BookingApplicationService(
             return new(false, "One or more selected services are not available for home service.", []);
 
         var effectiveDuration = services.Sum(x => x.DurationMinutes)
-            + (customHomeService ? CustomHomeServiceDurationMinutes : 0);
+            + (serviceLocation == ServiceLocation.Home && (customHomeService || !string.IsNullOrWhiteSpace(request.SpecialService))
+                ? CustomHomeServiceDurationMinutes : 0);
 
         if (!IsValidAppointmentDuration(effectiveDuration))
             return new(false, "Booking duration is invalid.", []);
@@ -429,7 +445,9 @@ public sealed class BookingApplicationService(
 
         var hasCustomHomeService = serviceLocation == ServiceLocation.Home
             && !string.IsNullOrWhiteSpace(request.SpecialService);
-        var serviceNames = SplitServices(request.Service);
+        var serviceNames = request.ServiceNames is { Count: > 0 }
+            ? request.ServiceNames.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            : SplitServices(request.Service);
 
         if (serviceNames.Count == 0)
             return (false, "Select at least one service.", null);
@@ -535,6 +553,10 @@ public sealed class BookingApplicationService(
             ? request.SpecialServiceAmount
             : null;
 
+        if (trustedSpecialServiceAmount is { } customAmount
+            && (customAmount <= 0 || decimal.Truncate(customAmount) != customAmount))
+            return (false, "Enter a whole-rupee custom service amount greater than 0.", null);
+
         var booking = new Booking
         {
             SalonId = salon.Id,
@@ -549,7 +571,7 @@ public sealed class BookingApplicationService(
             AppointmentDate = date,
             StartTime = time,
             TotalDurationMinutes = effectiveDuration,
-            TotalAmount = effectiveAmount,
+            TotalAmount = effectiveAmount + (trustedSpecialServiceAmount ?? 0),
             Status = status,
             Source = source,
             ServiceLocation = serviceLocation,
@@ -578,14 +600,14 @@ public sealed class BookingApplicationService(
                 });
             }
         }
-        else
+        if (hasCustomHomeService)
         {
             booking.Services.Add(new BookingService
             {
-                ServiceName = request.Service,
-                DurationMinutes = effectiveDuration,
-                Amount = effectiveAmount,
-                SortOrder = 0
+                ServiceName = "Custom Home Service",
+                DurationMinutes = CustomHomeServiceDurationMinutes,
+                Amount = trustedSpecialServiceAmount ?? 0,
+                SortOrder = booking.Services.Count
             });
         }
 
@@ -789,12 +811,14 @@ public sealed class BookingApplicationService(
     private static BookingResponse Map(Booking booking)
     {
         var services = booking.Services.OrderBy(x => x.SortOrder).ToList();
+        var namedServices = services.Where(x => x.ServiceId != null || x.ServiceName != "Custom Home Service").Select(x => x.ServiceName).ToList();
+        if (namedServices.Count == 0) namedServices = services.Select(x => x.ServiceName).ToList();
         return new BookingResponse(
             booking.PublicId,
             booking.BookingCode,
             booking.CustomerName,
             booking.CustomerPhone ?? string.Empty,
-            string.Join(", ", services.Select(x => x.ServiceName)),
+            string.Join(", ", namedServices),
             booking.TotalDurationMinutes,
             booking.Barber.FullName,
             booking.AppointmentDate.ToString("yyyy-MM-dd"),
@@ -807,7 +831,8 @@ public sealed class BookingApplicationService(
             booking.ServiceLocation.ToString(),
             booking.ServiceAddress ?? string.Empty,
             booking.SpecialService ?? string.Empty,
-            booking.SpecialServiceAmount ?? 0
+            booking.SpecialServiceAmount ?? 0,
+            namedServices
         );
     }
 }

@@ -12,7 +12,7 @@ const server = http.createServer((req,res)=>{
   res.setHeader('Content-Type',types[path.extname(file)]||'application/octet-stream');fs.createReadStream(file).pipe(res);
 });
 const barber=(id,name,specialties,rating)=>({id,name,specialties,rating,phone:'+92 '+(id===1?'300':'301')+' 1234567',accountStatus:'Active',availability:'Available Today',workingHours:'9 AM - 9 PM',experience:'5 years',image:'assets/images/barber-placeholder.svg'});
-const service=(id,name)=>({id,name,duration:40,originalPrice:600,discountPrice:null,homeServiceEnabled:true,homeOriginalPrice:900,homeDiscountPrice:null,status:'Active',image:'assets/images/service-placeholder.svg'});
+const service=(id,name)=>({id,name,categoryId:1,categoryName:'Haircut',duration:40,originalPrice:600,discountPrice:null,homeServiceEnabled:true,homeOriginalPrice:900,homeDiscountPrice:null,status:'Active',image:'assets/images/service-placeholder.svg'});
 const seed={
   'royal-barbers.admin-barbers.v1':[barber(1,'Falak Shair',['Haircut','Beard'],5),barber(2,'Second Barber',['Haircut'],4)],
   'royal-barbers.admin-services.v1':[service(1,'Haircut'),service(2,'Beard')]
@@ -222,6 +222,8 @@ let browser, activePage;
           return await route.fulfill(apiResponse({success:true,imported:true,message:'Legacy catalog migrated.'}));
         }
 
+        if(pathname==='/api/service-categories'&&req.method()==='GET')return await route.fulfill(apiResponse([{id:1,name:'Haircut',status:'Active',sortOrder:0}]));
+        if(pathname==='/api/branding'&&req.method()==='GET')return await route.fulfill(apiResponse([]));
         if(pathname==='/api/services'&&req.method()==='GET')return await route.fulfill(apiResponse(apiServices));
         if(pathname==='/api/services'&&req.method()==='POST'){
           const item={...body,id:nextServiceId++};
@@ -438,7 +440,7 @@ let browser, activePage;
         return await route.fulfill(apiResponse({success:false,message:'QA API mock error: '+error.message},500));
       }
     });
-    await page.clock.install({time:new Date('2026-09-28T16:30:00Z')});
+    await page.clock.install({time:new Date('2026-09-28T11:30:00Z')});
     await page.addInitScript(seed=>{
       if(!localStorage.getItem('qa-auth-disabled')){
         localStorage.setItem('adminToken','qa-admin-token');
@@ -512,11 +514,11 @@ let browser, activePage;
     nextBookingId=Math.max(nextBookingId,901);
     await goto('/admin/bookings');await page.locator('.create-booking-btn').click();
     const form=page.locator('.create-modal'), selects=form.locator('select');
-    assert.equal(await selects.count(),2,'Walk-in modal should contain only service and barber selects');
+    assert.equal(await selects.count(),1,'Walk-in modal has one barber select and a service multiselect');
     assert.equal(await form.locator('textarea').count(),0,'Walk-in modal should not contain a notes field');
-    const serviceSelect=selects.nth(0), barberSelect=selects.nth(1);
+    const barberSelect=selects.nth(0);
     assert.equal(await barberSelect.isDisabled(),true);
-    await serviceSelect.selectOption('Haircut');assert.equal(await barberSelect.isDisabled(),false);
+    await form.locator('.walkin-service-trigger').click();await page.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();await form.locator('.walkin-service-trigger').click();assert.equal(await barberSelect.isDisabled(),false);
     const barbers=await barberSelect.locator('option').allTextContents();
     assert.ok(barbers.some(x=>x.includes('Second Barber')&&x.includes('Available in 25 min')),'Second Barber should remain bookable even when the wait is longer than ten minutes');
     await barberSelect.selectOption('Second Barber');
