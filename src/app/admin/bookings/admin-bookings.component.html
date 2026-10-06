@@ -378,7 +378,7 @@
       <div class="walkin-now-row">
         <div>
           <i class="bi bi-calendar3"></i>
-          <span>{{ todayKey | date:'dd MMM yyyy' }}</span>
+          <span>{{ todayKey | date:'dd MMM yyyy':'UTC' }}</span>
         </div>
         <div *ngIf="selectedWalkInService">
           <i class="bi bi-scissors"></i>
