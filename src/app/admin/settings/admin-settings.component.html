@@ -228,11 +228,11 @@
               </div>
 
               <label class="media-upload-btn" [class.disabled]="brandingBusy">
-                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" [disabled]="brandingBusy" (change)="onLogoSelected($event)">
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" [disabled]="brandingBusy" (change)="onLogoSelected($event)">
                 <i class="bi bi-cloud-arrow-up"></i>
                 {{ brandingMedia.logoUrl() ? 'Change Logo' : 'Upload Logo' }}
               </label>
-              <small class="media-help">PNG, JPG, WebP or SVG · maximum 2 MB</small>
+              <small class="media-help">PNG, JPG, WebP or GIF · maximum 2 MB</small>
             </article>
 
             <article class="media-setting">

@@ -8,6 +8,10 @@ public sealed class Service : BaseEntity
     public Salon Salon { get; set; } = null!;
 
     public int PublicId { get; set; }
+
+    public Guid ServiceCategoryId { get; set; }
+    public ServiceCategory ServiceCategory { get; set; } = null!;
+
     public required string Name { get; set; }
     public string? Description { get; set; }
     public int DurationMinutes { get; set; }

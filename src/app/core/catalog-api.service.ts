@@ -1,7 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { firstValueFrom, forkJoin, Observable, Subject, tap } from 'rxjs';
-import type { AdminService, ServiceMutationResult } from '../admin/services/admin-service.service';
+import { firstValueFrom, Observable, Subject, tap } from 'rxjs';
+import type {
+  AdminService,
+  AdminServiceCategory,
+  ServiceMutationResult
+} from '../admin/services/admin-service.service';
 import type { AdminBarber, BarberMutationResult } from '../admin/barbers/admin-barber.service';
 import type { AdminSettings, SettingsSaveResult } from '../admin/settings/admin-settings.service';
 
@@ -20,15 +24,17 @@ export interface LegacyCatalogImportResult {
 @Injectable({ providedIn: 'root' })
 export class CatalogApiService {
   private readonly servicesUrl = '/api/services';
+  private readonly serviceCategoriesUrl = '/api/service-categories';
   private readonly barbersUrl = '/api/barbers';
   private readonly settingsUrl = '/api/settings';
   private readonly bootstrapUrl = '/api/bootstrap/legacy-catalog';
 
   serviceSnapshot: AdminService[] = [];
+  categorySnapshot: AdminServiceCategory[] = [];
   barberSnapshot: AdminBarber[] = [];
   settingsSnapshot: AdminSettings | null = null;
 
-  private readonly changeSubject = new Subject<'services' | 'barbers' | 'settings'>();
+  private readonly changeSubject = new Subject<'services' | 'categories' | 'barbers' | 'settings'>();
   readonly changes$ = this.changeSubject.asObservable();
   private readonly channel =
     typeof BroadcastChannel !== 'undefined'
@@ -38,12 +44,43 @@ export class CatalogApiService {
   constructor(private readonly http: HttpClient) {
     if (this.channel) {
       this.channel.onmessage = event => {
-        const scope = event.data as 'services' | 'barbers' | 'settings';
-        if (scope === 'services' || scope === 'barbers' || scope === 'settings') {
+        const scope = event.data as 'services' | 'categories' | 'barbers' | 'settings';
+        if (scope === 'services' || scope === 'categories' || scope === 'barbers' || scope === 'settings') {
           void this.refreshScope(scope);
         }
       };
     }
+  }
+
+  getServiceCategories(): Observable<AdminServiceCategory[]> {
+    return this.http.get<AdminServiceCategory[]>(this.serviceCategoriesUrl);
+  }
+
+  addServiceCategory(
+    category: Omit<AdminServiceCategory, 'id'>
+  ): Observable<ApiMutationResult<AdminServiceCategory>> {
+    return this.http.post<ApiMutationResult<AdminServiceCategory>>(this.serviceCategoriesUrl, category)
+      .pipe(tap(result => { if (result.success) this.announce('categories'); }));
+  }
+
+  updateServiceCategory(
+    id: number,
+    category: Omit<AdminServiceCategory, 'id'>
+  ): Observable<ApiMutationResult<AdminServiceCategory>> {
+    return this.http.put<ApiMutationResult<AdminServiceCategory>>(this.serviceCategoriesUrl + '/' + id, category)
+      .pipe(tap(result => { if (result.success) this.announce('categories'); }));
+  }
+
+  toggleServiceCategoryStatus(id: number): Observable<ApiMutationResult<AdminServiceCategory>> {
+    return this.http.patch<ApiMutationResult<AdminServiceCategory>>(
+      this.serviceCategoriesUrl + '/' + id + '/status',
+      {}
+    ).pipe(tap(result => { if (result.success) this.announce('categories'); }));
+  }
+
+  deleteServiceCategory(id: number): Observable<ServiceMutationResult> {
+    return this.http.delete<ServiceMutationResult>(this.serviceCategoriesUrl + '/' + id)
+      .pipe(tap(result => { if (result.success) this.announce('categories'); }));
   }
 
   getServices(): Observable<AdminService[]> {
@@ -151,27 +188,37 @@ export class CatalogApiService {
   }
 
   async preload(): Promise<void> {
-    const state = await firstValueFrom(forkJoin({
-      services: this.getServices(),
-      barbers: this.getBarbers(),
-      settings: this.getSettings()
-    }));
-
-    this.serviceSnapshot = state.services;
-    this.barberSnapshot = state.barbers;
-    this.settingsSnapshot = state.settings;
+    // Load catalog scopes in parallel, but publish each one as soon as it arrives.
+    // A slow barber/settings request must not delay rendering services (or vice versa).
+    await Promise.all([
+      firstValueFrom(this.getServices()).then(services => {
+        this.serviceSnapshot = services;
+        this.changeSubject.next('services');
+      }),
+      firstValueFrom(this.getServiceCategories()).then(categories => {
+        this.categorySnapshot = categories;
+        this.changeSubject.next('categories');
+      }),
+      firstValueFrom(this.getBarbers()).then(barbers => {
+        this.barberSnapshot = barbers;
+        this.changeSubject.next('barbers');
+      }),
+      firstValueFrom(this.getSettings()).then(settings => {
+        this.settingsSnapshot = settings;
+        this.changeSubject.next('settings');
+      })
+    ]);
   }
 
   async refreshAllAndNotify(): Promise<void> {
     await this.preload();
-    this.changeSubject.next('services');
-    this.changeSubject.next('barbers');
-    this.changeSubject.next('settings');
   }
 
-  private async refreshScope(scope: 'services' | 'barbers' | 'settings'): Promise<void> {
+  private async refreshScope(scope: 'services' | 'categories' | 'barbers' | 'settings'): Promise<void> {
     if (scope === 'services') {
       this.serviceSnapshot = await firstValueFrom(this.getServices());
+    } else if (scope === 'categories') {
+      this.categorySnapshot = await firstValueFrom(this.getServiceCategories());
     } else if (scope === 'barbers') {
       this.barberSnapshot = await firstValueFrom(this.getBarbers());
     } else {
@@ -181,7 +228,7 @@ export class CatalogApiService {
     this.changeSubject.next(scope);
   }
 
-  private announce(scope: 'services' | 'barbers' | 'settings'): void {
+  private announce(scope: 'services' | 'categories' | 'barbers' | 'settings'): void {
     this.channel?.postMessage(scope);
   }
 }

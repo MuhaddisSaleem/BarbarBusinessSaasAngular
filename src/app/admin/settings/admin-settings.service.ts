@@ -97,11 +97,6 @@ export class AdminSettingsService {
       ? this.normalizeSettings(this.api.settingsSnapshot)
       : this.loadSettings();
 
-    if (this.api && typeof window !== 'undefined') {
-      window.localStorage.removeItem(this.storageKey);
-    }
-
-
     this.api?.changes$.subscribe(changed => {
       if (changed === 'settings' && this.api?.settingsSnapshot) {
         this.settings = this.normalizeSettings(this.api.settingsSnapshot);
@@ -156,7 +151,26 @@ export class AdminSettingsService {
     return Math.max(0, Number(this.settings.lateArrivalMinutes) || 0);
   }
 
-  canCustomerCancel(dateKey: string, time: string, now = new Date()): boolean {
+  // Calendar Dates below represent salon wall time; API dates/times use this same zone.
+  salonNow(instant: Date = new Date()): Date {
+    let formatter: Intl.DateTimeFormat;
+    try {
+      formatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: this.current.timezone || 'UTC', year: 'numeric', month: '2-digit',
+        day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+      });
+    } catch {
+      formatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+      });
+    }
+    const parts = Object.fromEntries(formatter.formatToParts(instant).map(p => [p.type, p.value]));
+    return new Date(+parts['year'], +parts['month'] - 1, +parts['day'],
+      +parts['hour'], +parts['minute'], +parts['second']);
+  }
+
+  canCustomerCancel(dateKey: string, time: string, now = this.salonNow()): boolean {
     const appointment = this.bookingDateTime(dateKey, time);
     if (!appointment) return false;
 
@@ -164,7 +178,7 @@ export class AdminSettingsService {
     return appointment.getTime() - now.getTime() >= cutoffMs;
   }
 
-  isPastLateArrivalGrace(dateKey: string, time: string, now = new Date()): boolean {
+  isPastLateArrivalGrace(dateKey: string, time: string, now = this.salonNow()): boolean {
     const appointment = this.bookingDateTime(dateKey, time);
     if (!appointment) return false;
 
@@ -174,7 +188,7 @@ export class AdminSettingsService {
 
   isBookingDateAllowed(date: Date): boolean {
     const candidate = this.startOfDay(date);
-    const today = this.startOfDay(new Date());
+    const today = this.startOfDay(this.salonNow());
 
     if (candidate.getTime() < today.getTime()) return false;
     if (!this.settings.allowSameDayBooking && candidate.getTime() === today.getTime()) return false;

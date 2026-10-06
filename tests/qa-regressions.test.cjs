@@ -198,7 +198,7 @@ test('invalid calendar dates and 12-hour times cannot roll into valid bookings',
 
 test('walk-ins start at the current time without a time selection', () => {
   const f=fixture(),b=f.barber(),s=f.service();f.settings.settings.allowSameDayBooking=false;
-  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.walkInSelectedServiceNames=[s.name];f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   assert.equal(f.admin.currentWalkInTime,'4:30 PM');equal(f.admin.createBarbers,[b.name]);assert.equal(f.admin.walkInBarberOptions[0].availableNow,true);
   f.admin.newBooking.barber=b.name;f.admin.createBooking();
   assert.equal(f.bookings.all.length,1);assert.equal(f.bookings.all[0].source,'Walk-in');assert.equal(f.bookings.all[0].status,'Confirmed');assert.equal(f.bookings.all[0].phone,'');assert.equal(f.bookings.all[0].barber,b.name);assert.equal(f.bookings.all[0].time,'4:30 PM');assert.equal(f.bookings.all[0].notes,'');
@@ -206,7 +206,7 @@ test('walk-ins start at the current time without a time selection', () => {
 
 test('walk-in service selection carries correct duration and amount', () => {
   const f=fixture(),b=f.barber(),s=f.service({name:'Haircut',duration:40,originalPrice:600});
-  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Walk In';f.admin.walkInSelectedServiceNames=[s.name];f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   assert.equal(f.admin.walkInDuration,40);assert.equal(f.admin.walkInAmount,600);
   f.admin.newBooking.barber=b.name;f.admin.createBooking();
   const created=f.bookings.all[0];assert.equal(created.service,'Haircut');assert.equal(created.duration,40);assert.equal(created.amount,600);assert.equal(created.time,'4:30 PM');
@@ -214,7 +214,7 @@ test('walk-in service selection carries correct duration and amount', () => {
 
 test('walk-in barber select prefers barbers available now over short-wait barbers', () => {
   const f=fixture(),busy=f.barber({specialties:['Haircut']}),free=f.barber({specialties:['Haircut']}),beard=f.barber({specialties:['Beard']}),s=f.service({name:'Haircut',duration:40});
-  f.booking({barber:busy.name,time:'4:00 PM',duration:35});f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  f.booking({barber:busy.name,time:'4:00 PM',duration:35});f.admin.openCreateModal();f.admin.walkInSelectedServiceNames=[s.name];f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   equal(f.admin.createBarbers,[free.name]);assert.equal(f.admin.createBarbers.includes(busy.name),false);assert.equal(f.admin.createBarbers.includes(beard.name),false);
 });
 
@@ -222,7 +222,7 @@ test('when all eligible barbers are busy, walk-in suggests the shortest wait wit
   const f=fixture(),tenMin=f.barber(),tooLong=f.barber(),s=f.service({duration:20});
   f.booking({barber:tenMin.name,time:'4:00 PM',duration:40});
   f.booking({barber:tooLong.name,time:'4:00 PM',duration:41});
-  f.admin.openCreateModal();f.admin.newBooking.customerName='Waiting Customer';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Waiting Customer';f.admin.walkInSelectedServiceNames=[s.name];f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   equal(f.admin.createBarbers,[tenMin.name]);
   assert.equal(f.admin.walkInBarberOptions[0].waitMinutes,10);assert.equal(f.admin.walkInBarberOptions[0].startTime,'4:40 PM');assert.equal(f.admin.walkInBarberOptions[0].availableNow,false);
   f.admin.newBooking.barber=tenMin.name;f.admin.onCreateBarberChange();assert.equal(f.admin.newBooking.time,'4:40 PM');f.admin.createBooking();
@@ -232,7 +232,7 @@ test('when all eligible barbers are busy, walk-in suggests the shortest wait wit
 test('walk-in remains bookable when the next eligible barber is more than ten minutes away', () => {
   const f=fixture(),b=f.barber(),s=f.service({duration:20});
   f.booking({barber:b.name,time:'4:00 PM',duration:41});
-  f.admin.openCreateModal();f.admin.newBooking.customerName='Long Wait Customer';f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  f.admin.openCreateModal();f.admin.newBooking.customerName='Long Wait Customer';f.admin.walkInSelectedServiceNames=[s.name];f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   equal(f.admin.createBarbers,[b.name]);assert.equal(f.admin.walkInBarberOptions[0].waitMinutes,11);assert.equal(f.admin.walkInBarberOptions[0].startTime,'4:41 PM');
   f.admin.newBooking.barber=b.name;f.admin.onCreateBarberChange();f.admin.createBooking();
   assert.equal(f.bookings.all[0].barber,b.name);assert.equal(f.bookings.all[0].time,'4:41 PM');
@@ -241,13 +241,13 @@ test('walk-in remains bookable when the next eligible barber is more than ten mi
 test('walk-in only becomes unavailable when no eligible barber has time left today', () => {
   const f=fixture(),b=f.barber(),s=f.service({duration:20});
   f.booking({barber:b.name,time:'4:00 PM',duration:300});
-  f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  f.admin.openCreateModal();f.admin.walkInSelectedServiceNames=[s.name];f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   assert.equal(f.admin.walkInBarberOptions.length,0);assert.equal(f.admin.createBarbers.length,0);
 });
 
 test('walk-in barber select respects current working hours and leave', () => {
   const f=fixture(),working=f.barber(),offShift=f.barber({workingHours:'9:00 AM - 4:00 PM'}),onLeave=f.barber({availability:'On Leave',leaveFrom:DAY,leaveTo:DAY}),s=f.service();
-  f.admin.openCreateModal();f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
+  f.admin.openCreateModal();f.admin.walkInSelectedServiceNames=[s.name];f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();
   equal(f.admin.createBarbers,[working.name]);assert.equal(f.admin.createBarbers.includes(offShift.name),false);assert.equal(f.admin.createBarbers.includes(onLeave.name),false);
 });
 
@@ -289,8 +289,8 @@ test('admin separate assignment and reschedule actions preserve the saved choice
 for(const status of ['Completed','Cancelled'])test('closed bookings block reschedule/reassign/status mutations: '+status,()=>{
   const f=fixture(),a=f.barber(),b=f.barber(),s=f.service(),ap=f.booking({status});assert.equal(f.bookings.reschedule(ap.id,NEXT,'5:00 PM').success,false);assert.equal(f.bookings.assignBarber(ap.id,b.name).success,false);assert.equal(f.bookings.updateStatus(ap.id,'Confirmed').success,false);
 });
-test('walk-in barber options stay empty until a service is selected',()=>{const f=fixture();f.barber();const s=f.service();f.admin.openCreateModal();assert.equal(f.admin.createBarbers.length,0);f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();assert.ok(f.admin.createBarbers.length>0);});
-test('changing walk-in service clears the selected barber and refreshes the current start time',()=>{const f=fixture(),b=f.barber({specialties:['Haircut','Beard']});f.service({name:'Haircut'});f.service({name:'Beard'});f.admin.openCreateModal();f.admin.newBooking.service='Haircut';f.admin.newBooking.barber=b.name;f.admin.newBooking.time='5:00 PM';f.admin.newBooking.service='Beard';f.admin.onCreateServiceOrDateChange();assert.equal(f.admin.newBooking.time,'4:30 PM');assert.equal(f.admin.newBooking.barber,'');});
+test('walk-in barber options stay empty until a service is selected',()=>{const f=fixture();f.barber();const s=f.service();f.admin.openCreateModal();assert.equal(f.admin.createBarbers.length,0);f.admin.walkInSelectedServiceNames=[s.name];f.admin.newBooking.service=s.name;f.admin.onCreateServiceOrDateChange();assert.ok(f.admin.createBarbers.length>0);});
+test('changing walk-in service clears the selected barber and refreshes the current start time',()=>{const f=fixture(),b=f.barber({specialties:['Haircut','Beard']});f.service({name:'Haircut'});f.service({name:'Beard'});f.admin.openCreateModal();f.admin.newBooking.service='Haircut';f.admin.newBooking.barber=b.name;f.admin.newBooking.time='5:00 PM';f.admin.walkInSelectedServiceNames=['Beard'];f.admin.newBooking.service='Beard';f.admin.onCreateServiceOrDateChange();assert.equal(f.admin.newBooking.time,'4:30 PM');assert.equal(f.admin.newBooking.barber,'');});
 test('legacy labeled weekday arrays retain their identities',()=>{const f=fixture({'royal-barbers.admin-settings.v1':{businessHours:[{label:'Tuesday',enabled:false},{label:'Monday',enabled:true,open:'10:15',close:'18:00'}]}});equal(f.settings.hoursForDate(new f.Clock(DAY+'T12:00:00')),{start:615,end:1080});assert.equal(f.settings.hoursForDate(new f.Clock(NEXT+'T12:00:00')),null);});
 test('barber edits preserve upcoming shifts and identity while services stay automatic',()=>{
   const f=fixture(),b=f.barber(),s=f.service();f.booking();const c=f.make('admin/barbers/admin-barbers.component.ts','AdminBarbersComponent',f.barbers,f.services,f.bookings);

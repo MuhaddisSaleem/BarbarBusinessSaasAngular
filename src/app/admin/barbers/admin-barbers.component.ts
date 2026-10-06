@@ -630,7 +630,7 @@ export class AdminBarbersComponent {
   }
 
   get todayKey(): string {
-    const date = new Date();
+    const date = this.bookingService.salonNow();
 
     return [
       date.getFullYear(),

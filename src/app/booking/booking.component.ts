@@ -1,15 +1,27 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, map } from 'rxjs';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
-import { AdminServiceService } from '../admin/services/admin-service.service';
+import { AdminServiceCategory, AdminServiceService } from '../admin/services/admin-service.service';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { AdminBookingService } from '../admin/bookings/admin-booking.service';
 import { CatalogApiService } from '../core/catalog-api.service';
 import { BookingApiService } from '../core/booking-api.service';
+import { LoadMoreDirective } from '../shared/load-more.directive';
+import { ScrollRevealDirective } from '../shared/scroll-reveal.directive';
 
-interface Service { id: number; name: string; duration: number; price: number; originalPrice: number; discountPrice: number | null; image: string; }
+interface Service {
+  id: number;
+  name: string;
+  categoryId: number;
+  categoryName: string;
+  duration: number;
+  price: number;
+  originalPrice: number;
+  discountPrice: number | null;
+  image: string;
+}
 interface Barber { id: number; name: string; rating: number; experience: string; image: string; }
 interface BookingDate { date: Date; day: string; dateNumber: number; month: string; fullDate: string; }
 interface CalendarCell { date: Date | null; dayNumber: number | null; fullDate: string | null; }
@@ -20,15 +32,19 @@ interface PersonSchedule { personId: number; time: string; barber: Barber; sugge
 @Component({
   selector: 'app-booking',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ScrollRevealDirective, LoadMoreDirective],
   templateUrl: './booking.component.html',
   styleUrls: ['./booking.component.scss', './group-booking.component.scss']
 })
-export class BookingComponent implements OnInit {
+export class BookingComponent implements OnInit, OnDestroy {
   get salonServices(): Service[] {
-    return this.serviceService.active.map(service => ({
+    return this.serviceService.active
+      .filter(service => this.serviceService.getCategoryById(service.categoryId)?.status !== 'Inactive')
+      .map(service => ({
       id: service.id,
       name: service.name,
+      categoryId: service.categoryId,
+      categoryName: service.categoryName,
       duration: service.duration,
       price: this.serviceService.effectivePrice(service),
       originalPrice: service.originalPrice,
@@ -38,9 +54,13 @@ export class BookingComponent implements OnInit {
   }
 
   get homeServices(): Service[] {
-    return this.serviceService.homeActive.map(service => ({
+    return this.serviceService.homeActive
+      .filter(service => this.serviceService.getCategoryById(service.categoryId)?.status !== 'Inactive')
+      .map(service => ({
       id: service.id,
       name: service.name,
+      categoryId: service.categoryId,
+      categoryName: service.categoryName,
       duration: service.duration,
       price: this.serviceService.effectiveHomePrice(service),
       originalPrice: Number(service.homeOriginalPrice),
@@ -51,6 +71,117 @@ export class BookingComponent implements OnInit {
 
   get services(): Service[] {
     return this.serviceLocation === 'home' ? this.homeServices : this.salonServices;
+  }
+
+  get serviceCategories(): AdminServiceCategory[] {
+    const source = this.serviceLocation === 'home' ? this.homeServices : this.salonServices;
+    const availableIds = new Set(source.map(service => service.categoryId));
+
+    return this.serviceService.activeCategories
+      .filter(category => availableIds.has(category.id));
+  }
+
+  get filteredSalonServices(): Service[] {
+    const services = this.filterServicesByCategory(this.salonServices);
+    const term = this.serviceSearchTerm.trim().toLowerCase();
+
+    if (!term) return services;
+
+    return services.filter(service =>
+      service.name.toLowerCase().includes(term)
+      || service.categoryName.toLowerCase().includes(term)
+    );
+  }
+
+  private readonly initialVisibleServiceCount = 12;
+  private readonly serviceLoadBatchSize = 4;
+  private visibleServiceLimit = this.initialVisibleServiceCount;
+  loadingMoreServices = false;
+  private serviceRevealTimer?: ReturnType<typeof setTimeout>;
+
+  get visibleSalonServices(): Service[] {
+    const services = this.filteredSalonServices;
+
+    if (!this.isServiceCategorySelected('all') || this.serviceSearchTerm.trim()) {
+      return services;
+    }
+
+    return services.slice(0, this.visibleServiceLimit);
+  }
+
+  get visibleHomeServices(): Service[] {
+    const services = this.filterServicesByCategory(this.homeServices);
+
+    if (!this.isServiceCategorySelected('all')) {
+      return services;
+    }
+
+    return services.slice(0, this.visibleServiceLimit);
+  }
+
+  get hasMoreServices(): boolean {
+    if (!this.isServiceCategorySelected('all')) return false;
+
+    const total = this.serviceLocation === 'salon'
+      ? (this.serviceSearchTerm.trim() ? 0 : this.filteredSalonServices.length)
+      : this.filterServicesByCategory(this.homeServices).length;
+
+    return total > this.visibleServiceLimit;
+  }
+
+  trackService(_index: number, service: Service): number {
+    return service.id;
+  }
+
+  loadRemainingServices(): void {
+    if (!this.hasMoreServices || this.loadingMoreServices) return;
+
+    this.loadingMoreServices = true;
+
+    // Add a small batch instead of inserting the full remaining catalog.
+    // This keeps the document height growing gradually and prevents scroll jumps.
+    this.serviceRevealTimer = setTimeout(() => {
+      const total = this.serviceLocation === 'salon'
+        ? this.filteredSalonServices.length
+        : this.filterServicesByCategory(this.homeServices).length;
+
+      this.visibleServiceLimit = Math.min(
+        this.visibleServiceLimit + this.serviceLoadBatchSize,
+        total
+      );
+
+      this.loadingMoreServices = false;
+      this.serviceRevealTimer = undefined;
+    }, 160);
+  }
+
+  resetServiceReveal(): void {
+    clearTimeout(this.serviceRevealTimer);
+    this.serviceRevealTimer = undefined;
+    this.loadingMoreServices = false;
+    this.visibleServiceLimit = this.initialVisibleServiceCount;
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.serviceRevealTimer);
+  }
+
+  selectServiceCategory(category: 'all' | number): void {
+    this.resetServiceReveal();
+    this.selectedServiceCategory = category;
+  }
+
+  isServiceCategorySelected(category: 'all' | number): boolean {
+    if (category === 'all') {
+      return this.selectedServiceCategory === 'all'
+        || !this.serviceCategories.some(item => item.id === this.selectedServiceCategory);
+    }
+
+    return this.selectedServiceCategory === category;
+  }
+
+  trackBarber(_index: number, barber: Barber): number {
+    return barber.id;
   }
 
   get barbers(): Barber[] {
@@ -64,6 +195,8 @@ export class BookingComponent implements OnInit {
   }
 
   serviceLocation: 'salon' | 'home' = 'salon';
+  selectedServiceCategory: 'all' | number = 'all';
+  serviceSearchTerm = '';
   bookingMode: 'single' | 'group' = 'single';
   groupStrategy: 'parallel' | 'sequential' = 'parallel';
   homeAddress = '';
@@ -76,7 +209,7 @@ export class BookingComponent implements OnInit {
 
   selectedDate: BookingDate | null = null;
   selectedTime: string | null = null;
-  calendarDate = this.startOfMonth(new Date());
+  calendarDate = this.startOfMonth(this.settingsService.salonNow());
   calendarCells: CalendarCell[] = [];
   availableTimes: string[] = [];
   sequentialSchedule: PersonSchedule[] = [];
@@ -104,8 +237,14 @@ export class BookingComponent implements OnInit {
       queueMicrotask(() => this.reconcileAvailability());
     });
 
-    this.catalogApi?.changes$.subscribe(() => {
-      queueMicrotask(() => this.reconcileAvailability());
+    this.catalogApi?.changes$.subscribe(scope => {
+      queueMicrotask(() => {
+        if (scope === 'settings') {
+          this.buildCalendar();
+        }
+
+        this.reconcileAvailability();
+      });
     });
   }
 
@@ -122,7 +261,8 @@ export class BookingComponent implements OnInit {
 
     if (event && event.storageArea !== window.localStorage) return;
     const keys = ['royal-barbers.admin-barbers.v1', 'royal-barbers.admin-services.v1',
-      'royal-barbers.admin-settings.v1', 'royal-barbers.admin-bookings.v1'];
+      'royal-barbers.admin-service-categories.v1', 'royal-barbers.admin-settings.v1',
+      'royal-barbers.admin-bookings.v1'];
     if (event?.key && !keys.includes(event.key)) return;
 
     this.barberService.refreshFromStorage();
@@ -162,7 +302,7 @@ export class BookingComponent implements OnInit {
     if (!this.settingsService.isBookingDateAllowed(this.selectedDate.date)) {
       return 'This date is outside the salon’s booking window. Please choose an available date.';
     }
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const earliest = this.selectedDate.fullDate === this.formatDate(now)
       ? Math.max(hours.start, now.getHours() * 60 + now.getMinutes() + 1) : hours.start;
     const interval = this.bookingService.apiEnabled && this.bookingMode === 'single'
@@ -246,10 +386,10 @@ export class BookingComponent implements OnInit {
   get totalPrice(): number { return this.participants.reduce((total, person) => total + this.getPersonPrice(person), 0); }
   get totalDuration(): number { return this.getPersonDuration(this.activeParticipant); }
   get monthLabel(): string { return this.calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
-  get canGoPreviousMonth(): boolean { return this.calendarDate.getTime() > this.startOfMonth(new Date()).getTime(); }
+  get canGoPreviousMonth(): boolean { return this.calendarDate.getTime() > this.startOfMonth(this.settingsService.salonNow()).getTime(); }
 
   get canGoNextMonth(): boolean {
-    const maxDate = new Date();
+    const maxDate = this.settingsService.salonNow();
     maxDate.setDate(maxDate.getDate() + this.settingsService.maxAdvanceDays);
     return this.calendarDate.getTime() < this.startOfMonth(maxDate).getTime();
   }
@@ -299,6 +439,8 @@ export class BookingComponent implements OnInit {
     const destinationById = new Map(destinationServices.map(service => [service.id, service]));
 
     this.serviceLocation = location;
+    this.resetServiceReveal();
+    this.selectedServiceCategory = 'all';
     this.clearValidationMessage();
     this.clearSelectedTime();
 
@@ -513,7 +655,7 @@ export class BookingComponent implements OnInit {
 
   isPastDate(date: Date | null): boolean {
     if (!date) return false;
-    return this.startOfDay(date).getTime() < this.startOfDay(new Date()).getTime();
+    return this.startOfDay(date).getTime() < this.startOfDay(this.settingsService.salonNow()).getTime();
   }
 
   isDateDisabled(date: Date | null): boolean {
@@ -535,14 +677,14 @@ export class BookingComponent implements OnInit {
   }
 
   private get barberStatusDate(): string {
-    return this.selectedDate?.fullDate || this.formatDate(new Date());
+    return this.selectedDate?.fullDate || this.formatDate(this.settingsService.salonNow());
   }
 
   previousMonth(): void {
     if (!this.canGoPreviousMonth) return;
 
     const previous = new Date(this.calendarDate.getFullYear(), this.calendarDate.getMonth() - 1, 1);
-    const currentMonth = this.startOfMonth(new Date());
+    const currentMonth = this.startOfMonth(this.settingsService.salonNow());
     this.calendarDate = previous.getTime() < currentMonth.getTime() ? currentMonth : previous;
     this.buildCalendar();
   }
@@ -591,9 +733,9 @@ export class BookingComponent implements OnInit {
     }
 
     const slots: string[] = [];
-    const today = this.startOfDay(new Date());
+    const today = this.startOfDay(this.settingsService.salonNow());
     const selectedDay = this.startOfDay(this.selectedDate.date);
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     const apiSingleBooking = this.bookingService.apiEnabled && this.bookingMode === 'single';
     const singleDuration = Math.max(1, this.getPersonDuration(this.activeParticipant));
@@ -655,10 +797,13 @@ export class BookingComponent implements OnInit {
       forkJoin(slots.map(time =>
         this.bookingApi.checkAvailability({
           service,
+          serviceNames: person.selectedServices.map(item => item.name),
+          specialService: this.specialHomeService.trim(),
           date: this.selectedDate!.fullDate,
           time,
           duration,
-          barber
+          barber,
+          serviceLocation: this.serviceLocation === 'home' ? 'Home' : 'Salon'
         }).pipe(map(result => ({ time, available: result.available })))
       )).subscribe({
         next: results => {
@@ -743,10 +888,13 @@ export class BookingComponent implements OnInit {
 
       this.bookingApi.checkAvailability({
         service,
+        serviceNames: person.selectedServices.map(item => item.name),
+        specialService: this.specialHomeService.trim(),
         date,
         time,
         duration: this.getPersonDuration(person),
-        barber: requestedBarber
+        barber: requestedBarber,
+        serviceLocation: this.serviceLocation === 'home' ? 'Home' : 'Salon'
       }).subscribe({
         next: result => {
           // Ignore an old response if the customer changed date/time while the request was running.
@@ -829,6 +977,7 @@ export class BookingComponent implements OnInit {
         customerName: this.customer.name.trim(),
         phone,
         service: standardServices || 'Custom Home Service',
+        serviceNames: person.selectedServices.map(item => item.name),
         duration: this.getPersonDuration(person),
         barber: barber?.name || '',
         date: this.selectedDate!.fullDate,
@@ -1053,8 +1202,22 @@ export class BookingComponent implements OnInit {
     this.resetBookingForm();
   }
 
+  private filterServicesByCategory(source: Service[]): Service[] {
+    if (this.selectedServiceCategory === 'all') return source;
+
+    const categoryExists = source.some(
+      service => service.categoryId === this.selectedServiceCategory
+    );
+
+    if (!categoryExists) return source;
+
+    return source.filter(service => service.categoryId === this.selectedServiceCategory);
+  }
+
   private resetBookingForm(): void {
     this.serviceLocation = 'salon';
+    this.resetServiceReveal();
+    this.selectedServiceCategory = 'all';
     this.homeAddress = '';
     this.specialHomeService = '';
     this.bookingMode = 'single';
@@ -1064,7 +1227,7 @@ export class BookingComponent implements OnInit {
     this.nextPersonId = 2;
     this.selectedDate = null;
     this.clearSelectedTime();
-    this.calendarDate = this.startOfMonth(new Date());
+    this.calendarDate = this.startOfMonth(this.settingsService.salonNow());
     this.customer = { name: '', phone: '', notes: '' };
     this.phoneTouched = false;
     this.bookingValidationMessage = '';
@@ -1106,7 +1269,7 @@ export class BookingComponent implements OnInit {
   }
 
   private get businessWindows(): { start: number; end: number }[] {
-    const date = this.selectedDate?.date || new Date();
+    const date = this.selectedDate?.date || this.settingsService.salonNow();
     const hours = this.settingsService.hoursForDate(date);
     return hours ? [hours] : [];
   }

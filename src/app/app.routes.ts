@@ -1,12 +1,24 @@
 import { Routes } from '@angular/router';
-import { CustomerBookingComponent } from './customer-booking/customer-booking.component';
 import { adminAuthGuard } from './core/admin-auth.guard';
 
 export const routes: Routes = [
   {
     path: '',
-    component: CustomerBookingComponent,
-    title: 'Book Appointment'
+    loadComponent: () =>
+      import('./customer-booking/customer-booking.component').then(m => m.CustomerBookingComponent),
+    title: 'The Trim Town Studio'
+  },
+  {
+    path: 'about',
+    loadComponent: () =>
+      import('./about-page/about-page.component').then(m => m.AboutPageComponent),
+    title: 'About | The Trim Town'
+  },
+  {
+    path: 'gallery',
+    loadComponent: () =>
+      import('./gallery-page/gallery-page.component').then(m => m.GalleryPageComponent),
+    title: 'Gallery | The Trim Town'
   },
   {
     path: 'admin/login',
@@ -69,6 +81,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./admin/settings/admin-settings.component').then(m => m.AdminSettingsComponent),
     title: 'Settings'
+  },
+  {
+    path: 'admin/account-security',
+    canActivate: [adminAuthGuard],
+    loadComponent: () =>
+      import('./admin/account-security/account-security.component').then(m => m.AccountSecurityComponent),
+    title: 'Account & Security'
   },
   {
     path: 'admin/notifications',

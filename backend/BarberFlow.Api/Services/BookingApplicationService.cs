@@ -13,6 +13,7 @@ public sealed class BookingApplicationService(
     WhatsAppMessagingService whatsAppMessaging)
 {
     private const string DefaultSalonSlug = "royal-barbers";
+    private const int CustomHomeServiceDurationMinutes = 60;
 
     public async Task<IReadOnlyList<BookingResponse>> GetAllAsync(CancellationToken cancellationToken)
     {
@@ -308,6 +309,19 @@ public sealed class BookingApplicationService(
         var previous = booking.SpecialServiceAmount ?? 0;
         booking.SpecialServiceAmount = amount;
         booking.TotalAmount = Math.Max(0, booking.TotalAmount - previous) + amount;
+        var customLine = booking.Services.FirstOrDefault(x => x.ServiceId == null
+            && x.ServiceName == "Custom Home Service");
+        if (customLine is null)
+        {
+            customLine = new BookingService
+            {
+                ServiceName = "Custom Home Service",
+                DurationMinutes = CustomHomeServiceDurationMinutes,
+                SortOrder = booking.Services.Count
+            };
+            booking.Services.Add(customLine);
+        }
+        customLine.Amount = amount;
 
         await db.SaveChangesAsync(cancellationToken);
         return new(true, "Custom home-service price updated.", Map(booking));
@@ -326,23 +340,47 @@ public sealed class BookingApplicationService(
         if (!DateOnly.TryParse(request.Date, out var date) || !TryParseTime(request.Time, out var time))
             return new(false, "Select a valid appointment date and time.", []);
 
-        var schedule = await ValidateSalonScheduleAsync(salon, date, time, request.Duration, false, cancellationToken);
+        var serviceLocation = Enum.TryParse<ServiceLocation>(request.ServiceLocation, true, out var parsedLocation)
+            ? parsedLocation
+            : ServiceLocation.Salon;
+
+        var serviceNames = request.ServiceNames is { Count: > 0 }
+            ? request.ServiceNames.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            : SplitServices(request.Service);
+        if (serviceNames.Count == 0)
+            return new(false, "Select at least one service.", []);
+
+        var customHomeService = serviceLocation == ServiceLocation.Home
+            && serviceNames.Count == 1
+            && string.Equals(serviceNames[0], "Custom Home Service", StringComparison.OrdinalIgnoreCase);
+
+        List<Service> services = customHomeService
+            ? []
+            : await db.Services
+                .Where(x => x.SalonId == salon.Id
+                            && x.IsActive
+                            && x.ServiceCategory.IsActive
+                            && serviceNames.Contains(x.Name))
+                .ToListAsync(cancellationToken);
+
+        if (!customHomeService && services.Count != serviceNames.Count)
+            return new(false, "One or more selected services are not available.", []);
+
+        if (serviceLocation == ServiceLocation.Home && services.Any(x => !x.HomeServiceEnabled))
+            return new(false, "One or more selected services are not available for home service.", []);
+
+        var effectiveDuration = services.Sum(x => x.DurationMinutes)
+            + (serviceLocation == ServiceLocation.Home && (customHomeService || !string.IsNullOrWhiteSpace(request.SpecialService))
+                ? CustomHomeServiceDurationMinutes : 0);
+
+        if (!IsValidAppointmentDuration(effectiveDuration))
+            return new(false, "Booking duration is invalid.", []);
+
+        var schedule = await ValidateSalonScheduleAsync(salon, date, time, effectiveDuration, false, cancellationToken);
         if (!schedule.Success)
             return new(false, schedule.Message, []);
 
-        var serviceNames = SplitServices(request.Service);
-        var customHomeService = serviceNames.Count == 1
-            && string.Equals(serviceNames[0], "Custom Home Service", StringComparison.OrdinalIgnoreCase);
-
-        List<Guid> serviceIds = customHomeService
-            ? []
-            : await db.Services
-                .Where(x => x.SalonId == salon.Id && x.IsActive && serviceNames.Contains(x.Name))
-                .Select(x => x.Id)
-                .ToListAsync(cancellationToken);
-
-        if (!customHomeService && serviceNames.Count > 0 && serviceIds.Count != serviceNames.Count)
-            return new(false, "One or more selected services are not available.", []);
+        var serviceIds = services.Select(x => x.Id).ToList();
 
         var candidates = await db.Barbers
             .Where(x => x.SalonId == salon.Id && x.IsActive
@@ -371,7 +409,7 @@ public sealed class BookingApplicationService(
             }
 
             var result = await ValidateBarberWindowAsync(
-                salon.Id, barber, date, time, request.Duration, ignoreId, cancellationToken);
+                salon.Id, barber, date, time, effectiveDuration, ignoreId, cancellationToken);
 
             if (result.Success) eligible.Add(barber.FullName);
         }
@@ -395,29 +433,58 @@ public sealed class BookingApplicationService(
         if (!DateOnly.TryParse(request.Date, out var date) || !TryParseTime(request.Time, out var time))
             return (false, "Select a valid appointment date and time.", null);
 
-        if (request.Duration <= 0 || request.Amount < 0)
+        var serviceLocation = Enum.TryParse<ServiceLocation>(request.ServiceLocation, true, out var location)
+            ? location
+            : ServiceLocation.Salon;
+
+        if (serviceLocation == ServiceLocation.Home && string.IsNullOrWhiteSpace(request.ServiceAddress))
+            return (false, "Complete home-service address is required.", null);
+
+        if (serviceLocation != ServiceLocation.Home && !string.IsNullOrWhiteSpace(request.SpecialService))
+            return (false, "Custom service requests are only available for home bookings.", null);
+
+        var hasCustomHomeService = serviceLocation == ServiceLocation.Home
+            && !string.IsNullOrWhiteSpace(request.SpecialService);
+        var serviceNames = request.ServiceNames is { Count: > 0 }
+            ? request.ServiceNames.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            : SplitServices(request.Service);
+
+        if (serviceNames.Count == 0)
+            return (false, "Select at least one service.", null);
+
+        var customHomeService = hasCustomHomeService
+            && serviceNames.Count == 1
+            && string.Equals(serviceNames[0], "Custom Home Service", StringComparison.OrdinalIgnoreCase);
+
+        List<Service> services = customHomeService
+            ? []
+            : await db.Services
+                .Where(x => x.SalonId == salon.Id
+                            && x.IsActive
+                            && x.ServiceCategory.IsActive
+                            && serviceNames.Contains(x.Name))
+                .ToListAsync(cancellationToken);
+
+        if (!customHomeService && services.Count != serviceNames.Count)
+            return (false, "One or more selected services are not available.", null);
+
+        if (serviceLocation == ServiceLocation.Home && services.Any(x => !x.HomeServiceEnabled))
+            return (false, "One or more selected services are not available for home service.", null);
+
+        var effectiveDuration = services.Sum(x => x.DurationMinutes)
+            + (hasCustomHomeService ? CustomHomeServiceDurationMinutes : 0);
+        var effectiveAmount = services.Sum(x => GetServicePrice(x, serviceLocation));
+
+        if (!IsValidAppointmentDuration(effectiveDuration) || effectiveAmount < 0)
             return (false, "Booking duration or amount is invalid.", null);
 
         var isWalkIn = source == BookingSource.WalkIn;
-        var schedule = await ValidateSalonScheduleAsync(salon, date, time, request.Duration, isWalkIn, cancellationToken);
+        var schedule = await ValidateSalonScheduleAsync(salon, date, time, effectiveDuration, isWalkIn, cancellationToken);
         if (!schedule.Success) return (false, schedule.Message, null);
 
         var barber = await ResolveBarberAsync(salon.Id, request.Barber, cancellationToken);
         if (barber is null)
             return (false, "Selected barber is not active.", null);
-
-        var serviceNames = SplitServices(request.Service);
-        var services = serviceNames.Count == 0
-            ? []
-            : await db.Services
-                .Where(x => x.SalonId == salon.Id && x.IsActive && serviceNames.Contains(x.Name))
-                .ToListAsync(cancellationToken);
-
-        var customHomeService = string.Equals(request.Service, "Custom Home Service", StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(request.SpecialService);
-
-        if (!customHomeService && services.Count != serviceNames.Count)
-            return (false, "One or more selected services are not available.", null);
 
         if (services.Count > 0)
         {
@@ -428,12 +495,12 @@ public sealed class BookingApplicationService(
         }
 
         var barberWindow = await ValidateBarberWindowAsync(
-            salon.Id, barber, date, time, request.Duration, null, cancellationToken);
+            salon.Id, barber, date, time, effectiveDuration, null, cancellationToken);
         if (!barberWindow.Success) return (false, barberWindow.Message, null);
 
         if (staged.Any(x => x.BarberId == barber.Id
                             && x.AppointmentDate == date
-                            && Overlaps(x.StartTime, x.TotalDurationMinutes, time, request.Duration)))
+                            && Overlaps(x.StartTime, x.TotalDurationMinutes, time, effectiveDuration)))
         {
             return (false, $"{barber.FullName} already has an overlapping appointment at this time.", null);
         }
@@ -476,15 +543,19 @@ public sealed class BookingApplicationService(
             db.Customers.Add(customer);
         }
 
-        var serviceLocation = Enum.TryParse<ServiceLocation>(request.ServiceLocation, true, out var location)
-            ? location
-            : ServiceLocation.Salon;
-
         var status = source == BookingSource.WalkIn
             ? BookingStatus.Confirmed
-            : (serviceLocation == ServiceLocation.Home && !string.IsNullOrWhiteSpace(request.SpecialService)
+            : (hasCustomHomeService
                 ? BookingStatus.Pending
                 : (salon.Settings?.AutoConfirmBookings == false ? BookingStatus.Pending : BookingStatus.Confirmed));
+
+        var trustedSpecialServiceAmount = source == BookingSource.Admin && hasCustomHomeService
+            ? request.SpecialServiceAmount
+            : null;
+
+        if (trustedSpecialServiceAmount is { } customAmount
+            && (customAmount <= 0 || decimal.Truncate(customAmount) != customAmount))
+            return (false, "Enter a whole-rupee custom service amount greater than 0.", null);
 
         var booking = new Booking
         {
@@ -499,16 +570,16 @@ public sealed class BookingApplicationService(
             CustomerPhone = normalizedPhone,
             AppointmentDate = date,
             StartTime = time,
-            TotalDurationMinutes = request.Duration,
-            TotalAmount = request.Amount,
+            TotalDurationMinutes = effectiveDuration,
+            TotalAmount = effectiveAmount + (trustedSpecialServiceAmount ?? 0),
             Status = status,
             Source = source,
             ServiceLocation = serviceLocation,
             GroupSize = Math.Max(1, request.GroupSize),
             Notes = request.Notes?.Trim(),
-            ServiceAddress = request.ServiceAddress?.Trim(),
-            SpecialService = request.SpecialService?.Trim(),
-            SpecialServiceAmount = request.SpecialServiceAmount
+            ServiceAddress = serviceLocation == ServiceLocation.Home ? request.ServiceAddress?.Trim() : null,
+            SpecialService = hasCustomHomeService ? request.SpecialService?.Trim() : null,
+            SpecialServiceAmount = trustedSpecialServiceAmount
         };
 
         if (services.Count > 0)
@@ -524,19 +595,19 @@ public sealed class BookingApplicationService(
                     Service = service,
                     ServiceName = service.Name,
                     DurationMinutes = service.DurationMinutes,
-                    Amount = service.DiscountPrice is > 0 ? service.DiscountPrice.Value : service.OriginalPrice,
+                    Amount = GetServicePrice(service, serviceLocation),
                     SortOrder = index
                 });
             }
         }
-        else
+        if (hasCustomHomeService)
         {
             booking.Services.Add(new BookingService
             {
-                ServiceName = request.Service,
-                DurationMinutes = request.Duration,
-                Amount = request.Amount,
-                SortOrder = 0
+                ServiceName = "Custom Home Service",
+                DurationMinutes = CustomHomeServiceDurationMinutes,
+                Amount = trustedSpecialServiceAmount ?? 0,
+                SortOrder = booking.Services.Count
             });
         }
 
@@ -551,6 +622,9 @@ public sealed class BookingApplicationService(
         bool allowWalkInCurrentMinute,
         CancellationToken cancellationToken)
     {
+        if (!IsValidAppointmentDuration(duration))
+            return (false, "Booking duration is invalid.");
+
         var salonNow = GetSalonNow(salon);
         var today = DateOnly.FromDateTime(salonNow.DateTime);
         if (date < today)
@@ -569,14 +643,24 @@ public sealed class BookingApplicationService(
         if (hours is null || !hours.IsOpen || !hours.OpenTime.HasValue || !hours.CloseTime.HasValue)
             return (false, "The salon is closed on the selected date.");
 
-        var end = time.AddMinutes(duration);
-        if (time < hours.OpenTime.Value || end > hours.CloseTime.Value)
+        var start = time.ToTimeSpan();
+        var end = start + TimeSpan.FromMinutes(duration);
+        if (start < hours.OpenTime.Value.ToTimeSpan() || end > hours.CloseTime.Value.ToTimeSpan())
             return (false, "This appointment falls outside the configured business hours.");
 
         if (date == today)
         {
             var now = TimeOnly.FromDateTime(salonNow.DateTime);
-            if (allowWalkInCurrentMinute ? time < now : time <= now)
+
+            // Walk-ins are selected and transmitted with minute precision (for example 4:52 PM).
+            // Compare them against the salon's current minute, not current seconds, otherwise
+            // 4:52 PM would be rejected at 4:52:15 PM as already passed.
+            var currentMinute = new TimeOnly(now.Hour, now.Minute);
+            var isPast = allowWalkInCurrentMinute
+                ? time < currentMinute
+                : time <= now;
+
+            if (isPast)
                 return (false, "The selected appointment time has already passed.");
         }
 
@@ -592,6 +676,9 @@ public sealed class BookingApplicationService(
         Guid? ignoreBookingId,
         CancellationToken cancellationToken)
     {
+        if (!IsValidAppointmentDuration(duration))
+            return (false, "Booking duration is invalid.");
+
         var onLeave = await db.BarberLeaves.AnyAsync(
             x => x.BarberId == barber.Id && x.StartDate <= date && x.EndDate >= date,
             cancellationToken);
@@ -615,8 +702,9 @@ public sealed class BookingApplicationService(
             if (!working.IsWorking || !working.StartTime.HasValue || !working.EndTime.HasValue)
                 return (false, $"{barber.FullName} is not working on this date.");
 
-            var end = time.AddMinutes(duration);
-            if (time < working.StartTime.Value || end > working.EndTime.Value)
+            var start = time.ToTimeSpan();
+            var end = start + TimeSpan.FromMinutes(duration);
+            if (start < working.StartTime.Value.ToTimeSpan() || end > working.EndTime.Value.ToTimeSpan())
                 return (false, $"{barber.FullName} is outside their configured working hours at this time.");
         }
 
@@ -656,8 +744,31 @@ public sealed class BookingApplicationService(
             .FirstAsync(cancellationToken);
 
     private static bool Overlaps(TimeOnly firstStart, int firstDuration, TimeOnly secondStart, int secondDuration)
-        => firstStart < secondStart.AddMinutes(secondDuration)
-           && secondStart < firstStart.AddMinutes(firstDuration);
+    {
+        var firstStartValue = firstStart.ToTimeSpan();
+        var secondStartValue = secondStart.ToTimeSpan();
+        var firstEnd = firstStartValue + TimeSpan.FromMinutes(firstDuration);
+        var secondEnd = secondStartValue + TimeSpan.FromMinutes(secondDuration);
+
+        return firstStartValue < secondEnd && secondStartValue < firstEnd;
+    }
+
+    private static bool IsValidAppointmentDuration(int duration)
+        => duration > 0 && duration < 24 * 60;
+
+    private static decimal GetServicePrice(Service service, ServiceLocation location)
+    {
+        if (location == ServiceLocation.Home && service.HomeServiceEnabled)
+        {
+            return service.HomeDiscountPrice is > 0
+                ? service.HomeDiscountPrice.Value
+                : service.HomeOriginalPrice ?? service.OriginalPrice;
+        }
+
+        return service.DiscountPrice is > 0
+            ? service.DiscountPrice.Value
+            : service.OriginalPrice;
+    }
 
     private static List<string> SplitServices(string value)
         => value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -700,12 +811,14 @@ public sealed class BookingApplicationService(
     private static BookingResponse Map(Booking booking)
     {
         var services = booking.Services.OrderBy(x => x.SortOrder).ToList();
+        var namedServices = services.Where(x => x.ServiceId != null || x.ServiceName != "Custom Home Service").Select(x => x.ServiceName).ToList();
+        if (namedServices.Count == 0) namedServices = services.Select(x => x.ServiceName).ToList();
         return new BookingResponse(
             booking.PublicId,
             booking.BookingCode,
             booking.CustomerName,
             booking.CustomerPhone ?? string.Empty,
-            string.Join(", ", services.Select(x => x.ServiceName)),
+            string.Join(", ", namedServices),
             booking.TotalDurationMinutes,
             booking.Barber.FullName,
             booking.AppointmentDate.ToString("yyyy-MM-dd"),
@@ -718,7 +831,8 @@ public sealed class BookingApplicationService(
             booking.ServiceLocation.ToString(),
             booking.ServiceAddress ?? string.Empty,
             booking.SpecialService ?? string.Empty,
-            booking.SpecialServiceAmount ?? 0
+            booking.SpecialServiceAmount ?? 0,
+            namedServices
         );
     }
 }

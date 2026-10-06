@@ -10,7 +10,9 @@ public sealed record ServiceDto(
     decimal? HomeOriginalPrice,
     decimal? HomeDiscountPrice,
     string Image,
-    string Status
+    string Status,
+    int? CategoryId = null,
+    string? CategoryName = null
 );
 
 public sealed record ServiceUpsertRequest(
@@ -22,6 +24,22 @@ public sealed record ServiceUpsertRequest(
     decimal? HomeOriginalPrice,
     decimal? HomeDiscountPrice,
     string Image,
+    string Status,
+    int? CategoryId = null
+);
+
+
+public sealed record ServiceCategoryDto(
+    int Id,
+    string Name,
+    int SortOrder,
+    string Status,
+    int ServiceCount
+);
+
+public sealed record ServiceCategoryUpsertRequest(
+    string Name,
+    int SortOrder,
     string Status
 );
 

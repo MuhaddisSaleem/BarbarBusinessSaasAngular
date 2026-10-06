@@ -2,7 +2,7 @@ name: Phase 1 QA
 
 on:
   push:
-    branches: [main]
+    branches: [main, The_trim_town]
   workflow_dispatch:
 
 jobs:

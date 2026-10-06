@@ -17,6 +17,12 @@ export interface LoginResponse {
   user?: AuthUser;
 }
 
+export interface AuthMutationResponse {
+  success: boolean;
+  message: string;
+  user?: AuthUser;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly baseUrl = '/api/auth';
@@ -41,6 +47,48 @@ export class AuthService {
     if (typeof window === 'undefined') return null;
     return window.localStorage.getItem(this.tokenKey)
       || window.sessionStorage.getItem(this.tokenKey);
+  }
+
+
+  changePassword(currentPassword: string, newPassword: string): Observable<AuthMutationResponse> {
+    return this.http.patch<AuthMutationResponse>(this.baseUrl + '/password', {
+      currentPassword,
+      newPassword
+    });
+  }
+
+  requestEmailChange(currentPassword: string, newEmail: string): Observable<AuthMutationResponse> {
+    return this.http.post<AuthMutationResponse>(this.baseUrl + '/email-change/request', {
+      currentPassword,
+      newEmail: newEmail.trim()
+    });
+  }
+
+  confirmEmailChange(newEmail: string, code: string): Observable<AuthMutationResponse> {
+    return this.http.post<AuthMutationResponse>(this.baseUrl + '/email-change/confirm', {
+      newEmail: newEmail.trim(),
+      code
+    }).pipe(
+      tap(response => {
+        if (response.success && response.user) {
+          this.updateStoredUser(response.user);
+        }
+      })
+    );
+  }
+
+  requestPasswordReset(email: string): Observable<AuthMutationResponse> {
+    return this.http.post<AuthMutationResponse>(this.baseUrl + '/password-reset/request', {
+      email: email.trim()
+    });
+  }
+
+  confirmPasswordReset(email: string, code: string, newPassword: string): Observable<AuthMutationResponse> {
+    return this.http.post<AuthMutationResponse>(this.baseUrl + '/password-reset/confirm', {
+      email: email.trim(),
+      code,
+      newPassword
+    });
   }
 
   login(email: string, password: string, rememberMe: boolean): Observable<LoginResponse> {
@@ -101,6 +149,21 @@ export class AuthService {
     }
 
     this.userSubject.next(null);
+  }
+
+  private updateStoredUser(user: AuthUser): void {
+    if (typeof window === 'undefined') {
+      this.userSubject.next(user);
+      return;
+    }
+
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      if (storage.getItem(this.userKey)) {
+        storage.setItem(this.userKey, JSON.stringify(user));
+      }
+    }
+
+    this.userSubject.next(user);
   }
 
   private readUser(): AuthUser | null {
