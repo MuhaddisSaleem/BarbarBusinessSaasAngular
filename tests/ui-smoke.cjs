@@ -24,7 +24,10 @@ let browser, activePage;
   let scenarios=0;
   const failures=[];
   for(const width of [1440,390]){
-    const context=await browser.newContext({viewport:{width,height:1000},timezoneId:'UTC'});
+    const browserTimezone=process.env.QA_TT10_ONLY==='1'
+      ? (width>=1000?'Pacific/Honolulu':'America/New_York')
+      : 'UTC';
+    const context=await browser.newContext({viewport:{width,height:1000},timezoneId:browserTimezone});
     const page=await context.newPage();activePage=page;page.setDefaultTimeout(15000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
 
@@ -492,7 +495,9 @@ let browser, activePage;
         return await route.fulfill(apiResponse({success:false,message:'QA API mock error: '+error.message},500));
       }
     });
-    await page.clock.install({time:new Date('2026-09-28T11:30:00Z')});
+    await page.clock.install({time:new Date(process.env.QA_TT10_ONLY==='1'
+      ? '2026-10-05T22:30:00Z'
+      : '2026-09-28T11:30:00Z')});
     await page.addInitScript(seed=>{
       if(!localStorage.getItem('qa-auth-disabled')){
         localStorage.setItem('adminToken','qa-admin-token');
@@ -514,6 +519,40 @@ let browser, activePage;
     const stored=async()=>apiBookings.map(item=>({...item}));
     const details=async()=>{await page.locator('#customer-name-input').fill('QA Customer');await page.locator('#customer-phone-input').fill('3001234567');};
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
+
+    if(process.env.QA_TT10_ONLY==='1'){
+      // At 2026-10-05 22:30Z it is already 06 Oct in Asia/Karachi, while
+      // both browser zones used by this focused matrix are still on 05 Oct.
+      await goto();
+      await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();
+      await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();
+
+      assert.equal((await page.locator('.calendar-header strong').innerText()).trim(),'October 2026','TT-10 public calendar must use the salon month');
+      const day5=page.locator('.calendar-days button').filter({hasText:/^5$/});
+      const day6=page.locator('.calendar-days button').filter({hasText:/^6$/});
+      assert.equal(await day5.isDisabled(),true,'TT-10 browser-local previous day must be disabled after salon rollover');
+      assert.equal(await day6.isDisabled(),false,'TT-10 salon current day must remain bookable');
+
+      await goto('/admin/bookings');
+      await page.locator('.create-booking-btn').click();
+      const walkInDate=(await page.locator('.walkin-now-row > div').first().innerText()).trim();
+      assert.match(walkInDate,/06\s+Oct\s+2026/i,'TT-10 walk-in date must use salon today');
+      await page.locator('.modal-backdrop').click({position:{x:5,y:5}});
+
+      await goto('/admin/calendar');
+      assert.equal(await page.locator('.date-input').inputValue(),'2026-10-06','TT-10 admin calendar Today must use salon date');
+      assert.match((await page.locator('.current-period strong').innerText()).trim(),/06\s+October\s+2026/i,'TT-10 admin calendar label must use salon date');
+
+      await goto('/admin/reports');
+      const reportDates=page.locator('.report-filters input[type="date"]');
+      assert.equal(await reportDates.nth(0).inputValue(),'2026-10-01','TT-10 reports must start at the salon month');
+      assert.equal(await reportDates.nth(1).inputValue(),'2026-10-06','TT-10 reports must end at salon today');
+
+      scenarios+=8;
+      console.log(`PASS TT-10 ${width}px (${browserTimezone}): salon date wins over browser timezone`);
+      await context.close();
+      continue;
+    }
 
     if(process.env.QA_TT09_ONLY==='1'){
       await goto('/admin/account-security');
