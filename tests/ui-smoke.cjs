@@ -518,7 +518,7 @@ let browser, activePage;
     if(process.env.QA_TT09_ONLY==='1'){
       await goto('/admin/account-security');
       const security=page.locator('.security-page');
-      const current=security.getByPlaceholder('Current password');
+      const current=security.getByPlaceholder('Current password',{exact:true});
       const next=security.getByPlaceholder('Minimum 8 characters');
       const confirm=security.getByPlaceholder('Repeat new password');
       const changeButton=security.getByRole('button',{name:'Change Password'});
