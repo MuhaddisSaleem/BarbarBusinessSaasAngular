@@ -499,9 +499,9 @@ let browser, activePage;
     await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();await details();
     await page.screenshot({path:`test-results/customer-${width}.png`,fullPage:true});await finish();
 
-    await page.locator('.booking-footer').scrollIntoViewIfNeeded();
+    await page.locator('app-footer .site-footer').scrollIntoViewIfNeeded();
     const footerGap=await page.evaluate(()=>{
-      const footer=document.querySelector('.booking-footer');
+      const footer=document.querySelector('app-footer .site-footer');
       if(!footer)return Number.POSITIVE_INFINITY;
       const bottom=footer.getBoundingClientRect().bottom+window.scrollY;
       return Math.max(0,document.documentElement.scrollHeight-bottom);
