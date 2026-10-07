@@ -12,7 +12,7 @@ On 6 October 2026, the user explicitly authorized pushing these fixes to `the_tr
 | TT-01 | Already fixed | Production Angular build passes. Existing bundle/style warnings remain. |
 | TT-02 | Already fixed | Retained server-owned prices and duration. Backend scenarios confirm submitted price, duration and public custom price cannot override catalogue values. |
 | TT-03 | Already fixed, with an adjacent gap | Retained category, home eligibility and address checks. Fixed mixed standard/custom availability to include the extra custom-service hour. Backend scenarios pass. |
-| TT-04 | Open | Replaced browser-only media persistence with shared SQL-backed branding endpoints. Public reads, authenticated salon-scoped writes/deletes, 2 MB limit and media-signature checks. Frontend and backend component checks pass; production migration and cross-device browser test remain. |
+| TT-04 | **Open → Fixed** | Shared SQL-backed branding is verified end-to-end at the API/storage boundary. Real SQL Server CI applies the migration, uploads logo + hero as the authenticated salon admin, re-reads both from an independent anonymous client, byte-compares the persisted media, rejects unauthorized deletion, then deletes and confirms 404. Fresh-browser frontend consumption is also covered by the existing TT-04 regression. **Fixed and verified in Backend CI run 37579117832.** |
 | TT-05 | Open | Booking deep links subscribe to route changes and wait for delayed booking data. Subscriptions are cleaned up; background refresh does not reopen a dismissed drawer. Regression passes. |
 | TT-06 | Open | A committed POST triggers success independently of the subsequent refresh. Refresh errors generate a separate warning instead of prompting a duplicate save. Authenticated and public regression cases pass. |
 | TT-07 | Open | Walk-in creation has an in-flight guard and disabled submit button. Errors unlock retry; success closes the modal. Regression cases pass. |
@@ -30,12 +30,13 @@ On 6 October 2026, the user explicitly authorized pushing these fixes to `the_tr
 - Backend project compiled with .NET SDK 10.0.401, without compiler warnings/errors.
 - EF `migrations has-pending-model-changes`: no pending model differences.
 - SQL Server script generated for `AddSharedBranding`; it only creates the media table, foreign key and migration-history entry. The subsequent Backend CI run applied migrations against its disposable SQL Server service and passed its API smoke checks.
+- TT-04 closure: SQL Server-backed shared branding persistence passed in Backend CI run `37579117832` at code commit `72d2273`; logo and hero survived an independent anonymous re-read with exact byte equality, and authenticated deletion was verified.
 - `git diff --check` and `node --check tests/ui-smoke.cjs`: passed.
 - `npm run test:ui` via GitHub Actions: **41 scenarios passed** across 1440px desktop and 390px mobile. Overall job correctly fails because public group controls are hidden at both widths. Online/home bookings, walk-ins, dashboard/report totals, nine admin routes, barber CRUD, availability refresh/conflicts/cancellation and Settings save/reload/reset pass. Browser API responses are mocked; SQL-backed API CI is separate, not a full browser-to-SQL end-to-end test.
 
 ## Required before final release sign-off
 
-1. Completed: disposable SQL Server migration/startup and backend CI smoke checks passed (run 37577089199). Production migration remains a deployment step.
+1. Completed for TT-04: disposable SQL Server migration/startup plus shared logo/hero persistence passed. The TT-04-specific real SQL validation is run `37579117832`. Production migration/re-upload remains a deployment step, not an open TT-04 code defect.
 2. Run the desktop/mobile browser suite and the real API journeys: online/group/home bookings, repeated submissions, notifications, branding across clients, password reset with actual test email delivery, and salon/browser timezone differences. Password-reset confirmation and old-token replay already pass in the in-process HTTP tests.
 3. Audit historical service-line totals from bookings created before TT-02/TT-11 fixes. Run the read-only `backend/qa/audit-historical-service-totals.sql` to identify snapshot discrepancies. Determine any data repair from the actual historical records; the audit script has been prepared but not executed against SQL Server.
 
@@ -56,6 +57,8 @@ On 6 October 2026, the user explicitly authorized pushing these fixes to `the_tr
 - Fixes and test-harness updates have been pushed to `the_trim_town_final` under the user’s authorization; no production deployment was performed.
 
 ## Final QA continuation — 7 October 2026
+
+- **TT-04 closed on 7 October 2026:** real SQL Server persistence and independent-client reads passed in Backend CI run `37579117832` at code commit `72d2273`.
 
 - Backend CI passed against SQL Server: https://github.com/MuhaddisSaleem/BarbarBusinessSaasAngular/actions/runs/37577089199 .
 - Chromium browser execution is now available through draft PR #9. Earlier local installation limitations no longer prevent CI browser testing.
