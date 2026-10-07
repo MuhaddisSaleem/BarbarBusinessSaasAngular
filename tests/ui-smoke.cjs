@@ -29,7 +29,7 @@ let browser, activePage;
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
 
     let apiBookings=[];
-    let bookingsGetDelayMs=0,bookingsGetCount=0;
+    let bookingsGetGate=null,releaseBookingsGetGate=null,bookingsGetCount=0;
     let apiServices=JSON.parse(JSON.stringify(seed['royal-barbers.admin-services.v1']));
     let apiBarbers=JSON.parse(JSON.stringify(seed['royal-barbers.admin-barbers.v1']));
     let apiSettings={
@@ -410,9 +410,7 @@ let browser, activePage;
         }
         if(req.method()==='GET'&&pathname==='/api/bookings'){
           bookingsGetCount++;
-          const delay=bookingsGetDelayMs;
-          bookingsGetDelayMs=0;
-          if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
+          if(bookingsGetGate)await bookingsGetGate;
           return await route.fulfill(apiResponse(apiBookings));
         }
         if(req.method()==='POST'&&pathname==='/api/bookings/online'){
@@ -478,10 +476,13 @@ let browser, activePage;
         {id:72,code:'RB-TT05-B',customerName:'Deep Link Two',phone:'+92 300 2222222',service:'Haircut',serviceNames:['Haircut'],duration:40,barber:'Second Barber',date:'2026-09-28',time:'7:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'}
       ];
       nextBookingId=73;
-      bookingsGetDelayMs=3000;
+      bookingsGetGate=new Promise(resolve=>{releaseBookingsGetGate=resolve;});
 
       await goto('/admin/bookings?booking=71');
       assert.equal(await page.locator('.booking-drawer').count(),0,'TT-05 drawer must wait for delayed booking data');
+      releaseBookingsGetGate();
+      bookingsGetGate=null;
+      releaseBookingsGetGate=null;
       const firstDrawer=page.locator('.booking-drawer.open');
       await firstDrawer.waitFor();
       assert.equal((await firstDrawer.locator('h3').innerText()).trim(),'RB-TT05-A','TT-05 delayed deep link must open the requested booking');
@@ -508,7 +509,6 @@ let browser, activePage;
       await tt05Form.getByPlaceholder('Enter full name').fill('TT05 Refresh');
       await tt05Form.locator('.submit-booking-btn').click();
       await tt05Form.waitFor({state:'hidden'});
-      await page.waitForFunction(previous=>window.__tt05Dummy===undefined||true,refreshCountBefore);
       for(let i=0;i<30&&bookingsGetCount<=refreshCountBefore;i++)await new Promise(resolve=>setTimeout(resolve,50));
       assert.ok(bookingsGetCount>refreshCountBefore,'TT-05 must observe a real background bookings refresh');
       assert.equal(await page.locator('.booking-drawer').count(),0,'TT-05 background refresh must not reopen a dismissed deep-link drawer');
