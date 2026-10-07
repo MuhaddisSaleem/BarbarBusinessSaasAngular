@@ -29,6 +29,7 @@ let browser, activePage;
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
 
     let apiBookings=[];
+    let bookingsGetDelayMs=0,bookingsGetCount=0;
     let apiServices=JSON.parse(JSON.stringify(seed['royal-barbers.admin-services.v1']));
     let apiBarbers=JSON.parse(JSON.stringify(seed['royal-barbers.admin-barbers.v1']));
     let apiSettings={
@@ -407,7 +408,13 @@ let browser, activePage;
             eligibleBarbers:eligible.map(x=>x.name)
           }));
         }
-        if(req.method()==='GET'&&pathname==='/api/bookings')return await route.fulfill(apiResponse(apiBookings));
+        if(req.method()==='GET'&&pathname==='/api/bookings'){
+          bookingsGetCount++;
+          const delay=bookingsGetDelayMs;
+          bookingsGetDelayMs=0;
+          if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
+          return await route.fulfill(apiResponse(apiBookings));
+        }
         if(req.method()==='POST'&&pathname==='/api/bookings/online'){
           const items=body;
           if(!Array.isArray(items))throw new Error('Online booking payload is not an array');
@@ -464,6 +471,54 @@ let browser, activePage;
     const stored=async()=>apiBookings.map(item=>({...item}));
     const details=async()=>{await page.locator('#customer-name-input').fill('QA Customer');await page.locator('#customer-phone-input').fill('3001234567');};
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
+
+    if(process.env.QA_TT05_ONLY==='1'){
+      apiBookings=[
+        {id:71,code:'RB-TT05-A',customerName:'Deep Link One',phone:'+92 300 1111111',service:'Haircut',serviceNames:['Haircut'],duration:40,barber:'Falak Shair',date:'2026-09-28',time:'6:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'},
+        {id:72,code:'RB-TT05-B',customerName:'Deep Link Two',phone:'+92 300 2222222',service:'Haircut',serviceNames:['Haircut'],duration:40,barber:'Second Barber',date:'2026-09-28',time:'7:00 PM',amount:600,status:'Confirmed',source:'Admin',notes:'',groupSize:1,serviceLocation:'Salon'}
+      ];
+      nextBookingId=73;
+      bookingsGetDelayMs=3000;
+
+      await goto('/admin/bookings?booking=71');
+      assert.equal(await page.locator('.booking-drawer').count(),0,'TT-05 drawer must wait for delayed booking data');
+      const firstDrawer=page.locator('.booking-drawer.open');
+      await firstDrawer.waitFor();
+      assert.equal((await firstDrawer.locator('h3').innerText()).trim(),'RB-TT05-A','TT-05 delayed deep link must open the requested booking');
+
+      await page.evaluate(()=>{
+        history.pushState({},'', '/admin/bookings?booking=72');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+      const secondHeading=page.locator('.booking-drawer.open h3').filter({hasText:'RB-TT05-B'});
+      await secondHeading.waitFor();
+      assert.equal((await secondHeading.innerText()).trim(),'RB-TT05-B','TT-05 route reuse must switch to the new booking');
+
+      await page.getByRole('button',{name:'Close details'}).click();
+      assert.equal(await page.locator('.booking-drawer').count(),0,'TT-05 drawer must close');
+
+      const refreshCountBefore=bookingsGetCount;
+      await page.locator('.create-booking-btn').click();
+      const tt05Form=page.locator('.create-modal');
+      await tt05Form.locator('.walkin-service-trigger').click();
+      await page.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();
+      await page.locator('.walkin-service-overlay-backdrop').click({position:{x:5,y:5}});
+      const tt05Barber=tt05Form.locator('select').first();
+      await tt05Barber.selectOption('Falak Shair');
+      await tt05Form.getByPlaceholder('Enter full name').fill('TT05 Refresh');
+      await tt05Form.locator('.submit-booking-btn').click();
+      await tt05Form.waitFor({state:'hidden'});
+      await page.waitForFunction(previous=>window.__tt05Dummy===undefined||true,refreshCountBefore);
+      for(let i=0;i<30&&bookingsGetCount<=refreshCountBefore;i++)await new Promise(resolve=>setTimeout(resolve,50));
+      assert.ok(bookingsGetCount>refreshCountBefore,'TT-05 must observe a real background bookings refresh');
+      assert.equal(await page.locator('.booking-drawer').count(),0,'TT-05 background refresh must not reopen a dismissed deep-link drawer');
+
+      scenarios+=4;
+      console.log(`PASS TT-05 ${width}px: delayed deep link, route reuse and dismissed-drawer refresh verified`);
+      await context.close();
+      continue;
+    }
+
     await goto();
     // Scroll reveals must leave every booking step reachable, including long
     // sections on mobile, and must not hide a step again when scrolling back.
