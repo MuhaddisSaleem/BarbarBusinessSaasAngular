@@ -292,3 +292,35 @@ jobs:
             -d '{"businessName":"Royal Barbers CI","businessPhone":"+92 300 1234567","whatsappNumber":"+92 300 1234567","email":"owner@royalbarbers.local","address":"CI Address","city":"Bahawalpur","currency":"PKR","timezone":"Asia/Karachi","brandSubtitle":"LOOK GOOD · FEEL GREAT","heroEyebrow":"PREMIUM BARBERSHOP","heroHeadline":"","heroTagline":"More Than a Haircut. It is a Lifestyle.","bookingInterval":30,"maxAdvanceDays":30,"cancellationHours":2,"lateArrivalMinutes":10,"allowSameDayBooking":true,"autoConfirmBookings":true,"sendWhatsappConfirmation":true,"sendSmsFallback":false,"sendAppointmentReminder":true,"reminderHoursBefore":2,"notifyOwnerOnNewBooking":true,"businessHours":[{"key":"monday","label":"Monday","enabled":true,"open":"08:00","close":"21:00"},{"key":"tuesday","label":"Tuesday","enabled":true,"open":"08:00","close":"21:00"},{"key":"wednesday","label":"Wednesday","enabled":true,"open":"08:00","close":"21:00"},{"key":"thursday","label":"Thursday","enabled":true,"open":"08:00","close":"21:00"},{"key":"friday","label":"Friday","enabled":true,"open":"08:00","close":"21:00"},{"key":"saturday","label":"Saturday","enabled":true,"open":"08:00","close":"21:00"},{"key":"sunday","label":"Sunday","enabled":true,"open":"08:00","close":"21:00"}]}' \
             http://127.0.0.1:5080/api/settings | grep '"success":true'
           curl --fail --silent http://127.0.0.1:5080/api/settings | grep '"businessName":"Royal Barbers CI"'
+
+          # TT-04: shared branding must persist in SQL Server and be readable by
+          # an independent anonymous client, not only the browser that uploaded it.
+          python3 - <<'PY'
+          from pathlib import Path
+          Path("/tmp/tt04-logo.png").write_bytes(bytes([137,80,78,71,13,10,26,10,0,0,0,0]))
+          Path("/tmp/tt04-hero.webm").write_bytes(bytes([26,69,223,163,66,134,129,1]))
+          PY
+
+          curl --fail --silent -X PUT             -H "Authorization: Bearer $TOKEN"             -F "file=@/tmp/tt04-logo.png;type=image/png"             http://127.0.0.1:5080/api/branding/logo | grep '"contentType":"image/png"'
+
+          curl --fail --silent -X PUT             -H "Authorization: Bearer $TOKEN"             -F "file=@/tmp/tt04-hero.webm;type=video/webm"             http://127.0.0.1:5080/api/branding/hero | grep '"contentType":"video/webm"'
+
+          BRANDING_LIST=$(curl --fail --silent http://127.0.0.1:5080/api/branding)
+          echo "$BRANDING_LIST" | grep '"key":"logo"'
+          echo "$BRANDING_LIST" | grep '"key":"hero"'
+
+          curl --fail --silent http://127.0.0.1:5080/api/branding/logo -o /tmp/tt04-logo-download.png
+          cmp /tmp/tt04-logo.png /tmp/tt04-logo-download.png
+          curl --fail --silent http://127.0.0.1:5080/api/branding/hero -o /tmp/tt04-hero-download.webm
+          cmp /tmp/tt04-hero.webm /tmp/tt04-hero-download.webm
+
+          TT04_UNAUTH_DELETE=$(curl --silent -o /tmp/tt04-unauth-delete.txt -w "%{http_code}" -X DELETE             http://127.0.0.1:5080/api/branding/logo)
+          test "$TT04_UNAUTH_DELETE" = "401"
+
+          curl --fail --silent -X DELETE -H "Authorization: Bearer $TOKEN"             http://127.0.0.1:5080/api/branding/logo
+          curl --fail --silent -X DELETE -H "Authorization: Bearer $TOKEN"             http://127.0.0.1:5080/api/branding/hero
+
+          TT04_LOGO_AFTER_DELETE=$(curl --silent -o /tmp/tt04-logo-after-delete.txt -w "%{http_code}"             http://127.0.0.1:5080/api/branding/logo)
+          TT04_HERO_AFTER_DELETE=$(curl --silent -o /tmp/tt04-hero-after-delete.txt -w "%{http_code}"             http://127.0.0.1:5080/api/branding/hero)
+          test "$TT04_LOGO_AFTER_DELETE" = "404"
+          test "$TT04_HERO_AFTER_DELETE" = "404"
