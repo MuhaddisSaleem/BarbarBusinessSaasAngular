@@ -71,7 +71,10 @@ public sealed class ReportsApplicationService(BarberFlowDbContext db)
                 x.BookingCode,
                 x.CustomerName,
                 x.CustomerPhone ?? string.Empty,
-                string.Join(", ", x.Services.OrderBy(s => s.SortOrder).Select(s => s.ServiceName)),
+                string.Join(", ", ReportServiceLines(x)
+                    .Where(s => s.Name != HistoricalAdjustmentLabel)
+                    .Select(s => s.Name)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)),
                 x.Barber.FullName,
                 x.AppointmentDate.ToString("yyyy-MM-dd"),
                 x.StartTime.ToString("h:mm tt", CultureInfo.InvariantCulture),
@@ -105,15 +108,15 @@ public sealed class ReportsApplicationService(BarberFlowDbContext db)
     {
         var groups = bookings
             .Where(x => x.Status != BookingStatus.Cancelled)
-            .SelectMany(booking => booking.Services.Select(service => new
+            .SelectMany(booking => ReportServiceLines(booking).Select(service => new
             {
                 Booking = booking,
                 Service = service
             }))
-            .GroupBy(x => x.Service.ServiceName, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(x => x.Service.Name, StringComparer.OrdinalIgnoreCase)
             .Select(group => new
             {
-                Name = group.First().Service.ServiceName,
+                Name = group.First().Service.Name,
                 Bookings = group.Count(),
                 Completed = group.Count(x => x.Booking.Status == BookingStatus.Completed),
                 Value = group.Sum(x => x.Service.Amount)
@@ -131,6 +134,47 @@ public sealed class ReportsApplicationService(BarberFlowDbContext db)
             x.Value,
             (int)Math.Round(x.Bookings * 100m / maxBookings)
         )).ToList();
+    }
+
+    private const string CustomServiceLabel = "Custom Home Service";
+    private const string HistoricalAdjustmentLabel = "Historical adjustment";
+
+    private sealed record ReportServiceLine(string Name, decimal Amount);
+
+    private static IReadOnlyList<ReportServiceLine> ReportServiceLines(Booking booking)
+    {
+        // Reports must reconcile to the immutable booking total without rewriting
+        // historical snapshots or guessing old catalogue prices.
+        var lines = booking.Services
+            .OrderBy(x => x.SortOrder)
+            .Where(x => !(x.ServiceId is null
+                          && x.ServiceName.Equals(CustomServiceLabel, StringComparison.OrdinalIgnoreCase)))
+            .Select(x => new ReportServiceLine(x.ServiceName, x.Amount))
+            .ToList();
+
+        var storedCustomLine = booking.Services
+            .FirstOrDefault(x => x.ServiceId is null
+                                 && x.ServiceName.Equals(CustomServiceLabel, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(booking.SpecialService) || storedCustomLine is not null)
+        {
+            // SpecialServiceAmount is the authoritative booking-level snapshot when
+            // present. Older rows may have no custom BookingService line at all.
+            var customAmount = booking.SpecialServiceAmount ?? storedCustomLine?.Amount ?? 0;
+            lines.Add(new ReportServiceLine(CustomServiceLabel, customAmount));
+        }
+
+        var allocated = lines.Sum(x => x.Amount);
+        var remainder = booking.TotalAmount - allocated;
+        if (remainder != 0)
+        {
+            // Never backfill old catalogue prices from today's service table. Put any
+            // unexplained historical remainder in a visible reconciliation row so
+            // service totals still equal the booking ledger total.
+            lines.Add(new ReportServiceLine(HistoricalAdjustmentLabel, remainder));
+        }
+
+        return lines;
     }
 
     private static IReadOnlyList<BarberReportRowResponse> BuildBarberRows(
