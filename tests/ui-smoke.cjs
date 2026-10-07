@@ -31,6 +31,7 @@ let browser, activePage;
     let apiBookings=[];
     let bookingsGetGate=null,releaseBookingsGetGate=null,bookingsGetCount=0,failNextBookingsGet=false;
     let busySlotsGetCount=0,failNextBusySlotsGet=false,walkInPostCount=0,onlinePostCount=0;
+    let walkInPostGate=null,releaseWalkInPostGate=null,failNextWalkInPost=false;
     let apiServices=JSON.parse(JSON.stringify(seed['royal-barbers.admin-services.v1']));
     let apiBarbers=JSON.parse(JSON.stringify(seed['royal-barbers.admin-barbers.v1']));
     let apiSettings={
@@ -433,6 +434,11 @@ let browser, activePage;
         }
         if(req.method()==='POST'&&pathname==='/api/bookings/walk-in'){
           walkInPostCount++;
+          if(walkInPostGate)await walkInPostGate;
+          if(failNextWalkInPost){
+            failNextWalkInPost=false;
+            return await route.fulfill(apiResponse({message:'TT-07 forced walk-in failure.'},500));
+          }
           const created=normalizeBooking(body,'Walk-in',nextBookingId++);
           apiBookings=[created,...apiBookings];
           return await route.fulfill(apiResponse({success:true,message:'Walk-in booked successfully.',booking:created}));
@@ -481,6 +487,60 @@ let browser, activePage;
     const stored=async()=>apiBookings.map(item=>({...item}));
     const details=async()=>{await page.locator('#customer-name-input').fill('QA Customer');await page.locator('#customer-phone-input').fill('3001234567');};
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
+
+    if(process.env.QA_TT07_ONLY==='1'){
+      await goto('/admin/bookings');
+
+      const fillWalkIn=async name=>{
+        await page.locator('.create-booking-btn').click();
+        const form=page.locator('.create-modal');
+        await form.locator('.walkin-service-trigger').click();
+        await page.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();
+        await page.locator('.walkin-service-overlay-backdrop').click({position:{x:5,y:5}});
+        await form.locator('select').first().selectOption('Falak Shair');
+        await form.getByPlaceholder('Enter full name').fill(name);
+        return form;
+      };
+
+      // Rapid double submit: keep the first request pending and fire two click events.
+      const beforeRapidPosts=walkInPostCount;
+      const beforeRapidBookings=apiBookings.length;
+      const rapidForm=await fillWalkIn('TT07 Rapid');
+      walkInPostGate=new Promise(resolve=>{releaseWalkInPostGate=resolve;});
+      await rapidForm.locator('.submit-booking-btn').evaluate(button=>{button.click();button.click();});
+      for(let i=0;i<40&&walkInPostCount===beforeRapidPosts;i++)await new Promise(resolve=>setTimeout(resolve,25));
+      assert.equal(walkInPostCount,beforeRapidPosts+1,'TT-07 rapid repeated submit must issue exactly one POST');
+      assert.equal(await rapidForm.locator('.submit-booking-btn').isDisabled(),true,'TT-07 submit must stay disabled while request is in flight');
+      assert.equal(await rapidForm.locator('.modal-close').isDisabled().catch(()=>true),true,'TT-07 modal close must not bypass an in-flight create');
+      releaseWalkInPostGate();
+      walkInPostGate=null;
+      releaseWalkInPostGate=null;
+      await rapidForm.waitFor({state:'hidden'});
+      assert.equal(apiBookings.length,beforeRapidBookings+1,'TT-07 successful rapid submit must create exactly one booking');
+
+      // Failure must unlock the form for an intentional retry.
+      const retryForm=await fillWalkIn('TT07 Retry');
+      const beforeRetryPosts=walkInPostCount;
+      const beforeRetryBookings=apiBookings.length;
+      failNextWalkInPost=true;
+      await retryForm.locator('.submit-booking-btn').click();
+      await page.locator('.feedback-toast.error').filter({hasText:'TT-07 forced walk-in failure.'}).waitFor();
+      assert.equal(await retryForm.isVisible(),true,'TT-07 failed create must keep the modal open');
+      assert.equal(await retryForm.locator('.submit-booking-btn').isEnabled(),true,'TT-07 failed create must unlock retry');
+      assert.equal(walkInPostCount,beforeRetryPosts+1,'TT-07 failed attempt must send one POST');
+      assert.equal(apiBookings.length,beforeRetryBookings,'TT-07 failed attempt must not create a booking');
+
+      await retryForm.locator('.submit-booking-btn').click();
+      await retryForm.waitFor({state:'hidden'});
+      await page.locator('.feedback-toast:not(.error)').filter({hasText:'Walk-in booked successfully.'}).waitFor();
+      assert.equal(walkInPostCount,beforeRetryPosts+2,'TT-07 retry must send one additional POST');
+      assert.equal(apiBookings.length,beforeRetryBookings+1,'TT-07 successful retry must create exactly one booking');
+
+      scenarios+=8;
+      console.log(`PASS TT-07 ${width}px: double-submit guard, failure unlock and success-close verified`);
+      await context.close();
+      continue;
+    }
 
     if(process.env.QA_TT06_ONLY==='1'){
       // Authenticated path: the walk-in POST commits, then the list refresh fails.
