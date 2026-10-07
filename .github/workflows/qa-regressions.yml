@@ -24,6 +24,10 @@ jobs:
         env:
           QA_TT05_ONLY: "1"
         run: node tests/ui-smoke.cjs
+      - name: TT-06 refresh-failure browser regression
+        env:
+          QA_TT06_ONLY: "1"
+        run: node tests/ui-smoke.cjs
       - run: npm run test:ui
       - uses: actions/upload-artifact@v4
         if: always()
