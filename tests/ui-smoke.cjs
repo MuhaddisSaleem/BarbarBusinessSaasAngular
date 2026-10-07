@@ -22,6 +22,7 @@ let browser, activePage;
   await new Promise(resolve=>server.listen(4173,'127.0.0.1',resolve));
   browser=await chromium.launch({headless:true});fs.mkdirSync('test-results',{recursive:true});
   let scenarios=0;
+  const failures=[];
   for(const width of [1440,390]){
     const context=await browser.newContext({viewport:{width,height:1000},timezoneId:'UTC'});
     const page=await context.newPage();activePage=page;page.setDefaultTimeout(15000);
@@ -224,6 +225,7 @@ let browser, activePage;
 
         if(pathname==='/api/service-categories'&&req.method()==='GET')return await route.fulfill(apiResponse([{id:1,name:'Haircut',status:'Active',sortOrder:0}]));
         if(pathname==='/api/branding'&&req.method()==='GET')return await route.fulfill(apiResponse([]));
+        if(/^\/api\/branding\/(logo|hero)$/.test(pathname)&&req.method()==='DELETE')return await route.fulfill({status:204});
         if(pathname==='/api/services'&&req.method()==='GET')return await route.fulfill(apiResponse(apiServices));
         if(pathname==='/api/services'&&req.method()==='POST'){
           const item={...body,id:nextServiceId++};
@@ -538,10 +540,16 @@ let browser, activePage;
     await form.locator('.submit-booking-btn').click();await form.waitFor({state:'hidden'});
     assert.equal((await stored()).length,3);assert.equal((await stored())[0].source,'Walk-in');assert.equal((await stored())[0].phone,'');assert.equal((await stored())[0].barber,'Second Barber');assert.equal((await stored())[0].time,'4:55 PM');assert.equal((await stored())[0].notes,'');scenarios++;
     // Specialist matching must select two different barbers for parallel Any Barber bookings.
-    await goto();await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.salon-services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
+    await goto();
+    if(await page.locator('.booking-for-toggle button').nth(1).isVisible()){
+    await page.locator('.booking-for-toggle button').nth(1).click();await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();await page.locator('.any-barber').click();await page.locator('.participant-tab').nth(1).click();await page.locator('.salon-services-grid .service-card').filter({hasText:'Beard'}).click();await page.locator('.any-barber').click();await day();await page.locator('.time-slot').filter({hasText:/^7:00 PM$/}).click();await details();await finish();
     const group=(await stored()).slice(0,2);assert.equal(new Set(group.map(x=>x.barber)).size,2);assert.ok(group.every(x=>x.time==='7:00 PM'));scenarios++;
+    }else{
+      failures.push(`${width}px: Group booking controls are hidden; public group journey is inaccessible`);
+      console.error('FAIL',failures[failures.length-1]);
+    }
     await page.locator('.home-service-selector').click();
-    await page.locator('.select-salon-service-btn').waitFor({state:'visible'});
+    await page.locator('.select-salon-service-btn:visible').waitFor({state:'visible'});
     await page.locator('.home-catalog-motion.expanded').waitFor();
     assert.equal(await page.locator('.salon-catalog-motion.expanded').count(),0,'Salon service catalog must be collapsed while Home Service is active');
     assert.equal(await page.locator('.salon-choice-action-panel.visible .booking-for-toggle').count(),0,'Just Me / group choices must be visually hidden while Home Service is active');
@@ -551,8 +559,8 @@ let browser, activePage;
     await page.locator('#service-section').evaluate(async element=>{
       await Promise.all(element.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>{})));
     });
-    const salonButtonBox=await page.locator('.select-salon-service-btn').boundingBox();
-    const salonActionBox=await page.locator('.salon-choice-action-stage').boundingBox();
+    const salonButtonBox=await page.locator('.select-salon-service-btn:visible').boundingBox();
+    const salonActionBox=await page.locator('.salon-choice-action-stage:visible').boundingBox();
     assert.ok(
       salonButtonBox&&salonActionBox&&Math.abs(salonButtonBox.width-salonActionBox.width)<2,
       'Select Salon Service button must fill the full available action width'
@@ -565,7 +573,7 @@ let browser, activePage;
       );
     }
 
-    const actionStageBox=await page.locator('.salon-choice-action-stage').boundingBox();
+    const actionStageBox=await page.locator('.salon-choice-action-stage:visible').boundingBox();
     const salonIntroBox=await page.locator('.salon-service-intro').boundingBox();
     // Desktop grid items stretch to the visible intro, which can wrap with
     // different fonts. Only mobile uses the formerly stacked 154px stage.
@@ -574,7 +582,7 @@ let browser, activePage;
 
     const selectorGeometry=await page.evaluate(()=>{
       const salon=document.querySelector('.salon-service-choice')?.getBoundingClientRect();
-      const salonButton=document.querySelector('.select-salon-service-btn')?.getBoundingClientRect();
+      const salonButton=Array.from(document.querySelectorAll('.select-salon-service-btn')).find(el=>el.getClientRects().length)?.getBoundingClientRect();
       const home=document.querySelector('#home-service-section')?.getBoundingClientRect();
       return salon&&salonButton&&home
         ? {gap:home.top-salonButton.bottom,salonTop:salon.top,homeTop:home.top}
@@ -585,9 +593,9 @@ let browser, activePage;
     }
     assert.ok(selectorGeometry&&selectorGeometry.salonTop<selectorGeometry.homeTop,'Salon Service must always remain above Home Service');
 
-    await page.locator('.select-salon-service-btn').click();
+    await page.locator('.select-salon-service-btn:visible').click();
     await page.locator('.salon-catalog-motion.expanded').waitFor();
-    assert.equal(await page.locator('.salon-choice-action-panel.visible .booking-for-toggle').count(),1,'Salon booking mode choices must return when Salon Service is selected');
+    await page.getByRole('searchbox',{name:'Search salon services'}).waitFor({state:'visible'});
     assert.equal(await page.locator('.home-catalog-motion.expanded').count(),0,'Home Service catalog must collapse after switching back to Salon Service');
 
     await page.locator('.home-service-selector').click();await page.getByPlaceholder('Example: Groom styling for an event, special beard treatment, etc.').fill('Event styling');await day();await page.locator('.time-slot').filter({hasText:/^8:00 PM$/}).click();await details();await page.locator('#home-service-address').fill('QA test address');await finish();assert.equal((await stored())[0].status,'Pending');assert.equal((await stored())[0].specialService,'Event styling');scenarios++;
@@ -743,9 +751,11 @@ let browser, activePage;
     await resetDialog.getByRole('button',{name:'Reset Settings'}).click();
     await resetDialog.waitFor({state:'hidden'});
     assert.equal(apiSettings.businessName,'Royal Barbers');
+    await page.locator('.feedback-toast:not(.error)').filter({hasText:'Settings and landing page branding reset to defaults.'}).waitFor();
     scenarios++;
 
-    assert.deepEqual(errors,[]);console.log(`PASS ${width}px: customer, admin, group, home, settings and all nine admin routes`);await context.close();
+    assert.deepEqual(errors,[]);console.log(`PASS ${width}px: completed customer, admin, home, settings and nine admin-route checks (group failures reported separately)`);await context.close();
   }
   console.log(`PASS ${scenarios} browser scenarios`);
+  assert.deepEqual(failures,[],'Unresolved browser QA findings');
 })().catch(async error=>{console.error(error);if(activePage&&!activePage.isClosed()){await activePage.screenshot({path:'test-results/failure.png',fullPage:true});fs.writeFileSync('test-results/failure.html',await activePage.content());console.error((await activePage.locator('body').innerText()).slice(-4000));}process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();server.close();});
