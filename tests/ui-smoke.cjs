@@ -518,7 +518,9 @@ let browser, activePage;
       await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();
       await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();
       await day();
-      await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();
+      const tt06PublicSlot=page.locator('.time-slot').first();
+      await tt06PublicSlot.waitFor();
+      await tt06PublicSlot.click();
       await details();
 
       const publicBeforeBookings=apiBookings.length;
