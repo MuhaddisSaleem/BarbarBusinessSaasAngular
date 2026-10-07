@@ -63,6 +63,26 @@ Check(customLines.Count == 1 && customLines[0].Amount == 400, "TT-11 custom-only
 var report = await new ReportsApplicationService(db).GetAsync(salon.Id, day, day, null, null, default);
 Check(report.Services.Sum(x => x.Value) == report.Summary.BookedValue, "TT-11 actual report service totals match booked value");
 Check(report.Services.Single(x => x.Name == "Custom Home Service").Value == 1100, "TT-11 report includes both repriced and custom-only amounts");
+// Simulate a pre-fix historical record: custom snapshot line is missing and the
+// remaining service line no longer reconciles to the immutable booking total.
+var historicalBooking = await db.Bookings
+    .Include(x => x.Services)
+    .SingleAsync(x => x.PublicId == created.Booking.Id);
+var historicalCustomLine = historicalBooking.Services
+    .Single(x => x.ServiceId == null && x.ServiceName == "Custom Home Service");
+db.BookingServices.Remove(historicalCustomLine);
+historicalBooking.Services.Single(x => x.ServiceId != null).Amount = 850;
+await db.SaveChangesAsync();
+
+var historicalReport = await new ReportsApplicationService(db).GetAsync(salon.Id, day, day, null, null, default);
+Check(historicalReport.Services.Sum(x => x.Value) == historicalReport.Summary.BookedValue,
+    "TT-11 historical report values reconcile without rewriting booking totals");
+Check(historicalReport.Services.Single(x => x.Name == "Custom Home Service").Value == 1100,
+    "TT-11 missing historical custom line is recovered from booking snapshot");
+Check(historicalReport.Services.Single(x => x.Name == "Historical adjustment").Value == 50,
+    "TT-11 unexplained historical remainder is surfaced instead of guessed from current catalogue prices");
+Check(historicalReport.Bookings.Single(x => x.Id == created.Booking.Id).Service.Contains("Custom Home Service"),
+    "TT-11 historical booking row still identifies the custom service");
 var user = new SalonUser { FullName = "QA", Email = "qa@example.test", SalonId = salon.Id, PasswordHash = "hash-before" };
 var key = new string('k', 48);
 var oldStamp = SessionStamp.Create(user, key);
