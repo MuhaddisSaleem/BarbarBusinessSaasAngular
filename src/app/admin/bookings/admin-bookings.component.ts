@@ -113,9 +113,7 @@ export class AdminBookingsComponent implements OnInit, OnDestroy {
 
   get filterServices(): string[] {
     const historicalServices = this.bookingService.all.flatMap(item =>
-      (item.serviceNames ?? item.service.split(','))
-        .map(service => service.trim())
-        .filter(Boolean)
+      this.bookingServiceNames(item)
     );
 
     return Array.from(new Set([
@@ -370,9 +368,7 @@ export class AdminBookingsComponent implements OnInit, OnDestroy {
       .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
       .filter(item =>
         this.selectedService === 'All'
-        || (item.serviceNames ?? item.service.split(','))
-          .map(service => service.trim())
-          .includes(this.selectedService)
+        || this.bookingServiceNames(item).includes(this.selectedService)
       )
       .filter(item => !this.selectedDate || item.date === this.selectedDate)
       .filter(item => {
@@ -609,6 +605,25 @@ export class AdminBookingsComponent implements OnInit, OnDestroy {
     window.setTimeout(() => {
       if (this.feedbackMessage === message) this.feedbackMessage = '';
     }, 3500);
+  }
+
+  private bookingServiceNames(item: AdminBooking): string[] {
+    if (item.serviceNames?.length) {
+      return item.serviceNames.map(name => name.trim()).filter(Boolean);
+    }
+
+    const serialized = String(item.service || '').trim();
+    if (!serialized) return [];
+
+    const exactCatalogueService = this.bookingService.services.find(
+      service => service.name.trim().toLowerCase() === serialized.toLowerCase()
+    );
+
+    if (exactCatalogueService) {
+      return [exactCatalogueService.name];
+    }
+
+    return serialized.split(',').map(name => name.trim()).filter(Boolean);
   }
 
   private toDateKey(date: Date): string {
