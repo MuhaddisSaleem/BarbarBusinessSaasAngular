@@ -29,7 +29,8 @@ let browser, activePage;
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
 
     let apiBookings=[];
-    let bookingsGetGate=null,releaseBookingsGetGate=null,bookingsGetCount=0;
+    let bookingsGetGate=null,releaseBookingsGetGate=null,bookingsGetCount=0,failNextBookingsGet=false;
+    let busySlotsGetCount=0,failNextBusySlotsGet=false,walkInPostCount=0,onlinePostCount=0;
     let apiServices=JSON.parse(JSON.stringify(seed['royal-barbers.admin-services.v1']));
     let apiBarbers=JSON.parse(JSON.stringify(seed['royal-barbers.admin-barbers.v1']));
     let apiSettings={
@@ -319,6 +320,11 @@ let browser, activePage;
         }
 
         if(req.method()==='GET'&&pathname==='/api/bookings/busy-slots'){
+          busySlotsGetCount++;
+          if(failNextBusySlotsGet){
+            failNextBusySlotsGet=false;
+            return await route.fulfill(apiResponse({message:'TT-06 forced availability refresh failure.'},503));
+          }
           return await route.fulfill(apiResponse(
             apiBookings
               .filter(item=>item.status!=='Cancelled')
@@ -411,9 +417,14 @@ let browser, activePage;
         if(req.method()==='GET'&&pathname==='/api/bookings'){
           bookingsGetCount++;
           if(bookingsGetGate)await bookingsGetGate;
+          if(failNextBookingsGet){
+            failNextBookingsGet=false;
+            return await route.fulfill(apiResponse({message:'TT-06 forced bookings refresh failure.'},503));
+          }
           return await route.fulfill(apiResponse(apiBookings));
         }
         if(req.method()==='POST'&&pathname==='/api/bookings/online'){
+          onlinePostCount++;
           const items=body;
           if(!Array.isArray(items))throw new Error('Online booking payload is not an array');
           const created=items.map(item=>normalizeBooking(item,'Online',nextBookingId++));
@@ -421,6 +432,7 @@ let browser, activePage;
           return await route.fulfill(apiResponse({success:true,message:'Booking created successfully.',booking:created[0]}));
         }
         if(req.method()==='POST'&&pathname==='/api/bookings/walk-in'){
+          walkInPostCount++;
           const created=normalizeBooking(body,'Walk-in',nextBookingId++);
           apiBookings=[created,...apiBookings];
           return await route.fulfill(apiResponse({success:true,message:'Walk-in booked successfully.',booking:created}));
@@ -469,6 +481,63 @@ let browser, activePage;
     const stored=async()=>apiBookings.map(item=>({...item}));
     const details=async()=>{await page.locator('#customer-name-input').fill('QA Customer');await page.locator('#customer-phone-input').fill('3001234567');};
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
+
+    if(process.env.QA_TT06_ONLY==='1'){
+      // Authenticated path: the walk-in POST commits, then the list refresh fails.
+      await goto('/admin/bookings');
+      const adminBeforeBookings=apiBookings.length;
+      const adminBeforePosts=walkInPostCount;
+      const adminRefreshBefore=bookingsGetCount;
+
+      await page.locator('.create-booking-btn').click();
+      const tt06AdminForm=page.locator('.create-modal');
+      await tt06AdminForm.locator('.walkin-service-trigger').click();
+      await page.locator('.walkin-service-option').filter({hasText:'Haircut'}).click();
+      await page.locator('.walkin-service-overlay-backdrop').click({position:{x:5,y:5}});
+      await tt06AdminForm.locator('select').first().selectOption('Falak Shair');
+      await tt06AdminForm.getByPlaceholder('Enter full name').fill('TT06 Admin');
+      failNextBookingsGet=true;
+      await tt06AdminForm.locator('.submit-booking-btn').click();
+      await tt06AdminForm.waitFor({state:'hidden'});
+      await page.locator('.feedback-toast:not(.error)').filter({hasText:'Walk-in booked successfully.'}).waitFor();
+      for(let i=0;i<40&&bookingsGetCount<=adminRefreshBefore;i++)await new Promise(resolve=>setTimeout(resolve,50));
+      assert.ok(bookingsGetCount>adminRefreshBefore,'TT-06 authenticated mutation must attempt a follow-up refresh');
+      assert.equal(walkInPostCount,adminBeforePosts+1,'TT-06 authenticated refresh failure must not cause a duplicate POST');
+      assert.equal(apiBookings.length,adminBeforeBookings+1,'TT-06 authenticated booking must remain committed after refresh failure');
+      assert.equal(await page.locator('.feedback-toast.error').count(),0,'TT-06 committed walk-in must not be presented as a failed save');
+
+      // Public path: remove the admin session and force the busy-slot refresh to fail
+      // after a successful online booking POST.
+      await page.evaluate(()=>{
+        localStorage.setItem('qa-auth-disabled','1');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminTokenExpiresAt');
+        localStorage.removeItem('adminUser');
+      });
+      await goto();
+      await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();
+      await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();
+      await day();
+      await page.locator('.time-slot').filter({hasText:/^5:00 PM$/}).click();
+      await details();
+
+      const publicBeforeBookings=apiBookings.length;
+      const publicBeforePosts=onlinePostCount;
+      const publicRefreshBefore=busySlotsGetCount;
+      failNextBusySlotsGet=true;
+      await page.locator('.confirm-btn').click();
+      await page.locator('.success-modal').waitFor();
+      for(let i=0;i<40&&busySlotsGetCount<=publicRefreshBefore;i++)await new Promise(resolve=>setTimeout(resolve,50));
+      assert.ok(busySlotsGetCount>publicRefreshBefore,'TT-06 public mutation must attempt a follow-up availability refresh');
+      assert.equal(onlinePostCount,publicBeforePosts+1,'TT-06 public refresh failure must not cause a duplicate POST');
+      assert.equal(apiBookings.length,publicBeforeBookings+1,'TT-06 public booking must remain committed after refresh failure');
+      assert.equal(await page.locator('.success-modal').isVisible(),true,'TT-06 public customer must still see booking success');
+
+      scenarios+=8;
+      console.log(`PASS TT-06 ${width}px: committed admin/public bookings survive failed refresh without duplicate POSTs`);
+      await context.close();
+      continue;
+    }
 
     if(process.env.QA_TT05_ONLY==='1'){
       apiBookings=[
