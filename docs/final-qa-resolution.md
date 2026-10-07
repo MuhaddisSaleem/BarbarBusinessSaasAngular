@@ -13,7 +13,7 @@ On 6 October 2026, the user explicitly authorized pushing these fixes to `the_tr
 | TT-02 | Already fixed | Retained server-owned prices and duration. Backend scenarios confirm submitted price, duration and public custom price cannot override catalogue values. |
 | TT-03 | Already fixed, with an adjacent gap | Retained category, home eligibility and address checks. Fixed mixed standard/custom availability to include the extra custom-service hour. Backend scenarios pass. |
 | TT-04 | **Open → Fixed** | Shared SQL-backed branding is verified end-to-end at the API/storage boundary. Real SQL Server CI applies the migration, uploads logo + hero as the authenticated salon admin, re-reads both from an independent anonymous client, byte-compares the persisted media, rejects unauthorized deletion, then deletes and confirms 404. Fresh-browser frontend consumption is also covered by the existing TT-04 regression. **Fixed and verified in Backend CI run 37579117832.** |
-| TT-05 | Open | Booking deep links subscribe to route changes and wait for delayed booking data. Subscriptions are cleaned up; background refresh does not reopen a dismissed drawer. Regression passes. |
+| TT-05 | **Open → Fixed** | Booking deep links now have both component-level and focused Chromium coverage. The browser regression gates all initial `/api/bookings` responses to prove the drawer waits for delayed data, switches `?booking=` within the reused route, then closes the drawer, performs a real walk-in mutation/booking refresh, and confirms the dismissed drawer does not reopen. **Focused TT-05 browser step passed in run 37579878914 at commit `99d1142`.** |
 | TT-06 | Open | A committed POST triggers success independently of the subsequent refresh. Refresh errors generate a separate warning instead of prompting a duplicate save. Authenticated and public regression cases pass. |
 | TT-07 | Open | Walk-in creation has an in-flight guard and disabled submit button. Errors unlock retry; success closes the modal. Regression cases pass. |
 | TT-08 | Open | Requests, availability and responses carry a structured `serviceNames` array. Walk-in eligibility and booking/service filters preserve embedded commas. Legacy string-only requests retain compatibility. Frontend and backend regressions pass. |
@@ -31,6 +31,7 @@ On 6 October 2026, the user explicitly authorized pushing these fixes to `the_tr
 - EF `migrations has-pending-model-changes`: no pending model differences.
 - SQL Server script generated for `AddSharedBranding`; it only creates the media table, foreign key and migration-history entry. The subsequent Backend CI run applied migrations against its disposable SQL Server service and passed its API smoke checks.
 - TT-04 closure: SQL Server-backed shared branding persistence passed in Backend CI run `37579117832` at code commit `72d2273`; logo and hero survived an independent anonymous re-read with exact byte equality, and authenticated deletion was verified.
+- TT-05 closure: the focused Chromium deep-link regression passed at both 1440px and 390px in Booking regression QA run `37579878914` at code commit `99d1142`. The existing `npm run test:qa` TT-05 component regression also passes.
 - `git diff --check` and `node --check tests/ui-smoke.cjs`: passed.
 - `npm run test:ui` via GitHub Actions: **41 scenarios passed** across 1440px desktop and 390px mobile. Overall job correctly fails because public group controls are hidden at both widths. Online/home bookings, walk-ins, dashboard/report totals, nine admin routes, barber CRUD, availability refresh/conflicts/cancellation and Settings save/reload/reset pass. Browser API responses are mocked; SQL-backed API CI is separate, not a full browser-to-SQL end-to-end test.
 
@@ -59,6 +60,7 @@ On 6 October 2026, the user explicitly authorized pushing these fixes to `the_tr
 ## Final QA continuation — 7 October 2026
 
 - **TT-04 closed on 7 October 2026:** real SQL Server persistence and independent-client reads passed in Backend CI run `37579117832` at code commit `72d2273`.
+- **TT-05 closed on 7 October 2026:** delayed booking data, route reuse and dismissed-drawer refresh behavior passed the dedicated desktop/mobile Chromium gate in run `37579878914` at commit `99d1142`.
 
 - Backend CI passed against SQL Server: https://github.com/MuhaddisSaleem/BarbarBusinessSaasAngular/actions/runs/37577089199 .
 - Chromium browser execution is now available through draft PR #9. Earlier local installation limitations no longer prevent CI browser testing.
