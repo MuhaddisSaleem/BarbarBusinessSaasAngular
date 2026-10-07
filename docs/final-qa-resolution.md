@@ -87,3 +87,9 @@ The TT-01–TT-12 code bug sheet is closed. The following are environment/deploy
 - Backend run: Backend CI `37587196358` — **success**. API build, **44 backend QA checks**, EF model validation, no pending model changes, idempotent migration generation and SQL Server-backed API smoke all passed.
 - **Decision: TT-01–TT-12 bug-sheet issues are closed.** Production deployment, real external messaging delivery and optional legacy-data diagnostics remain separate handover/environment activities, not open code defects.
 - No production deployment was performed by this QA pass.
+
+## Client scope confirmation — 7 October 2026, 15:46 PKT
+
+The owner explicitly confirmed that Just Me / Me + Someone Else controls are intentionally commented out. Public group booking is excluded from the current handover scope; the controls remain commented out. The protected template baseline now records this reviewed decision. Browser QA asserts that these controls stay hidden and continues testing individual salon bookings, walk-ins, Home bookings and admin flows. Group booking is not counted as a passed browser scenario. Earlier results expecting visible group controls describe a superseded scope.
+
+Validation of this QA-scope update is pending the next CI run. No production booking code was changed.
