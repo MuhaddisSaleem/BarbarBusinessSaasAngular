@@ -70,7 +70,7 @@ test('TT-08 comma-containing selected service remains one specialty and one subm
 
 test('TT-08 legacy booking string matching a comma-containing catalogue service stays one name', () => {
   const f = fixture(), name = 'Cut, wash and style';
-  f.bookings.services = [f.service({ name })];
+  f.service({ name });
   const legacy = {
     service: name,
     serviceNames: undefined,
