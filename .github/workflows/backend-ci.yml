@@ -46,6 +46,9 @@ jobs:
       - name: Build API
         run: dotnet build backend/BarberFlow.Api/BarberFlow.Api.csproj --configuration Release --no-restore
 
+      - name: Run backend QA scenarios
+        run: dotnet run --project backend/BarberFlow.Qa/BarberFlow.Qa.csproj --configuration Release
+
       - name: Validate EF Core model
         env:
           BARBERFLOW_DB_CONNECTION: "Server=localhost,1433;Database=BarberFlow;User Id=sa;Password=CiDesignTime123!;Encrypt=False;TrustServerCertificate=True"
