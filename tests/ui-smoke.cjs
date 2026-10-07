@@ -32,6 +32,7 @@ let browser, activePage;
     let bookingsGetGate=null,releaseBookingsGetGate=null,bookingsGetCount=0,failNextBookingsGet=false;
     let busySlotsGetCount=0,failNextBusySlotsGet=false,walkInPostCount=0,onlinePostCount=0;
     let walkInPostGate=null,releaseWalkInPostGate=null,failNextWalkInPost=false,lastWalkInBody=null;
+    let passwordPatchCount=0;
     let apiServices=JSON.parse(JSON.stringify(seed['royal-barbers.admin-services.v1']));
     let apiBarbers=JSON.parse(JSON.stringify(seed['royal-barbers.admin-barbers.v1']));
     let apiSettings={
@@ -216,6 +217,16 @@ let browser, activePage;
             role:'Owner'
           }));
         }
+        if(pathname==='/api/auth/password'&&req.method()==='PATCH'){
+          passwordPatchCount++;
+          if(body?.currentPassword!=='RoyalBarbers@2026'){
+            return await route.fulfill(apiResponse({success:false,message:'Current password is incorrect.'},400));
+          }
+          if(body?.newPassword!=='ChangedPass123'){
+            return await route.fulfill(apiResponse({success:false,message:'New password fixture mismatch.'},400));
+          }
+          return await route.fulfill(apiResponse({success:true,message:'Password changed and saved successfully.'}));
+        }
 
         if(pathname==='/api/bootstrap/legacy-catalog'&&req.method()==='POST'){
           if(Array.isArray(body?.services)&&body.services.length)apiServices=JSON.parse(JSON.stringify(body.services));
@@ -224,7 +235,44 @@ let browser, activePage;
 
           // TT-08 focused fixture: bootstrap is the authoritative catalogue source,
           // so inject the comma-bearing service after legacy migration has copied its data.
-          if(process.env.QA_TT08_ONLY==='1'){
+          if(process.env.QA_TT09_ONLY==='1'){
+      await goto('/admin/account-security');
+      const security=page.locator('.security-page');
+      const current=security.getByPlaceholder('Current password');
+      const next=security.getByPlaceholder('Minimum 8 characters');
+      const confirm=security.getByPlaceholder('Repeat new password');
+      const changeButton=security.getByRole('button',{name:'Change Password'});
+
+      // A rejected change must not destroy a still-valid session.
+      await current.fill('wrong-password');
+      await next.fill('ChangedPass123');
+      await confirm.fill('ChangedPass123');
+      const failedBefore=passwordPatchCount;
+      await changeButton.click();
+      await page.locator('.feedback-toast.error').filter({hasText:'Current password is incorrect.'}).waitFor();
+      assert.equal(passwordPatchCount,failedBefore+1,'TT-09 failed password change must send one PATCH');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('adminToken')),'qa-admin-token','TT-09 failed password change must preserve local session');
+      assert.ok(page.url().endsWith('/admin/account-security'),'TT-09 failed password change must keep the admin on account security');
+
+      // A committed password change revokes the browser session immediately.
+      await current.fill('RoyalBarbers@2026');
+      const successBefore=passwordPatchCount;
+      await changeButton.click();
+      await page.waitForURL('**/admin/login');
+      assert.equal(passwordPatchCount,successBefore+1,'TT-09 successful password change must send one PATCH');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('adminToken')),null,'TT-09 successful password change must clear localStorage token');
+      assert.equal(await page.evaluate(()=>sessionStorage.getItem('adminToken')),null,'TT-09 successful password change must clear sessionStorage token');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('adminUser')),null,'TT-09 successful password change must clear cached admin user');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('adminTokenExpiresAt')),null,'TT-09 successful password change must clear token expiry');
+      await page.locator('app-admin-login').waitFor();
+
+      scenarios+=8;
+      console.log(`PASS TT-09 ${width}px: failed change preserves session; successful change clears session and redirects to login`);
+      await context.close();
+      continue;
+    }
+
+    if(process.env.QA_TT08_ONLY==='1'){
             const commaService='Cut, wash and style';
             if(!apiServices.some(item=>item.name===commaService)){
               const id=Math.max(0,...apiServices.map(x=>Number(x.id)||0))+1;
