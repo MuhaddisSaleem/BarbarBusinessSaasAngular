@@ -475,7 +475,11 @@ let browser, activePage;
       },selector);
     }
     await page.locator('#service-section').scrollIntoViewIfNeeded();
-    assert.equal(await page.locator('.booking-reveal-pending').count(),0,'Revealed sections must stay visible');
+    // Only visited sections must remain revealed. Collapsed home-service cards
+    // also use the directive and correctly remain pending until opened.
+    for (const selector of revealSections) {
+      assert.equal(await page.locator(selector).evaluate(element => element.classList.contains('booking-reveal-pending')),false,'Visited section must stay revealed: '+selector);
+    }
     const imageFit=await page.locator('.salon-services-grid .service-image img').first().evaluate(img=>{
       const box=img.getBoundingClientRect();
       return {ratio:box.width/box.height,fit:getComputedStyle(img).objectFit};
