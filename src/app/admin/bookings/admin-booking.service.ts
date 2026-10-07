@@ -1026,7 +1026,18 @@ export class AdminBookingService {
   }
 
   private serviceNames(service: string): string[] {
-    return String(service || '')
+    const serialized = String(service || '').trim();
+    if (!serialized) return [];
+
+    const exactCatalogueService = this.services.find(
+      item => item.name.trim().toLowerCase() === serialized.toLowerCase()
+    );
+
+    if (exactCatalogueService) {
+      return [exactCatalogueService.name];
+    }
+
+    return serialized
       .split(',')
       .map(name => name.trim())
       .filter(Boolean);
