@@ -92,4 +92,9 @@ The TT-01–TT-12 code bug sheet is closed. The following are environment/deploy
 
 The owner explicitly confirmed that Just Me / Me + Someone Else controls are intentionally commented out. Public group booking is excluded from the current handover scope; the controls remain commented out. The protected template baseline now records this reviewed decision. Browser QA asserts that these controls stay hidden and continues testing individual salon bookings, walk-ins, Home bookings and admin flows. Group booking is not counted as a passed browser scenario. Earlier results expecting visible group controls describe a superseded scope.
 
-Validation of this QA-scope update is pending the next CI run. No production booking code was changed.
+Validated code/test commit: `2b0b1676e3f79b7760431b957078d1ceb02066a2`.
+
+- Booking regression QA run [37609796987](https://github.com/MuhaddisSaleem/BarbarBusinessSaasAngular/actions/runs/37609796987): **success**. 87 frontend tests, production build, all six focused browser gates (TT-10/09/05/06/07/08), and 41 desktop/mobile browser scenarios passed.
+- Backend CI run [37609797070](https://github.com/MuhaddisSaleem/BarbarBusinessSaasAngular/actions/runs/37609797070): **success**, including backend QA, EF model/migration checks and SQL Server API smoke tests.
+- Group booking intentionally excluded; hidden-control assertions passed. No production booking code was changed.
+- Final automated QA passes for the agreed feature scope. Live messaging delivery and deployment configuration remain environment/handover checks.
