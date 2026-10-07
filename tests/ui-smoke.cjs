@@ -905,10 +905,16 @@ let browser, activePage;
     await page.locator('#service-section').evaluate(async element=>{
       await Promise.all(element.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>{})));
     });
-    const salonButtonBox=await page.locator('.select-salon-service-btn:visible').boundingBox();
-    const salonActionBox=await page.locator('.salon-choice-action-stage:visible').boundingBox();
+    const salonActionGeometry=await page.locator('.select-salon-service-btn:visible').evaluate(button=>{
+      const stage=button.closest('.salon-choice-action-stage');
+      const buttonBox=button.getBoundingClientRect();
+      const stageBox=stage?.getBoundingClientRect();
+      return stageBox
+        ? {buttonWidth:buttonBox.width,stageWidth:stageBox.width,stageHeight:stageBox.height}
+        : null;
+    });
     assert.ok(
-      salonButtonBox&&salonActionBox&&Math.abs(salonButtonBox.width-salonActionBox.width)<2,
+      salonActionGeometry&&Math.abs(salonActionGeometry.buttonWidth-salonActionGeometry.stageWidth)<2,
       'Select Salon Service button must fill the full available action width'
     );
     if(width<=390){
@@ -919,12 +925,11 @@ let browser, activePage;
       );
     }
 
-    const actionStageBox=await page.locator('.salon-choice-action-stage:visible').boundingBox();
     const salonIntroBox=await page.locator('.salon-service-intro').boundingBox();
     // Desktop grid items stretch to the visible intro, which can wrap with
     // different fonts. Only mobile uses the formerly stacked 154px stage.
     const homeStageLimit=width<=390?100:Math.max(100,salonIntroBox?.height||0)+2;
-    assert.ok(actionStageBox&&actionStageBox.height<=homeStageLimit,'Home mode must not keep the hidden stacked salon-choice height');
+    assert.ok(salonActionGeometry&&salonActionGeometry.stageHeight<=homeStageLimit,'Home mode must not keep the hidden stacked salon-choice height');
 
     const selectorGeometry=await page.evaluate(()=>{
       const salon=document.querySelector('.salon-service-choice')?.getBoundingClientRect();
