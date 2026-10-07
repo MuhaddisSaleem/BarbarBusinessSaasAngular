@@ -228,6 +228,27 @@ jobs:
           curl --fail --silent http://127.0.0.1:5080/api/services | grep '"name":"CI Service"'
           curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; items=json.load(sys.stdin); assert items and all("CI Service" in x["specialties"] for x in items)'
 
+          # TT-08: a catalogue service whose name contains commas must remain one
+          # service through request binding, SQL persistence and response mapping.
+          TT08_SERVICE_RESPONSE=$(curl --fail --silent \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Cut, wash and style","duration":20,"originalPrice":500,"discountPrice":null,"homeServiceEnabled":false,"homeOriginalPrice":null,"homeDiscountPrice":null,"image":"assets/images/service-placeholder.svg","status":"Active"}' \
+            http://127.0.0.1:5080/api/services)
+          echo "$TT08_SERVICE_RESPONSE" | grep '"success":true'
+          echo "$TT08_SERVICE_RESPONSE" | grep '"name":"Cut, wash and style"'
+          curl --fail --silent http://127.0.0.1:5080/api/barbers | python3 -c 'import json,sys; items=json.load(sys.stdin); assert items and all("Cut, wash and style" in x["specialties"] for x in items)'
+
+          TT08_BOOKING_RESPONSE=$(curl --fail --silent \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"customerName\":\"TT08 Comma Service\",\"phone\":\"+923001234588\",\"service\":\"Cut, wash and style\",\"serviceNames\":[\"Cut, wash and style\"],\"duration\":999,\"barber\":\"Second Barber\",\"date\":\"$BOOKING_DATE\",\"time\":\"8:00 PM\",\"amount\":1,\"notes\":\"\",\"groupSize\":1,\"serviceLocation\":\"Salon\",\"serviceAddress\":\"\",\"specialService\":\"\",\"specialServiceAmount\":0}" \
+            http://127.0.0.1:5080/api/bookings/admin)
+          echo "$TT08_BOOKING_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); b=d["booking"]; assert d["success"] is True; assert b["service"] == "Cut, wash and style"; assert b["serviceNames"] == ["Cut, wash and style"]; assert b["duration"] == 20'
+          TT08_BOOKING_ID=$(echo "$TT08_BOOKING_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["booking"]["id"])')
+          curl --fail --silent -H "Authorization: Bearer $TOKEN" http://127.0.0.1:5080/api/bookings | \
+            python3 -c 'import json,sys; items=json.load(sys.stdin); b=next(x for x in items if x["id"] == int("'"$TT08_BOOKING_ID"'")); assert b["service"] == "Cut, wash and style"; assert b["serviceNames"] == ["Cut, wash and style"]'
+
           BARBERS_RESPONSE=$(curl --fail --silent http://127.0.0.1:5080/api/barbers)
           echo "$BARBERS_RESPONSE" | grep '"name":"Falak Shair"'
           FALAK_ID=$(echo "$BARBERS_RESPONSE" | python3 -c 'import json,sys; items=json.load(sys.stdin); print(next(x["id"] for x in items if x["name"]=="Falak Shair"))')
