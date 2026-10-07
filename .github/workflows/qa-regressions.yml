@@ -32,6 +32,10 @@ jobs:
         env:
           QA_TT07_ONLY: "1"
         run: node tests/ui-smoke.cjs
+      - name: TT-08 comma-service browser regression
+        env:
+          QA_TT08_ONLY: "1"
+        run: node tests/ui-smoke.cjs
       - run: npm run test:ui
       - uses: actions/upload-artifact@v4
         if: always()
