@@ -31,7 +31,7 @@ let browser, activePage;
     let apiBookings=[];
     let bookingsGetGate=null,releaseBookingsGetGate=null,bookingsGetCount=0,failNextBookingsGet=false;
     let busySlotsGetCount=0,failNextBusySlotsGet=false,walkInPostCount=0,onlinePostCount=0;
-    let walkInPostGate=null,releaseWalkInPostGate=null,failNextWalkInPost=false;
+    let walkInPostGate=null,releaseWalkInPostGate=null,failNextWalkInPost=false,lastWalkInBody=null;
     let apiServices=JSON.parse(JSON.stringify(seed['royal-barbers.admin-services.v1']));
     let apiBarbers=JSON.parse(JSON.stringify(seed['royal-barbers.admin-barbers.v1']));
     let apiSettings={
@@ -434,6 +434,7 @@ let browser, activePage;
         }
         if(req.method()==='POST'&&pathname==='/api/bookings/walk-in'){
           walkInPostCount++;
+          lastWalkInBody=body;
           if(walkInPostGate)await walkInPostGate;
           if(failNextWalkInPost){
             failNextWalkInPost=false;
@@ -487,6 +488,57 @@ let browser, activePage;
     const stored=async()=>apiBookings.map(item=>({...item}));
     const details=async()=>{await page.locator('#customer-name-input').fill('QA Customer');await page.locator('#customer-phone-input').fill('3001234567');};
     const finish=async()=>{await page.locator('.confirm-btn').click();await page.locator('.success-modal').waitFor();await page.locator('.success-modal button').click();};
+
+    if(process.env.QA_TT08_ONLY==='1'){
+      const commaService='Cut, wash and style';
+      apiServices.push(service(3,commaService));
+      for(const barberItem of apiBarbers){
+        if(!barberItem.specialties.includes(commaService))barberItem.specialties.push(commaService);
+      }
+
+      await goto('/admin/bookings');
+      await page.locator('.create-booking-btn').click();
+      const form=page.locator('.create-modal');
+      await form.locator('.walkin-service-trigger').click();
+      const commaOption=page.locator('.walkin-service-option').filter({hasText:commaService});
+      await commaOption.waitFor();
+      await commaOption.click();
+      await page.locator('.walkin-service-overlay-backdrop').click({position:{x:5,y:5}});
+
+      assert.equal((await form.locator('.walkin-service-trigger strong').innerText()).trim(),commaService,'TT-08 comma service must remain one selected UI item');
+
+      const barberSelect=form.locator('select').first();
+      const eligibleOption=barberSelect.locator('option').nth(1);
+      await eligibleOption.waitFor({state:'attached'});
+      const eligibleBarber=await eligibleOption.getAttribute('value');
+      assert.ok(eligibleBarber,'TT-08 fixture requires an eligible barber');
+      await barberSelect.selectOption(eligibleBarber);
+      await form.getByPlaceholder('Enter full name').fill('TT08 Comma Service');
+
+      const beforePosts=walkInPostCount;
+      await form.locator('.submit-booking-btn').click();
+      await form.waitFor({state:'hidden'});
+      assert.equal(walkInPostCount,beforePosts+1,'TT-08 must submit one walk-in POST');
+      assert.ok(lastWalkInBody,'TT-08 must capture the walk-in request');
+      assert.equal(lastWalkInBody.service,commaService,'TT-08 serialized display service must preserve the comma name');
+      assert.deepEqual(lastWalkInBody.serviceNames,[commaService],'TT-08 serviceNames must contain exactly one comma-bearing service');
+      assert.deepEqual(apiBookings[0].serviceNames,[commaService],'TT-08 persisted browser fixture booking must keep one service name');
+
+      // Legacy fallback: simulate an older booking record without serviceNames and
+      // verify the admin filter treats an exact catalogue name as one option.
+      delete apiBookings[0].serviceNames;
+      await goto('/admin/bookings');
+      const serviceFilter=page.locator('select[aria-label="Filter by service"]');
+      const values=await serviceFilter.locator('option').allTextContents();
+      assert.ok(values.includes(commaService),'TT-08 legacy booking must expose the exact comma-containing service in filters');
+      assert.equal(values.includes('Cut'),false,'TT-08 legacy fallback must not split the catalogue service into Cut');
+      assert.equal(values.includes('wash and style'),false,'TT-08 legacy fallback must not split the catalogue service suffix');
+
+      scenarios+=8;
+      console.log(`PASS TT-08 ${width}px: comma-containing service preserved in UI, request, persistence and legacy filters`);
+      await context.close();
+      continue;
+    }
 
     if(process.env.QA_TT07_ONLY==='1'){
       await goto('/admin/bookings');
