@@ -506,37 +506,41 @@ let browser, activePage;
       assert.equal(apiBookings.length,adminBeforeBookings+1,'TT-06 authenticated booking must remain committed after refresh failure');
       assert.equal(await page.locator('.feedback-toast.error').count(),0,'TT-06 committed walk-in must not be presented as a failed save');
 
-      // Public path: remove the admin session and force the busy-slot refresh to fail
-      // after a successful online booking POST.
-      await page.evaluate(()=>{
-        localStorage.setItem('qa-auth-disabled','1');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminTokenExpiresAt');
-        localStorage.removeItem('adminUser');
-      });
-      await goto();
-      await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();
-      await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();
-      await day();
-      const tt06PublicSlot=page.locator('.time-slot').first();
-      await tt06PublicSlot.waitFor();
-      await tt06PublicSlot.click();
-      await details();
+      // Public path: functional behavior is viewport-independent and already has
+      // authenticated/public unit coverage. Exercise the full public browser journey
+      // once on desktop; keep the authenticated browser path above on both widths.
+      if(width>=1000){
+        await page.evaluate(()=>{
+          localStorage.setItem('qa-auth-disabled','1');
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminTokenExpiresAt');
+          localStorage.removeItem('adminUser');
+        });
+        await goto();
+        await page.locator('.salon-services-grid .service-card').filter({hasText:'Haircut'}).click();
+        await page.locator('.barber-card').filter({hasText:'Falak Shair'}).click();
+        await day();
+        const tt06PublicSlot=page.locator('.time-slot').first();
+        await tt06PublicSlot.waitFor();
+        await tt06PublicSlot.click();
+        await details();
 
-      const publicBeforeBookings=apiBookings.length;
-      const publicBeforePosts=onlinePostCount;
-      const publicRefreshBefore=busySlotsGetCount;
-      failNextBusySlotsGet=true;
-      await page.locator('.confirm-btn').click();
-      await page.locator('.success-modal').waitFor();
-      for(let i=0;i<40&&busySlotsGetCount<=publicRefreshBefore;i++)await new Promise(resolve=>setTimeout(resolve,50));
-      assert.ok(busySlotsGetCount>publicRefreshBefore,'TT-06 public mutation must attempt a follow-up availability refresh');
-      assert.equal(onlinePostCount,publicBeforePosts+1,'TT-06 public refresh failure must not cause a duplicate POST');
-      assert.equal(apiBookings.length,publicBeforeBookings+1,'TT-06 public booking must remain committed after refresh failure');
-      assert.equal(await page.locator('.success-modal').isVisible(),true,'TT-06 public customer must still see booking success');
+        const publicBeforeBookings=apiBookings.length;
+        const publicBeforePosts=onlinePostCount;
+        const publicRefreshBefore=busySlotsGetCount;
+        failNextBusySlotsGet=true;
+        await page.locator('.confirm-btn').click();
+        await page.locator('.success-modal').waitFor();
+        for(let i=0;i<40&&busySlotsGetCount<=publicRefreshBefore;i++)await new Promise(resolve=>setTimeout(resolve,50));
+        assert.ok(busySlotsGetCount>publicRefreshBefore,'TT-06 public mutation must attempt a follow-up availability refresh');
+        assert.equal(onlinePostCount,publicBeforePosts+1,'TT-06 public refresh failure must not cause a duplicate POST');
+        assert.equal(apiBookings.length,publicBeforeBookings+1,'TT-06 public booking must remain committed after refresh failure');
+        assert.equal(await page.locator('.success-modal').isVisible(),true,'TT-06 public customer must still see booking success');
+        scenarios+=4;
+      }
 
-      scenarios+=8;
-      console.log(`PASS TT-06 ${width}px: committed admin/public bookings survive failed refresh without duplicate POSTs`);
+      scenarios+=4;
+      console.log(`PASS TT-06 ${width}px: committed booking survives failed refresh without duplicate POSTs`);
       await context.close();
       continue;
     }
