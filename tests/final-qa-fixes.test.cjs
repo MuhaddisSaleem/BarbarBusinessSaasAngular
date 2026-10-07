@@ -68,6 +68,18 @@ test('TT-08 comma-containing selected service remains one specialty and one subm
   assert.deepEqual(Array.from(f.bookings.bookingServiceNames(submitted)), [name]);
 });
 
+test('TT-08 legacy booking string matching a comma-containing catalogue service stays one name', () => {
+  const f = fixture(), name = 'Cut, wash and style';
+  f.bookings.services = [f.service({ name })];
+  const legacy = {
+    service: name,
+    serviceNames: undefined,
+    serviceLocation: 'Salon',
+    specialService: ''
+  };
+  assert.deepEqual(Array.from(f.bookings.bookingServiceNames(legacy)), [name]);
+});
+
 for (const [zone, instant, expected] of [
   ['Asia/Karachi', '2026-10-05T22:30:00Z', [2026, 10, 6, 3, 30]],
   ['America/New_York', '2026-07-01T03:30:00Z', [2026, 6, 30, 23, 30]],
