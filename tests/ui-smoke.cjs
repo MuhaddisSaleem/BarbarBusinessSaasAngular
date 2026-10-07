@@ -221,6 +221,21 @@ let browser, activePage;
           if(Array.isArray(body?.services)&&body.services.length)apiServices=JSON.parse(JSON.stringify(body.services));
           if(Array.isArray(body?.barbers)&&body.barbers.length)apiBarbers=JSON.parse(JSON.stringify(body.barbers));
           if(body?.settings)apiSettings=JSON.parse(JSON.stringify(body.settings));
+
+          // TT-08 focused fixture: bootstrap is the authoritative catalogue source,
+          // so inject the comma-bearing service after legacy migration has copied its data.
+          if(process.env.QA_TT08_ONLY==='1'){
+            const commaService='Cut, wash and style';
+            if(!apiServices.some(item=>item.name===commaService)){
+              const id=Math.max(0,...apiServices.map(x=>Number(x.id)||0))+1;
+              apiServices=[...apiServices,service(id,commaService)];
+            }
+            apiBarbers=apiBarbers.map(barber=>({
+              ...barber,
+              specialties:Array.from(new Set([...(barber.specialties||[]),commaService]))
+            }));
+          }
+
           nextServiceId=Math.max(0,...apiServices.map(x=>Number(x.id)||0))+1;
           nextBarberId=Math.max(0,...apiBarbers.map(x=>Number(x.id)||0))+1;
           return await route.fulfill(apiResponse({success:true,imported:true,message:'Legacy catalog migrated.'}));
@@ -491,10 +506,6 @@ let browser, activePage;
 
     if(process.env.QA_TT08_ONLY==='1'){
       const commaService='Cut, wash and style';
-      apiServices.push(service(3,commaService));
-      for(const barberItem of apiBarbers){
-        if(!barberItem.specialties.includes(commaService))barberItem.specialties.push(commaService);
-      }
 
       await goto('/admin/bookings');
       await page.locator('.create-booking-btn').click();
