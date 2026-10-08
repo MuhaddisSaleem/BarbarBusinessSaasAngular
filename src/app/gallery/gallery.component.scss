@@ -182,7 +182,7 @@ button {
 
 .gallery-heading {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(280px, .75fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: end;
   gap: 60px;
   margin-bottom: 42px;
@@ -600,7 +600,7 @@ button {
 
   .studio-picture-gallery {
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    grid-template-rows: repeat(14, 70px);
+    grid-template-rows: repeat(17, 70px);
     gap: 10px;
   }
 
@@ -638,7 +638,7 @@ button {
   }
 
   .gallery-intro h2 {
-    font-size: clamp(38px, 11vw, 58px);
+    font-size: clamp(30px, 8.5vw, 54px);
   }
 
   .gallery-intro p {
@@ -653,7 +653,7 @@ button {
   }
 
   .gallery-heading h1 {
-    font-size: clamp(42px, 13vw, 62px);
+    font-size: clamp(32px, 9vw, 56px);
   }
 
   .gallery-heading-copy p {
@@ -757,4 +757,33 @@ button {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* Keep copy and the image viewer inside narrow or short viewports. */
+.gallery-intro, .gallery-heading, .tile-meta { overflow-wrap: anywhere; }
+.gallery-heading > div { min-width: 0; }
+.gallery-intro h2, .gallery-heading h1 { line-height: 1.08; }
+.gallery-kicker, .gallery-intro-kicker { line-height: 1.5; }
+.gallery-lightbox { padding: 80px 92px; }
+.gallery-lightbox figure { min-width: 0; max-width: 100%; }
+.gallery-lightbox figure img {
+  max-width: 100%;
+  max-height: calc(100vh - 160px);
+  max-height: calc(100dvh - 160px);
+}
+.gallery-lightbox figcaption { max-width: calc(100% - 32px); overflow-wrap: anywhere; }
+@media (hover: none), (pointer: coarse) {
+  .tile-meta, .tile-open { opacity: 1; transform: none; }
+}
+@media (max-width: 767.98px) {
+  .gallery-lightbox { padding: 72px 14px 80px; }
+  .gallery-lightbox figure img {
+    max-height: calc(100vh - 152px);
+    max-height: calc(100dvh - 152px);
+  }
+  .lightbox-arrow { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); transform: none; width: 44px; height: 44px; }
+  .lightbox-arrow:hover { transform: none; }
+  .lightbox-prev { left: calc(50% - 56px); }
+  .lightbox-next { right: calc(50% - 56px); }
+  .lightbox-close { top: max(14px, env(safe-area-inset-top)); width: 44px; height: 44px; }
 }
