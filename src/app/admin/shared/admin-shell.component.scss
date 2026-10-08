@@ -224,6 +224,11 @@ button, a { font: inherit; }
   strong { font-size:10px; }
   small { margin-top:2px; color:#758187; font-size:8px; }
 }
+.security-item:hover { background:rgba(242,191,90,.055); color:$gold-soft; }
+.security-dropdown-icon {
+  width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center;
+  border:1px solid rgba(242,191,90,.22); border-radius:7px; background:rgba(242,191,90,.06); color:$gold-soft;
+}
 .logout-item:hover { background:rgba(255,91,91,.07); color:#ff8585; }
 .logout-icon {
   width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center;

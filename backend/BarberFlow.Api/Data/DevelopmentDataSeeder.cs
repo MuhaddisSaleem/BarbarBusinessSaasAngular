@@ -60,15 +60,25 @@ public static class DevelopmentDataSeeder
             });
         }
 
+        var haircutCategory = new ServiceCategory
+        {
+            Salon = salon,
+            PublicId = 1,
+            Name = "Haircut",
+            SortOrder = 1,
+            IsActive = true
+        };
+        salon.ServiceCategories.Add(haircutCategory);
+
         var services = new[]
         {
-            new Service { Salon = salon, PublicId = 1, Name = "Haircut", DurationMinutes = 40, OriginalPrice = 600, HomeServiceEnabled = true, HomeOriginalPrice = 900, ImageUrl = "assets/images/services/haircut.webp" },
-            new Service { Salon = salon, PublicId = 2, Name = "Beard Trim", DurationMinutes = 25, OriginalPrice = 400, HomeServiceEnabled = true, HomeOriginalPrice = 650, ImageUrl = "assets/images/services/beard-trim.webp" },
-            new Service { Salon = salon, PublicId = 3, Name = "Hair + Beard + Free Hair Massage", DurationMinutes = 60, OriginalPrice = 1100, HomeServiceEnabled = true, HomeOriginalPrice = 1500, ImageUrl = "assets/images/services/hair-beard-massage.webp" },
-            new Service { Salon = salon, PublicId = 4, Name = "Kids Haircut", DurationMinutes = 30, OriginalPrice = 500, HomeServiceEnabled = true, HomeOriginalPrice = 800, ImageUrl = "assets/images/services/kids-haircut.webp" },
-            new Service { Salon = salon, PublicId = 5, Name = "Hair Wash", DurationMinutes = 20, OriginalPrice = 300, HomeServiceEnabled = true, HomeOriginalPrice = 500, ImageUrl = "assets/images/services/hair-wash.webp" },
-            new Service { Salon = salon, PublicId = 6, Name = "Hair Coloring", DurationMinutes = 75, OriginalPrice = 1800, HomeServiceEnabled = true, HomeOriginalPrice = 2300, ImageUrl = "assets/images/services/hair-color.webp" },
-            new Service { Salon = salon, PublicId = 7, Name = "6 Step Face Massage", DurationMinutes = 45, OriginalPrice = 1200, HomeServiceEnabled = true, HomeOriginalPrice = 1600, ImageUrl = "assets/images/services/face-massage.webp" }
+            new Service { Salon = salon, ServiceCategory = haircutCategory, PublicId = 1, Name = "Haircut", DurationMinutes = 40, OriginalPrice = 600, HomeServiceEnabled = true, HomeOriginalPrice = 900, ImageUrl = "assets/images/services/haircut.webp" },
+            new Service { Salon = salon, ServiceCategory = haircutCategory, PublicId = 2, Name = "Beard Trim", DurationMinutes = 25, OriginalPrice = 400, HomeServiceEnabled = true, HomeOriginalPrice = 650, ImageUrl = "assets/images/services/beard-trim.webp" },
+            new Service { Salon = salon, ServiceCategory = haircutCategory, PublicId = 3, Name = "Hair + Beard + Free Hair Massage", DurationMinutes = 60, OriginalPrice = 1100, HomeServiceEnabled = true, HomeOriginalPrice = 1500, ImageUrl = "assets/images/services/hair-beard-massage.webp" },
+            new Service { Salon = salon, ServiceCategory = haircutCategory, PublicId = 4, Name = "Kids Haircut", DurationMinutes = 30, OriginalPrice = 500, HomeServiceEnabled = true, HomeOriginalPrice = 800, ImageUrl = "assets/images/services/kids-haircut.webp" },
+            new Service { Salon = salon, ServiceCategory = haircutCategory, PublicId = 5, Name = "Hair Wash", DurationMinutes = 20, OriginalPrice = 300, HomeServiceEnabled = true, HomeOriginalPrice = 500, ImageUrl = "assets/images/services/hair-wash.webp" },
+            new Service { Salon = salon, ServiceCategory = haircutCategory, PublicId = 6, Name = "Hair Coloring", DurationMinutes = 75, OriginalPrice = 1800, HomeServiceEnabled = true, HomeOriginalPrice = 2300, ImageUrl = "assets/images/services/hair-color.webp" },
+            new Service { Salon = salon, ServiceCategory = haircutCategory, PublicId = 7, Name = "6 Step Face Massage", DurationMinutes = 45, OriginalPrice = 1200, HomeServiceEnabled = true, HomeOriginalPrice = 1600, ImageUrl = "assets/images/services/face-massage.webp" }
         };
 
         var falak = new Barber
@@ -133,6 +143,11 @@ public static class DevelopmentDataSeeder
 
         var owner = await db.SalonUsers
             .FirstOrDefaultAsync(
+                x => x.SalonId == salon.Id && x.Role == SalonUserRole.Owner,
+                cancellationToken);
+
+        owner ??= await db.SalonUsers
+            .FirstOrDefaultAsync(
                 x => x.SalonId == salon.Id && x.Email.ToLower() == adminEmail,
                 cancellationToken);
 
@@ -152,6 +167,8 @@ public static class DevelopmentDataSeeder
         }
         else if (string.IsNullOrWhiteSpace(owner.PasswordHash))
         {
+            // Seed credentials are bootstrap-only. Once an owner has a password,
+            // later email/password changes made through the admin portal are preserved.
             owner.PasswordHash = passwordHasher.HashPassword(owner, adminPassword);
             owner.FullName = string.IsNullOrWhiteSpace(owner.FullName) ? adminName : owner.FullName;
             owner.Role = SalonUserRole.Owner;

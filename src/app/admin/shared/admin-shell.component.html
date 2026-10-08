@@ -1,6 +1,33 @@
 <div class="admin-shell">
   <div class="sidebar-backdrop" [class.show]="sidebarOpen" (click)="closeSidebar()"></div>
 
+<div
+  class="live-booking-alert admin-live-booking-alert"
+  *ngIf="notificationService.liveBookingAlert as liveAlert"
+  role="alert"
+  aria-live="assertive">
+  <div class="live-booking-alert-icon">
+    <i class="bi bi-calendar2-check-fill"></i>
+  </div>
+
+  <div class="live-booking-alert-copy">
+    <span class="live-booking-alert-kicker">NEW BOOKING RECEIVED</span>
+    <strong>{{ liveAlert.title }}</strong>
+    <p>{{ liveAlert.message }}</p>
+    <button type="button" (click)="openNotification(liveAlert); notificationService.dismissLiveBookingAlert()">
+      View booking
+    </button>
+  </div>
+
+  <button
+    type="button"
+    class="live-booking-alert-close"
+    (click)="notificationService.dismissLiveBookingAlert()"
+    aria-label="Dismiss booking notification">
+    <i class="bi bi-x-lg"></i>
+  </button>
+</div>
+
   <aside class="admin-sidebar d-flex flex-column" [class.open]="sidebarOpen">
     <div class="sidebar-brand d-flex align-items-center">
       <div class="brand-mark" [class.has-logo]="brandingMedia.logoUrl()">
@@ -176,6 +203,16 @@
                 <small>{{ currentUser.role }}</small>
               </div>
             </div>
+
+            <div class="profile-dropdown-divider"></div>
+
+            <button type="button" class="profile-dropdown-item security-item" role="menuitem" (click)="navigate('/admin/account-security')">
+              <span class="security-dropdown-icon"><i class="bi bi-shield-lock"></i></span>
+              <span>
+                <strong>Account &amp; Security</strong>
+                <small>Login email and password</small>
+              </span>
+            </button>
 
             <div class="profile-dropdown-divider"></div>
 

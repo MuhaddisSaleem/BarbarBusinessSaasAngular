@@ -2,7 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminShellComponent } from '../shared/admin-shell.component';
-import { AdminService, AdminServiceService, ServiceStatus } from './admin-service.service';
+import {
+  AdminService,
+  AdminServiceCategory,
+  AdminServiceService,
+  ServiceCategoryStatus,
+  ServiceStatus
+} from './admin-service.service';
 import { AdminBookingService } from '../bookings/admin-booking.service';
 
 @Component({
@@ -15,19 +21,23 @@ import { AdminBookingService } from '../bookings/admin-booking.service';
 export class AdminServicesComponent {
   searchTerm = '';
   selectedStatus: 'All' | ServiceStatus = 'All';
+  selectedCategory: 'All' | number = 'All';
 
   addModalOpen = false;
   editModalOpen = false;
   deleteModalOpen = false;
+  categoryModalOpen = false;
 
   editCandidate: AdminService | null = null;
   deleteCandidate: AdminService | null = null;
+  editingCategory: AdminServiceCategory | null = null;
 
   feedbackMessage = '';
   feedbackType: 'success' | 'error' = 'success';
 
   newService = this.emptyServiceForm();
   editService = this.emptyServiceForm();
+  categoryForm = this.emptyCategoryForm();
 
   constructor(
     public readonly serviceService: AdminServiceService,
@@ -39,7 +49,12 @@ export class AdminServicesComponent {
 
     return this.serviceService.all
       .filter(item => this.selectedStatus === 'All' || item.status === this.selectedStatus)
-      .filter(item => !term || item.name.toLowerCase().includes(term));
+      .filter(item => this.selectedCategory === 'All' || item.categoryId === this.selectedCategory)
+      .filter(item =>
+        !term
+        || item.name.toLowerCase().includes(term)
+        || item.categoryName.toLowerCase().includes(term)
+      );
   }
 
   get inactiveCount(): number {
@@ -48,6 +63,7 @@ export class AdminServicesComponent {
 
   openAddModal(): void {
     this.newService = this.emptyServiceForm();
+    this.newService.categoryId = this.serviceService.activeCategories[0]?.id ?? 0;
     this.addModalOpen = true;
     this.feedbackMessage = '';
   }
@@ -60,6 +76,7 @@ export class AdminServicesComponent {
     this.editCandidate = service;
     this.editService = {
       name: service.name,
+      categoryId: service.categoryId,
       duration: String(service.duration),
       originalPrice: String(service.originalPrice),
       hasDiscount: this.serviceService.hasDiscount(service),
@@ -159,6 +176,80 @@ export class AdminServicesComponent {
   resetFilters(): void {
     this.searchTerm = '';
     this.selectedStatus = 'All';
+    this.selectedCategory = 'All';
+  }
+
+  openCategoryManager(): void {
+    this.categoryModalOpen = true;
+    this.editingCategory = null;
+    this.categoryForm = this.emptyCategoryForm();
+    this.feedbackMessage = '';
+  }
+
+  closeCategoryManager(): void {
+    this.categoryModalOpen = false;
+    this.editingCategory = null;
+    this.categoryForm = this.emptyCategoryForm();
+  }
+
+  editCategory(category: AdminServiceCategory): void {
+    this.editingCategory = category;
+    this.categoryForm = {
+      name: category.name,
+      sortOrder: String(category.sortOrder),
+      status: category.status
+    };
+  }
+
+  cancelCategoryEdit(): void {
+    this.editingCategory = null;
+    this.categoryForm = this.emptyCategoryForm();
+  }
+
+  saveCategory(): void {
+    const payload = {
+      name: this.categoryForm.name.trim(),
+      sortOrder: Number(this.categoryForm.sortOrder) || 0,
+      status: this.categoryForm.status
+    };
+
+    const handle = (result: { success: boolean; message: string }) => {
+      this.showFeedback(result.success, result.message);
+      if (result.success) {
+        this.editingCategory = null;
+        this.categoryForm = this.emptyCategoryForm();
+      }
+    };
+
+    if (this.editingCategory) {
+      if (this.serviceService.updateCategoryThroughApi(this.editingCategory.id, payload, handle)) return;
+      handle(this.serviceService.updateCategory(this.editingCategory.id, payload));
+      return;
+    }
+
+    if (this.serviceService.addCategoryThroughApi(payload, handle)) return;
+    handle(this.serviceService.addCategory(payload));
+  }
+
+  toggleCategoryStatus(category: AdminServiceCategory): void {
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.serviceService.toggleCategoryStatusThroughApi(category.id, handle)) return;
+    handle(this.serviceService.toggleCategoryStatus(category.id));
+  }
+
+  deleteCategory(category: AdminServiceCategory): void {
+    if (category.serviceCount > 0 || this.serviceService.all.some(service => service.categoryId === category.id)) {
+      this.showFeedback(false, 'Move or delete the services in ' + category.name + ' before deleting this category.');
+      return;
+    }
+
+    const handle = (result: { success: boolean; message: string }) =>
+      this.showFeedback(result.success, result.message);
+
+    if (this.serviceService.deleteCategoryThroughApi(category.id, handle)) return;
+    handle(this.serviceService.deleteCategory(category.id));
   }
 
   async onImageSelected(event: Event, target: 'add' | 'edit'): Promise<void> {
@@ -215,15 +306,14 @@ export class AdminServicesComponent {
     return this.bookingService.all.filter(booking =>
       booking.date >= today
       && (booking.status === 'Pending' || booking.status === 'Confirmed')
-      && booking.service
-        .split(',')
+      && (booking.serviceNames ?? booking.service.split(','))
         .map(name => name.trim().toLowerCase())
         .includes(target)
     );
   }
 
   private todayKey(): string {
-    const date = new Date();
+    const date = this.bookingService.salonNow();
     return [
       date.getFullYear(),
       String(date.getMonth() + 1).padStart(2, '0'),
@@ -234,6 +324,8 @@ export class AdminServicesComponent {
   private buildPayload(form: ReturnType<AdminServicesComponent['emptyServiceForm']>) {
     return {
       name: form.name,
+      categoryId: Number(form.categoryId),
+      categoryName: this.serviceService.getCategoryById(Number(form.categoryId))?.name || '',
       duration: Number(form.duration),
       originalPrice: Number(form.originalPrice),
       discountPrice: form.hasDiscount && form.discountPrice ? Number(form.discountPrice) : null,
@@ -250,6 +342,7 @@ export class AdminServicesComponent {
   private emptyServiceForm() {
     return {
       name: '',
+      categoryId: 0,
       duration: '',
       originalPrice: '',
       hasDiscount: false,
@@ -260,6 +353,14 @@ export class AdminServicesComponent {
       homeDiscountPrice: '',
       image: '',
       status: 'Active' as ServiceStatus
+    };
+  }
+
+  private emptyCategoryForm() {
+    return {
+      name: '',
+      sortOrder: '',
+      status: 'Active' as ServiceCategoryStatus
     };
   }
 

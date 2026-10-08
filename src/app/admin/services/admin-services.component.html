@@ -12,10 +12,17 @@
         <p>Manage salon and home-service pricing, discounts, visibility and service images.</p>
       </div>
 
-      <button type="button" class="add-service-btn" (click)="openAddModal()">
-        <i class="bi bi-plus-lg"></i>
-        Add Service
-      </button>
+      <div class="heading-actions d-flex flex-wrap gap-2">
+        <button type="button" class="manage-category-btn" (click)="openCategoryManager()">
+          <i class="bi bi-grid"></i>
+          Manage Categories
+        </button>
+
+        <button type="button" class="add-service-btn" (click)="openAddModal()">
+          <i class="bi bi-plus-lg"></i>
+          Add Service
+        </button>
+      </div>
     </section>
 
     <section class="row g-3 service-stats">
@@ -57,7 +64,16 @@
           </label>
         </div>
 
-        <div class="col-8 col-lg-auto">
+        <div class="col-6 col-lg-auto">
+          <select [(ngModel)]="selectedCategory">
+            <option [ngValue]="'All'">All Categories</option>
+            <option *ngFor="let category of serviceService.allCategories" [ngValue]="category.id">
+              {{ category.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-6 col-lg-auto">
           <select [(ngModel)]="selectedStatus">
             <option value="All">Select Status</option>
             <option value="Active">Active</option>
@@ -65,7 +81,7 @@
           </select>
         </div>
 
-        <div class="col-4 col-lg-auto">
+        <div class="col-12 col-lg-auto">
           <button type="button" class="reset-btn w-100" (click)="resetFilters()">
             <i class="bi bi-arrow-counterclockwise"></i>
             <span class="d-none d-xl-inline">Reset</span>
@@ -78,6 +94,7 @@
           <thead>
             <tr>
               <th>Service</th>
+              <th>Category</th>
               <th>Duration</th>
               <th>Original Amount</th>
               <th>Discount Amount</th>
@@ -100,6 +117,10 @@
                     </small>
                   </div>
                 </div>
+              </td>
+
+              <td>
+                <span class="category-pill">{{ service.categoryName }}</span>
               </td>
 
               <td>{{ service.duration }} min</td>
@@ -168,6 +189,7 @@
               <div class="d-flex align-items-start justify-content-between gap-2">
                 <div>
                   <strong>{{ service.name }}</strong>
+                  <span class="category-pill mobile-category">{{ service.categoryName }}</span>
                   <small>{{ service.duration }} minutes</small>
                 </div>
 
@@ -286,6 +308,22 @@
       </label>
 
       <label class="full">
+        <span>Service Category *</span>
+        <select [(ngModel)]="form.categoryId">
+          <option [ngValue]="0" disabled>Select a category</option>
+          <option
+            *ngFor="let category of serviceService.allCategories"
+            [ngValue]="category.id"
+            [disabled]="category.status === 'Inactive' && category.id !== form.categoryId">
+            {{ category.name }}{{ category.status === 'Inactive' ? ' (Inactive)' : '' }}
+          </option>
+        </select>
+        <small class="field-note" *ngIf="!serviceService.allCategories.length">
+          Create a service category first.
+        </small>
+      </label>
+
+      <label class="full">
         <span>Service Name *</span>
         <input type="text" [(ngModel)]="form.name" placeholder="e.g. Premium Haircut">
       </label>
@@ -347,6 +385,109 @@
       </label>
     </div>
   </ng-template>
+
+  <div class="modal-backdrop category-layer" *ngIf="categoryModalOpen" (click)="closeCategoryManager()"></div>
+  <section class="category-modal" *ngIf="categoryModalOpen">
+    <div class="modal-header d-flex align-items-start justify-content-between">
+      <div>
+        <span class="eyebrow">SERVICE ORGANIZATION</span>
+        <h3>Service Categories</h3>
+        <p>Create categories once, then assign every service to the correct category.</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closeCategoryManager()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="category-modal-body">
+      <div class="category-editor">
+        <div class="category-editor-heading d-flex align-items-center justify-content-between gap-3">
+          <div>
+            <strong>{{ editingCategory ? 'Edit Category' : 'Add Category' }}</strong>
+            <small>Category names are stored in the database and will power customer service tabs.</small>
+          </div>
+          <button
+            type="button"
+            class="cancel-category-edit"
+            *ngIf="editingCategory"
+            (click)="cancelCategoryEdit()">
+            Cancel edit
+          </button>
+        </div>
+
+        <div class="category-form-grid">
+          <label>
+            <span>Category Name *</span>
+            <input type="text" [(ngModel)]="categoryForm.name" placeholder="e.g. Beard">
+          </label>
+
+          <label>
+            <span>Display Order</span>
+            <input type="number" min="1" [(ngModel)]="categoryForm.sortOrder" placeholder="e.g. 2">
+          </label>
+
+          <label>
+            <span>Status</span>
+            <select [(ngModel)]="categoryForm.status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </label>
+
+          <button type="button" class="save-category-btn" (click)="saveCategory()">
+            <i class="bi" [ngClass]="editingCategory ? 'bi-check2' : 'bi-plus-lg'"></i>
+            {{ editingCategory ? 'Save Category' : 'Add Category' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="category-list">
+        <article class="category-row" *ngFor="let category of serviceService.allCategories">
+          <div class="category-order">{{ category.sortOrder }}</div>
+
+          <div class="category-copy">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <strong>{{ category.name }}</strong>
+              <span class="status-pill" [class.inactive]="category.status === 'Inactive'">
+                <i></i>{{ category.status }}
+              </span>
+            </div>
+            <small>
+              {{ category.serviceCount }} service{{ category.serviceCount === 1 ? '' : 's' }}
+            </small>
+          </div>
+
+          <div class="category-actions d-flex align-items-center gap-2">
+            <button type="button" class="category-action edit" (click)="editCategory(category)" title="Edit category">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button
+              type="button"
+              class="category-action"
+              [class.activate]="category.status === 'Inactive'"
+              (click)="toggleCategoryStatus(category)"
+              [title]="category.status === 'Active' ? 'Deactivate category' : 'Activate category'">
+              <i class="bi" [ngClass]="category.status === 'Active' ? 'bi-eye-slash' : 'bi-eye'"></i>
+            </button>
+            <button
+              type="button"
+              class="category-action delete"
+              [disabled]="category.serviceCount > 0"
+              (click)="deleteCategory(category)"
+              title="Delete category">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+        </article>
+
+        <div class="category-empty" *ngIf="!serviceService.allCategories.length">
+          <i class="bi bi-grid"></i>
+          <strong>No categories yet</strong>
+          <span>Create your first category above.</span>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <div class="modal-backdrop delete-layer" *ngIf="deleteModalOpen" (click)="closeDeleteModal()"></div>
   <section class="delete-dialog" *ngIf="deleteModalOpen && deleteCandidate">

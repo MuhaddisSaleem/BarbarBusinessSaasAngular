@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { AdminBarberService } from '../admin/barbers/admin-barber.service';
 import { AdminSettingsService } from '../admin/settings/admin-settings.service';
 import { BrandingMediaService } from '../admin/settings/branding-media.service';
@@ -11,12 +11,37 @@ import { BrandingMediaService } from '../admin/settings/branding-media.service';
   templateUrl: './hero.component.html',
   styleUrl: './hero.component.scss'
 })
-export class HeroComponent {
+export class HeroComponent implements AfterViewInit, OnDestroy {
+  private heroSection?: HTMLElement;
+  private scrollFrame: number | null = null;
   constructor(
     private readonly settingsService: AdminSettingsService,
     private readonly barberService: AdminBarberService,
-    public readonly brandingMedia: BrandingMediaService
+    public readonly brandingMedia: BrandingMediaService,
+    private readonly host: ElementRef<HTMLElement>
   ) {}
+
+  ngAfterViewInit(): void {
+    this.heroSection = this.host.nativeElement.querySelector<HTMLElement>('.royal-hero') ?? undefined;
+    this.updateHeroScroll();
+  }
+
+  ngOnDestroy(): void {
+    if (this.scrollFrame !== null) {
+      cancelAnimationFrame(this.scrollFrame);
+    }
+  }
+
+  @HostListener('window:scroll')
+  @HostListener('window:resize')
+  onViewportChange(): void {
+    if (this.scrollFrame !== null) return;
+
+    this.scrollFrame = requestAnimationFrame(() => {
+      this.updateHeroScroll();
+      this.scrollFrame = null;
+    });
+  }
 
   get businessName(): string {
     return this.settingsService.current.businessName || 'Salon';
@@ -63,7 +88,7 @@ export class HeroComponent {
   }
 
   get businessHoursStatus(): { label: string; value: string } {
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const hours = this.settingsService.hoursForDate(now);
 
     if (!hours) {
@@ -81,6 +106,27 @@ export class HeroComponent {
     }
 
     return { label: 'Open until', value: this.minutesToTime(hours.end) };
+  }
+
+  private updateHeroScroll(): void {
+    if (!this.heroSection) return;
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.heroSection.style.setProperty('--hero-content-y', '0px');
+      this.heroSection.style.setProperty('--hero-content-opacity', '1');
+      this.heroSection.style.setProperty('--hero-bg-y', '0px');
+      this.heroSection.style.setProperty('--hero-bg-scale', '1.015');
+      return;
+    }
+
+    const rect = this.heroSection.getBoundingClientRect();
+    const height = Math.max(this.heroSection.offsetHeight, 1);
+    const progress = Math.min(1, Math.max(0, -rect.top / height));
+
+    this.heroSection.style.setProperty('--hero-content-y', `${(-24 * progress).toFixed(1)}px`);
+    this.heroSection.style.setProperty('--hero-content-opacity', (1 - (progress * 0.38)).toFixed(3));
+    this.heroSection.style.setProperty('--hero-bg-y', `${(22 * progress).toFixed(1)}px`);
+    this.heroSection.style.setProperty('--hero-bg-scale', (1.015 + (progress * 0.03)).toFixed(3));
   }
 
   private minutesToTime(totalMinutes: number): string {

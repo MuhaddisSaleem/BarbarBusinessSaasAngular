@@ -68,7 +68,7 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   get greeting(): string {
-    const hour = new Date().getHours();
+    const hour = this.settingsService.salonNow().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
@@ -76,7 +76,7 @@ export class AdminDashboardComponent implements OnInit {
 
   get currentDateLabel(): string {
     const value = this.dashboard?.today;
-    const date = value ? new Date(value + 'T12:00:00') : new Date();
+    const date = value ? new Date(value + 'T12:00:00') : this.settingsService.salonNow();
 
     return new Intl.DateTimeFormat('en-GB', {
       weekday: 'long',

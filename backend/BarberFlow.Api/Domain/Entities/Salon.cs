@@ -18,6 +18,7 @@ public sealed class Salon : BaseEntity
     public SalonSettings? Settings { get; set; }
     public ICollection<SalonUser> Users { get; set; } = [];
     public ICollection<Barber> Barbers { get; set; } = [];
+    public ICollection<ServiceCategory> ServiceCategories { get; set; } = [];
     public ICollection<Service> Services { get; set; } = [];
     public ICollection<Customer> Customers { get; set; } = [];
     public ICollection<Booking> Bookings { get; set; } = [];

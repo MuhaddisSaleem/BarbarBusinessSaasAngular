@@ -405,9 +405,6 @@ app-hero .site-header > .container-fluid {
     font-size: 18px;
   }
 
-  .booking-page .service-image {
-    height: 132px;
-  }
 
   .booking-page .booking-for-toggle {
     flex-direction: column !important;
@@ -482,9 +479,6 @@ app-hero .site-header > .container-fluid {
     line-height: 1.2;
   }
 
-  .booking-page .service-image {
-    height: 190px;
-  }
 
   .booking-page .time-title-row {
     align-items: flex-start !important;
@@ -503,14 +497,11 @@ app-hero .site-header > .container-fluid {
 }
 
 @media (max-width: 380px) {
-  .booking-page .barber-col {
-    flex: 0 0 100%;
-    max-width: 100%;
-  }
+  // .booking-page .barber-col {
+  //   flex: 0 0 100%;
+  //   max-width: 100%;
+  // }
 
-  .booking-page .service-image {
-    height: 170px;
-  }
 
   .booking-page .step > .step-label {
     max-width: 58px;

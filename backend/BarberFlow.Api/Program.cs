@@ -1,5 +1,7 @@
 using BarberFlow.Api.Data;
 using System.Text;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using BarberFlow.Api.Domain.Entities;
 using BarberFlow.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -10,6 +12,10 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
@@ -25,6 +31,7 @@ builder.Services.AddHttpClient<WhatsAppCloudApiClient>(client =>
 });
 builder.Services.AddScoped<CatalogApplicationService>();
 builder.Services.AddScoped<AuthApplicationService>();
+builder.Services.AddScoped<AccountEmailService>();
 builder.Services.AddScoped<IPasswordHasher<SalonUser>, PasswordHasher<SalonUser>>();
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
@@ -41,6 +48,26 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var principal = context.Principal;
+                if (!Guid.TryParse(principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                {
+                    context.Fail("Invalid session.");
+                    return;
+                }
+                var db = context.HttpContext.RequestServices.GetRequiredService<BarberFlowDbContext>();
+                var user = await db.SalonUsers.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id == userId, context.HttpContext.RequestAborted);
+                var stamp = principal?.FindFirstValue(SessionStamp.Claim) ?? "";
+                if (user is null || !user.IsActive || !CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(stamp),
+                    Encoding.UTF8.GetBytes(SessionStamp.Create(user, jwtSigningKey))))
+                    context.Fail("Session expired. Sign in again.");
+            }
+        };
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -100,6 +127,7 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+app.UseResponseCompression();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

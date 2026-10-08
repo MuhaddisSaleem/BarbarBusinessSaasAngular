@@ -25,7 +25,7 @@ interface BarberScheduleSummary {
 })
 export class AdminCalendarComponent {
   view: ScheduleView = 'daily';
-  selectedDateKey = this.toDateKey(new Date());
+  selectedDateKey = this.toDateKey(this.settingsService.salonNow());
   selectedBarber = 'All';
   selectedStatus: 'All' | BookingStatus = 'All';
   selectedBooking: AdminBooking | null = null;
@@ -151,7 +151,7 @@ export class AdminCalendarComponent {
   }
 
   goToday(): void {
-    this.selectedDateKey = this.toDateKey(new Date());
+    this.selectedDateKey = this.toDateKey(this.settingsService.salonNow());
     this.selectedBooking = null;
   }
 
@@ -188,7 +188,7 @@ export class AdminCalendarComponent {
   }
 
   isToday(date: Date): boolean {
-    return this.toDateKey(date) === this.toDateKey(new Date());
+    return this.toDateKey(date) === this.toDateKey(this.settingsService.salonNow());
   }
 
   openBooking(booking: AdminBooking): void {
@@ -228,8 +228,8 @@ export class AdminCalendarComponent {
     const interval = this.settingsService.bookingInterval;
     let candidate = hours.start;
 
-    if (this.selectedDateKey === this.toDateKey(new Date())) {
-      const now = new Date();
+    if (this.selectedDateKey === this.toDateKey(this.settingsService.salonNow())) {
+      const now = this.settingsService.salonNow();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       candidate = hours.start + Math.max(0, Math.ceil((nowMinutes + 1 - hours.start) / interval)) * interval;
     }

@@ -15,6 +15,10 @@ public sealed class Barber : BaseEntity
     public int? ExperienceYears { get; set; }
     public bool IsActive { get; set; } = true;
 
+    // Soft-delete keeps historical booking relationships intact while removing
+    // the barber from current admin/customer catalog results.
+    public bool IsDeleted { get; set; }
+
     public ICollection<BarberService> Services { get; set; } = [];
     public ICollection<BarberWorkingHour> WorkingHours { get; set; } = [];
     public ICollection<BarberScheduleOverride> ScheduleOverrides { get; set; } = [];

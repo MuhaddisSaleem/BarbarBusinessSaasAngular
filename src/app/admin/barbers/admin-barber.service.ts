@@ -1,3 +1,4 @@
+import { AdminSettingsService } from '../settings/admin-settings.service';
 import { Injectable } from '@angular/core';
 import { NotificationService } from '../notifications/notification.service';
 import { CatalogApiService } from '../../core/catalog-api.service';
@@ -30,17 +31,12 @@ export interface BarberMutationResult {
 export class AdminBarberService {
   constructor(
     private readonly notificationService: NotificationService,
-    private readonly api?: CatalogApiService
+    private readonly api?: CatalogApiService,
+    private readonly settingsService?: AdminSettingsService
   ) {
     this.barbers = this.api
       ? this.normalizeBarbers(this.api.barberSnapshot)
       : this.loadBarbers();
-
-    if (this.api && typeof window !== 'undefined') {
-      window.localStorage.removeItem(this.storageKey);
-      window.localStorage.removeItem(this.demoCleanupKey);
-    }
-
 
     this.api?.changes$.subscribe(changed => {
       if (changed === 'barbers' && this.api) {
@@ -891,7 +887,7 @@ export class AdminBarberService {
   }
 
   private todayKey(): string {
-    const date = new Date();
+    const date = this.settingsService?.salonNow() ?? new Date();
     return [
       date.getFullYear(),
       String(date.getMonth() + 1).padStart(2, '0'),

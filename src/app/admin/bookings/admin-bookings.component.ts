@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { AdminShellComponent } from '../shared/admin-shell.component';
 import { AdminBooking, AdminBookingService, BookingStatus, WalkInBarberOption } from './admin-booking.service';
@@ -15,7 +16,10 @@ type BookingTab = 'all' | 'today' | 'upcoming' | 'completed' | 'cancelled';
   templateUrl: './admin-bookings.component.html',
   styleUrl: './admin-bookings.component.scss'
 })
-export class AdminBookingsComponent implements OnInit {
+export class AdminBookingsComponent implements OnInit, OnDestroy {
+  private readonly subscriptions = new Subscription();
+  private pendingBookingId: number | null = null;
+  creatingBooking = false;
   activeTab: BookingTab = 'today';
   searchTerm = '';
   selectedBarber = 'All';
@@ -28,6 +32,12 @@ export class AdminBookingsComponent implements OnInit {
   cancelDialogOpen = false;
   feedbackMessage = '';
   feedbackType: 'success' | 'error' = 'success';
+  walkInServiceSearch = '';
+  walkInServiceDropdownOpen = false;
+  walkInServiceOverlayStyle: Record<string, string> = {};
+  walkInSelectedServiceNames: string[] = [];
+  walkInBarberOptions: WalkInBarberOption[] = [];
+  private walkInServiceTriggerElement?: HTMLElement;
 
   editBarber = '';
   editDate = '';
@@ -51,34 +61,45 @@ export class AdminBookingsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const bookingId = Number(this.route.snapshot.queryParamMap.get('booking'));
-    const customer = this.route.snapshot.queryParamMap.get('customer');
+    this.subscriptions.add(this.route.queryParamMap.subscribe(params => {
+      const customer = params.get('customer');
+      if (customer) {
+        this.searchTerm = customer;
+        this.activeTab = 'all';
+      }
+      const id = Number(params.get('booking'));
+      this.pendingBookingId = Number.isSafeInteger(id) && id > 0 ? id : null;
+      this.openPendingBooking();
+    }));
+    this.subscriptions.add(this.bookingService.changes$.subscribe(() => this.openPendingBooking()));
+  }
 
-    if (customer) {
-      this.searchTerm = customer;
-      this.activeTab = 'all';
-    }
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
 
-    if (bookingId) {
-      const booking = this.bookingService.getById(bookingId);
-      if (booking) this.openBooking(booking);
-    }
+  private openPendingBooking(): void {
+    if (this.pendingBookingId === null) return;
+    const booking = this.bookingService.getById(this.pendingBookingId);
+    if (!booking) return;
+    this.pendingBookingId = null;
+    this.openBooking(booking);
   }
 
   get todayKey(): string {
-    return this.toDateKey(new Date());
+    return this.toDateKey(this.settingsService.salonNow());
   }
 
   get minDate(): string {
     if (this.settingsService.current.allowSameDayBooking) return this.todayKey;
 
-    const tomorrow = new Date();
+    const tomorrow = this.settingsService.salonNow();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return this.toDateKey(tomorrow);
   }
 
   get maxDate(): string {
-    const date = new Date();
+    const date = this.settingsService.salonNow();
     date.setDate(date.getDate() + this.settingsService.maxAdvanceDays);
     return this.toDateKey(date);
   }
@@ -92,10 +113,7 @@ export class AdminBookingsComponent implements OnInit {
 
   get filterServices(): string[] {
     const historicalServices = this.bookingService.all.flatMap(item =>
-      item.service
-        .split(',')
-        .map(service => service.trim())
-        .filter(Boolean)
+      this.bookingServiceNames(item)
     );
 
     return Array.from(new Set([
@@ -137,30 +155,151 @@ export class AdminBookingsComponent implements OnInit {
     );
   }
 
+  get selectedWalkInServiceNames(): string[] {
+    return this.walkInSelectedServiceNames;
+  }
+
+  get selectedWalkInServices() {
+    const selected = new Set(this.selectedWalkInServiceNames);
+    return this.bookingService.services.filter(service => selected.has(service.name));
+  }
+
   get selectedWalkInService() {
-    return this.bookingService.services.find(service => service.name === this.newBooking.service);
+    const services = this.selectedWalkInServices;
+    if (!services.length) return undefined;
+
+    return {
+      name: services.map(service => service.name).join(', '),
+      duration: services.reduce((total, service) => total + service.duration, 0),
+      amount: services.reduce((total, service) => total + service.amount, 0)
+    };
+  }
+
+  get filteredWalkInServices() {
+    const term = this.walkInServiceSearch.trim().toLowerCase();
+    if (!term) return this.bookingService.services;
+
+    return this.bookingService.services.filter(service =>
+      service.name.toLowerCase().includes(term)
+    );
+  }
+
+  get walkInServiceButtonLabel(): string {
+    const selected = this.selectedWalkInServiceNames;
+    if (!selected.length) return 'Select services';
+    if (selected.length === 1) return selected[0];
+    return selected.length + ' services selected';
+  }
+
+  isWalkInServiceSelected(serviceName: string): boolean {
+    return this.selectedWalkInServiceNames.includes(serviceName);
+  }
+
+  toggleWalkInServiceDropdown(event: Event): void {
+    event.stopPropagation();
+    this.walkInServiceTriggerElement = event.currentTarget as HTMLElement;
+    this.walkInServiceDropdownOpen = !this.walkInServiceDropdownOpen;
+
+    if (this.walkInServiceDropdownOpen) {
+      this.positionWalkInServicePanel();
+      return;
+    }
+
+    this.walkInServiceSearch = '';
+    this.walkInServiceOverlayStyle = {};
+  }
+
+  toggleWalkInService(serviceName: string, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const selected = new Set(this.walkInSelectedServiceNames);
+
+    if (selected.has(serviceName)) {
+      selected.delete(serviceName);
+    } else {
+      selected.add(serviceName);
+    }
+
+    // Keep UI selection state independent from the serialized booking value.
+    // Preserve the catalogue order so the displayed/posted service list is stable.
+    this.walkInSelectedServiceNames = this.bookingService.services
+      .filter(service => selected.has(service.name))
+      .map(service => service.name);
+
+    this.newBooking.service = this.walkInSelectedServiceNames.join(', ');
+    this.onCreateServiceOrDateChange();
+  }
+
+  @HostListener('document:click')
+  closeWalkInServiceDropdown(): void {
+    if (!this.walkInServiceDropdownOpen) return;
+    this.walkInServiceDropdownOpen = false;
+    this.walkInServiceSearch = '';
+    this.walkInServiceOverlayStyle = {};
+  }
+
+  @HostListener('window:resize')
+  repositionWalkInServiceDropdown(): void {
+    if (this.walkInServiceDropdownOpen) {
+      this.positionWalkInServicePanel();
+    }
+  }
+
+  positionWalkInServicePanel(): void {
+    const trigger = this.walkInServiceTriggerElement;
+    if (!trigger || !this.walkInServiceDropdownOpen) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 10;
+    const gap = 6;
+    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const availableAbove = rect.top - viewportPadding;
+    const openAbove = availableBelow < 280 && availableAbove > availableBelow;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(rect.left, window.innerWidth - rect.width - viewportPadding)
+    );
+    const width = Math.max(
+      260,
+      Math.min(rect.width, window.innerWidth - (viewportPadding * 2))
+    );
+
+    this.walkInServiceOverlayStyle = {
+      position: 'fixed',
+      left: left + 'px',
+      width: width + 'px',
+      zIndex: '10020',
+      top: openAbove ? 'auto' : (rect.bottom + gap) + 'px',
+      bottom: openAbove ? (window.innerHeight - rect.top + gap) + 'px' : 'auto'
+    };
   }
 
   get currentWalkInTime(): string {
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     return this.minutesToTime(now.getHours() * 60 + now.getMinutes());
-  }
-
-  get walkInBarberOptions(): WalkInBarberOption[] {
-    const service = this.selectedWalkInService;
-    if (!service) return [];
-
-    return this.bookingService.availableBarbersForWalkIn(
-      service.name,
-      this.todayKey,
-      this.currentWalkInTime,
-      service.duration,
-      10
-    );
   }
 
   get createBarbers(): string[] {
     return this.walkInBarberOptions.map(option => option.name);
+  }
+
+  private refreshWalkInBarberOptions(): void {
+    const service = this.selectedWalkInService;
+
+    if (!service) {
+      this.walkInBarberOptions = [];
+      return;
+    }
+
+    this.walkInBarberOptions = this.bookingService.availableBarbersForWalkIn(
+      service.name,
+      this.todayKey,
+      this.currentWalkInTime,
+      service.duration,
+      10,
+      this.selectedWalkInServiceNames
+    );
   }
 
   get selectedWalkInBarberOption(): WalkInBarberOption | undefined {
@@ -200,6 +339,7 @@ export class AdminBookingsComponent implements OnInit {
   onCreateServiceOrDateChange(): void {
     this.newBooking.barber = '';
     this.newBooking.time = this.currentWalkInTime;
+    this.refreshWalkInBarberOptions();
   }
 
   onEditDateChange(): void {
@@ -228,10 +368,7 @@ export class AdminBookingsComponent implements OnInit {
       .filter(item => this.selectedBarber === 'All' || item.barber === this.selectedBarber)
       .filter(item =>
         this.selectedService === 'All'
-        || item.service
-          .split(',')
-          .map(service => service.trim())
-          .includes(this.selectedService)
+        || this.bookingServiceNames(item).includes(this.selectedService)
       )
       .filter(item => !this.selectedDate || item.date === this.selectedDate)
       .filter(item => {
@@ -339,8 +476,13 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   openCreateModal(): void {
+    if (this.creatingBooking) return;
     this.createModalOpen = true;
     this.feedbackMessage = '';
+    this.walkInServiceSearch = '';
+    this.walkInServiceDropdownOpen = false;
+    this.walkInSelectedServiceNames = [];
+    this.walkInBarberOptions = [];
     this.newBooking = {
       customerName: '',
       phone: '',
@@ -353,7 +495,14 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   closeCreateModal(): void {
+    if (this.creatingBooking) return;
+    this.walkInServiceDropdownOpen = false;
+    this.walkInServiceSearch = '';
+    this.walkInServiceOverlayStyle = {};
+    this.walkInSelectedServiceNames = [];
+    this.walkInBarberOptions = [];
     this.createModalOpen = false;
+    this.walkInServiceTriggerElement = undefined;
   }
 
   get canCreateWalkIn(): boolean {
@@ -369,6 +518,7 @@ export class AdminBookingsComponent implements OnInit {
   }
 
   createBooking(): void {
+    if (this.creatingBooking) return;
     const form = this.newBooking;
     const digits = form.phone.replace(/\D/g, '');
     const service = this.selectedWalkInService;
@@ -388,7 +538,8 @@ export class AdminBookingsComponent implements OnInit {
       this.todayKey,
       this.currentWalkInTime,
       service.duration,
-      10
+      10,
+      this.selectedWalkInServiceNames
     );
     const selectedOption = freshOptions.find(option => option.name === form.barber);
 
@@ -404,6 +555,7 @@ export class AdminBookingsComponent implements OnInit {
       customerName: form.customerName.trim(),
       phone: digits ? '+92 ' + digits.slice(0, 3) + ' ' + digits.slice(3) : '',
       service: service.name,
+      serviceNames: [...this.selectedWalkInServiceNames],
       duration: service.duration,
       barber: form.barber,
       date: this.todayKey,
@@ -414,17 +566,23 @@ export class AdminBookingsComponent implements OnInit {
       serviceLocation: 'Salon' as const
     };
 
+    this.creatingBooking = true;
     if (this.bookingService.createWalkInThroughApi(
       bookingInput,
       result => {
+        this.creatingBooking = false;
         this.showFeedback(result.success, result.message);
         if (result.success) this.createModalOpen = false;
       },
-      message => this.showFeedback(false, message)
+      message => {
+        this.creatingBooking = false;
+        this.showFeedback(false, message);
+      }
     )) {
       return;
     }
 
+    this.creatingBooking = false;
     const result = this.bookingService.addWalkInBooking(bookingInput);
     this.showFeedback(result.success, result.message);
     if (result.success) this.createModalOpen = false;
@@ -447,6 +605,25 @@ export class AdminBookingsComponent implements OnInit {
     window.setTimeout(() => {
       if (this.feedbackMessage === message) this.feedbackMessage = '';
     }, 3500);
+  }
+
+  private bookingServiceNames(item: AdminBooking): string[] {
+    if (item.serviceNames?.length) {
+      return item.serviceNames.map(name => name.trim()).filter(Boolean);
+    }
+
+    const serialized = String(item.service || '').trim();
+    if (!serialized) return [];
+
+    const exactCatalogueService = this.bookingService.services.find(
+      service => service.name.trim().toLowerCase() === serialized.toLowerCase()
+    );
+
+    if (exactCatalogueService) {
+      return [exactCatalogueService.name];
+    }
+
+    return serialized.split(',').map(name => name.trim()).filter(Boolean);
   }
 
   private toDateKey(date: Date): string {
@@ -474,7 +651,7 @@ export class AdminBookingsComponent implements OnInit {
     const slots: string[] = [];
     const interval = this.settingsService.bookingInterval;
 
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const isToday = dateKey === this.todayKey;
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 

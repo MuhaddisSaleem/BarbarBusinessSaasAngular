@@ -15,6 +15,7 @@ export interface AdminBooking {
   customerName: string;
   phone: string;
   service: string;
+  serviceNames?: string[];
   duration: number;
   barber: string;
   date: string;
@@ -71,6 +72,10 @@ export class AdminBookingService {
     }
   }
 
+  salonNow(): Date {
+    return this.settingsService.salonNow();
+  }
+
   get barbers(): string[] {
     return this.barberService.active.map(barber => barber.name);
   }
@@ -99,7 +104,8 @@ export class AdminBookingService {
     dateKey: string,
     time: string,
     duration: number,
-    preferredWaitMinutes = 10
+    preferredWaitMinutes = 10,
+    selectedNames?: string[]
   ): WalkInBarberOption[] {
     const startMinutes = this.timeToMinutes(time);
     if (!Number.isFinite(startMinutes)) return [];
@@ -111,7 +117,7 @@ export class AdminBookingService {
     const latestStart = salonHours.end - duration;
     if (startMinutes > latestStart) return [];
 
-    const services = this.serviceNames(service);
+    const services = selectedNames ?? this.serviceNames(service);
     const eligible = this.barberService.active.filter(barber =>
       this.barberService.isAvailableOnDate(barber.id, dateKey)
       && this.barberService.supportsServices(barber.id, services)
@@ -228,7 +234,7 @@ export class AdminBookingService {
     if (!this.api) return false;
 
     this.api.createOnline(bookings).subscribe({
-      next: response => this.reloadAfterMutation(response, onSuccess, onError),
+      next: response => this.reloadAfterMutation(response, onSuccess),
       error: error => onError(this.apiErrorMessage(error, 'Could not save the booking. Please try again.'))
     });
 
@@ -243,7 +249,7 @@ export class AdminBookingService {
     if (!this.api) return false;
 
     this.api.createWalkIn(booking).subscribe({
-      next: response => this.reloadAfterMutation(response, onSuccess, onError),
+      next: response => this.reloadAfterMutation(response, onSuccess),
       error: error => onError(this.apiErrorMessage(error, 'Could not save the walk-in booking. Please try again.'))
     });
 
@@ -252,22 +258,19 @@ export class AdminBookingService {
 
   private reloadAfterMutation(
     response: BookingMutationResult,
-    onSuccess: (result: BookingMutationResult) => void,
-    onError: (message: string) => void
+    onSuccess: (result: BookingMutationResult) => void
   ): void {
-    if (!this.api) {
-      onSuccess(response);
-      return;
-    }
+    // The POST is committed. A failed refresh must never invite a duplicate retry.
+    onSuccess(response);
+    if (!this.api) return;
 
     if (this.auth?.isAuthenticated()) {
       this.api.getAll().subscribe({
         next: bookings => {
           this.bookings = Array.isArray(bookings) ? bookings.map(item => this.normalizeBooking(item)) : [];
-          onSuccess(response);
           this.bookingsChangedSubject.next();
         },
-        error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but the booking list could not be refreshed.'))
+        error: error => this.notifyApiError('Booking saved. Could not refresh the list; reload it before making another booking.', error)
       });
       return;
     }
@@ -275,10 +278,9 @@ export class AdminBookingService {
     this.api.getBusySlots().subscribe({
       next: slots => {
         this.bookings = Array.isArray(slots) ? slots.map(item => this.busySlotBooking(item)) : [];
-        onSuccess(response);
         this.bookingsChangedSubject.next();
       },
-      error: error => onError(this.apiErrorMessage(error, 'The booking was saved, but availability could not be refreshed.'))
+      error: error => this.notifyApiError('Booking saved. Could not refresh availability; reload before making another booking.', error)
     });
   }
 
@@ -646,7 +648,7 @@ export class AdminBookingService {
   }
 
   addWalkInBooking(input: Omit<AdminBooking, 'id' | 'code' | 'status' | 'source'>): BookingMutationResult {
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const todayKey = [
       now.getFullYear(),
       String(now.getMonth() + 1).padStart(2, '0'),
@@ -792,7 +794,7 @@ export class AdminBookingService {
       return { success: false, message: 'Select a valid appointment date.' };
     }
 
-    const today = new Date();
+    const today = this.settingsService.salonNow();
     const walkInTodayKey = [
       today.getFullYear(),
       String(today.getMonth() + 1).padStart(2, '0'),
@@ -823,7 +825,7 @@ export class AdminBookingService {
       return { success: false, message: 'This appointment falls outside the configured business hours.' };
     }
 
-    const now = new Date();
+    const now = this.settingsService.salonNow();
     const todayKey = [
       now.getFullYear(),
       String(now.getMonth() + 1).padStart(2, '0'),
@@ -1010,7 +1012,7 @@ export class AdminBookingService {
   }
 
   private bookingServiceNames(
-    booking: Pick<AdminBooking, 'service' | 'serviceLocation' | 'specialService'>
+    booking: Pick<AdminBooking, 'service' | 'serviceNames' | 'serviceLocation' | 'specialService'>
   ): string[] {
     if (
       booking.serviceLocation === 'Home'
@@ -1020,11 +1022,22 @@ export class AdminBookingService {
       return [];
     }
 
-    return this.serviceNames(booking.service);
+    return booking.serviceNames ?? this.serviceNames(booking.service);
   }
 
   private serviceNames(service: string): string[] {
-    return String(service || '')
+    const serialized = String(service || '').trim();
+    if (!serialized) return [];
+
+    const exactCatalogueService = this.services.find(
+      item => item.name.trim().toLowerCase() === serialized.toLowerCase()
+    );
+
+    if (exactCatalogueService) {
+      return [exactCatalogueService.name];
+    }
+
+    return serialized
       .split(',')
       .map(name => name.trim())
       .filter(Boolean);
