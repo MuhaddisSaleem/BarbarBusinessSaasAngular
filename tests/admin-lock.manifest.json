@@ -1,6 +1,6 @@
 {
   "baseline_commit": "086d027",
-  "purpose": "Reviewed QA fixes TT-04 through TT-12, plus existing TT-01 through TT-03 changes on the_trim_town_final. User authorized fixes on a separate branch. Preserve the full protected-file inventory; behavioral regressions are tested separately. On 7 October 2026 the owner confirmed that the commented-out public group-booking controls are intentionally disabled; the booking template baseline accepts that reviewed change.",
+  "purpose": "Reviewed QA fixes TT-04 through TT-12, plus existing TT-01 through TT-03 changes on the_trim_town_final. User authorized fixes on a separate branch. Preserve the full protected-file inventory; behavioral regressions are tested separately. On 7 October 2026 the owner confirmed that the commented-out public group-booking controls are intentionally disabled; the booking template baseline accepts that reviewed change. On 8 October 2026, reviewed the user-requested automatic service loading fix: the salon and home catalog sentinels now receive loadingMoreServices through loadMoreBusy; all other booking template behavior remains unchanged.",
   "protected_files": {
     "backend/BarberFlow.Api/Services/BookingApplicationService.cs": "09bad7630f159a5b1866cb6d6606ef28ff75decb",
     "backend/BarberFlow.Api/Services/CatalogApplicationService.cs": "188e0974fbb9db7e4b3d977cab3d802466f47813",
@@ -41,7 +41,7 @@
     "src/app/admin/shared/admin-shell.component.html": "5f420c2f6c46b3903ad7c0f2cb2975c935091215",
     "src/app/admin/shared/admin-shell.component.scss": "b567fc8da0dc817e6201202c9dbeca940b16f44a",
     "src/app/admin/shared/admin-shell.component.ts": "0af2f81877efb2f84180a1bc3e969d6ca089338c",
-    "src/app/booking/booking.component.html": "8c046dce299994e156a08f6b6ca701353378876c",
+    "src/app/booking/booking.component.html": "625ac8904ef705852d404a4d2beb00ed7d4a0dc4",
     "src/app/booking/booking.component.scss": "07d3c5ba7822d9223ec028fac86340d9f8111b73",
     "src/app/booking/booking.component.ts": "119da6dc0de79127721a02ae2a1751899af2165e",
     "src/app/core/booking-api.service.ts": "eb65ee7f0f8fc1b7100f7d2be022a20036590c18",

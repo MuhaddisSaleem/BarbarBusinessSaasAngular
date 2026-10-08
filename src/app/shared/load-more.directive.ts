@@ -1,45 +1,64 @@
-import { AfterViewInit, Directive, ElementRef, EventEmitter, NgZone, OnDestroy, Output } from '@angular/core';
+import { AfterViewInit, Directive, ElementRef, EventEmitter, Input, NgZone, OnChanges, OnDestroy, Output } from '@angular/core';
 
-/** Observe only the active catalog's end; the button remains a keyboard/browser fallback. */
+/** Load near the active catalog's end; keep the button as an accessible fallback. */
 @Directive({ selector: '[appLoadMore]', standalone: true })
-export class LoadMoreDirective implements AfterViewInit, OnDestroy {
+export class LoadMoreDirective implements AfterViewInit, OnChanges, OnDestroy {
+  @Input() loadMoreBusy = false;
   @Output() reached = new EventEmitter<void>();
   private observer?: IntersectionObserver;
-  private isInsideViewport = false;
+  private frame?: number;
+  private ready = false;
+  private pending = false;
 
   constructor(private element: ElementRef<HTMLElement>, private zone: NgZone) {}
 
   ngAfterViewInit(): void {
-    if (typeof IntersectionObserver === 'undefined') return;
+    this.ready = true;
     this.zone.runOutsideAngular(() => {
-      this.observer = new IntersectionObserver(entries => {
-        const isIntersecting = entries.some(entry => entry.isIntersecting);
-
-        if (!isIntersecting) {
-          this.isInsideViewport = false;
-          return;
-        }
-
-        // Header deep-link navigation can cross the catalog sentinel while
-        // travelling to the footer. Do not treat that programmatic jump as
-        // genuine customer browsing; keep observing for the next manual pass.
-        if (document.documentElement.hasAttribute('data-programmatic-anchor-scroll')) return;
-
-        // Emit only once per viewport entry. When a new service batch pushes
-        // the sentinel below the viewport it automatically re-arms, so the
-        // next user scroll loads the next small batch instead of everything.
-        if (this.isInsideViewport) return;
-        this.isInsideViewport = true;
-        this.zone.run(() => this.reached.emit());
-      }, {
-        threshold: 0.01,
-        rootMargin: '0px 0px 90px 0px'
-      });
-      this.observer.observe(this.element.nativeElement);
+      if (typeof IntersectionObserver !== 'undefined') {
+        this.observer = new IntersectionObserver(() => this.scheduleCheck(), {
+          threshold: 0.01,
+          rootMargin: '0px 0px 90px 0px'
+        });
+        this.observer.observe(this.element.nativeElement);
+      }
+      // IntersectionObserver does not fire again when the sentinel stays visible,
+      // including after an entry suppressed during Contact Us navigation.
+      window.addEventListener('scroll', this.scheduleCheck, { passive: true, capture: true });
+      window.addEventListener('resize', this.scheduleCheck, { passive: true });
+      this.scheduleCheck();
     });
   }
 
+  ngOnChanges(): void {
+    if (!this.loadMoreBusy) {
+      this.pending = false;
+      // Measure after Angular has rendered the newly added service cards.
+      this.zone.runOutsideAngular(() => this.scheduleCheck());
+    }
+  }
+
+  private scheduleCheck = (): void => {
+    if (!this.ready || this.frame !== undefined) return;
+    this.frame = requestAnimationFrame(() => {
+      this.frame = undefined;
+      if (this.loadMoreBusy || this.pending) return;
+      if (document.documentElement.hasAttribute('data-programmatic-anchor-scroll')) return;
+
+      const rect = this.element.nativeElement.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0 || rect.bottom <= 0
+        || rect.top > window.innerHeight + 90) return;
+
+      this.pending = true;
+      this.zone.run(() => this.reached.emit());
+    });
+  };
+
   ngOnDestroy(): void {
+    this.ready = false;
     this.observer?.disconnect();
+    window.removeEventListener('scroll', this.scheduleCheck, true);
+    window.removeEventListener('resize', this.scheduleCheck);
+    if (this.frame !== undefined) cancelAnimationFrame(this.frame);
   }
 }

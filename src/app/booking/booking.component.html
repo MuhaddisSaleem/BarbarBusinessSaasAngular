@@ -251,7 +251,7 @@
                 </div>
 
                 <div class="service-load-more" *ngIf="serviceLocation === 'salon' && hasMoreServices"
-                  appLoadMore (reached)="loadRemainingServices()" [attr.aria-busy]="loadingMoreServices">
+                  appLoadMore [loadMoreBusy]="loadingMoreServices" (reached)="loadRemainingServices()" [attr.aria-busy]="loadingMoreServices">
                   <span class="service-loading-spinner" *ngIf="loadingMoreServices" aria-hidden="true"></span>
                   <span role="status" *ngIf="loadingMoreServices">Loading more services…</span>
                   <button type="button" *ngIf="!loadingMoreServices" (click)="loadRemainingServices()">Show more services</button>
@@ -360,7 +360,7 @@
                   </div>
 
                 <div class="service-load-more" *ngIf="serviceLocation === 'home' && hasMoreServices"
-                  appLoadMore (reached)="loadRemainingServices()" [attr.aria-busy]="loadingMoreServices">
+                  appLoadMore [loadMoreBusy]="loadingMoreServices" (reached)="loadRemainingServices()" [attr.aria-busy]="loadingMoreServices">
                   <span class="service-loading-spinner" *ngIf="loadingMoreServices" aria-hidden="true"></span>
                   <span role="status" *ngIf="loadingMoreServices">Loading more services…</span>
                   <button type="button" *ngIf="!loadingMoreServices" (click)="loadRemainingServices()">Show more services</button>
