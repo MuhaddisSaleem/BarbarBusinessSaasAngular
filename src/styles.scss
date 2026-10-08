@@ -30,6 +30,17 @@ html {
 
 .booking-page .barber-col.booking-reveal:nth-child(even) { transition-delay: 90ms; }
 
+// At Bootstrap's large breakpoint, keep the first barber row static.
+// The section must also be visible so its entrance cannot animate those cards.
+@media (min-width: 992px) {
+  .booking-page .barber-section.booking-reveal,
+  .booking-page .barber-grid > .barber-col.booking-reveal:nth-child(-n + 2) {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 @media (max-width: 767.98px) {
   .booking-page .service-col.booking-reveal:nth-child(odd) { transition-delay: 0ms; }
   .booking-page .service-col.booking-reveal:nth-child(even) { transition-delay: 90ms; }

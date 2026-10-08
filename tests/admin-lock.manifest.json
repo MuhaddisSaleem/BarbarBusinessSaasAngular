@@ -1,6 +1,6 @@
 {
   "baseline_commit": "086d027",
-  "purpose": "Reviewed QA fixes TT-04 through TT-12, plus existing TT-01 through TT-03 changes on the_trim_town_final. User authorized fixes on a separate branch. Preserve the full protected-file inventory; behavioral regressions are tested separately. On 7 October 2026 the owner confirmed that the commented-out public group-booking controls are intentionally disabled; the booking template baseline accepts that reviewed change. On 8 October 2026, reviewed the user-requested automatic service loading fix: the salon and home catalog sentinels now receive loadingMoreServices through loadMoreBusy; all other booking template behavior remains unchanged.",
+  "purpose": "Reviewed QA fixes TT-04 through TT-12, plus existing TT-01 through TT-03 changes on the_trim_town_final. User authorized fixes on a separate branch. Preserve the full protected-file inventory; behavioral regressions are tested separately. On 7 October 2026 the owner confirmed that the commented-out public group-booking controls are intentionally disabled; the booking template baseline accepts that reviewed change. On 8 October 2026, reviewed the user-requested automatic service loading fix: the salon and home catalog sentinels now receive loadingMoreServices through loadMoreBusy; all other booking template behavior remains unchanged. On 8 October 2026, reviewed the requested desktop-only static first two barber cards: at 992px and wider, disable entrance motion on their section and first two card wrappers while preserving later-card and mobile reveals.",
   "protected_files": {
     "backend/BarberFlow.Api/Services/BookingApplicationService.cs": "09bad7630f159a5b1866cb6d6606ef28ff75decb",
     "backend/BarberFlow.Api/Services/CatalogApplicationService.cs": "188e0974fbb9db7e4b3d977cab3d802466f47813",
@@ -45,7 +45,7 @@
     "src/app/booking/booking.component.scss": "07d3c5ba7822d9223ec028fac86340d9f8111b73",
     "src/app/booking/booking.component.ts": "119da6dc0de79127721a02ae2a1751899af2165e",
     "src/app/core/booking-api.service.ts": "eb65ee7f0f8fc1b7100f7d2be022a20036590c18",
-    "src/styles.scss": "be1b1b51b12feb80ad44133e85e845dc44853175",
+    "src/styles.scss": "4ad506ae9f8ba32380100cd6e4cd749645a3d17b",
     "src/app/booking/group-booking.component.scss": "7d2e1ff3605f75d3b35e9ac8e94e23ff24f54657"
   },
   "reviewed_changes": [
